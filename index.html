@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical-FAQ 技术文档索引</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 40px; font-size: 1.05em; }
+        .category {
+            margin-bottom: 32px;
+        }
+        .category-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #30363d;
+        }
+        .cat-ai { color: #f0883e; }
+        .cat-comm { color: #56d364; }
+        .cat-comp { color: #79c0ff; }
+        .cat-other { color: #d2a8ff; }
+        .doc-card {
+            display: block;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            text-decoration: none;
+            color: #c9d1d9;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .doc-card:hover {
+            border-color: #58a6ff;
+            background: #1c2331;
+        }
+        .doc-title {
+            font-size: 1.05em;
+            font-weight: 500;
+            color: #58a6ff;
+            margin-bottom: 4px;
+        }
+        .doc-date {
+            font-size: 0.85em;
+            color: #8b949e;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+            font-weight: 500;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+        a { color: #58a6ff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Technical-FAQ 技术文档索引</h1>
+    <p class="subtitle">AI / Computer / Communication 技术分析文档合集 — 点击标题查看渲染页面</p>
+
+    <!-- AI -->
+    <div class="category">
+        <h2 class="category-title cat-ai">AI 人工智能<span class="badge badge-ai">2 篇</span></h2>
+        <a class="doc-card" href="html/AI/2026-08-13-transformer-architecture-analysis.html">
+            <div class="doc-title">Transformer 架构源代码逐段分析</div>
+            <div class="doc-date">2026-08-13 · 含多头注意力数据流图、Mask 机制深度对比</div>
+        </a>
+        <a class="doc-card" href="html/AI/2026-08-13-deepseek分析.html">
+            <div class="doc-title">DeepSeek V3 综合分析</div>
+            <div class="doc-date">2026-08-13 · 架构/组件/代码/训练/推理五大主题，2303行</div>
+        </a>
+    </div>
+
+    <!-- Communication -->
+    <div class="category">
+        <h2 class="category-title cat-comm">Communication 通信网络<span class="badge badge-comm">3 篇</span></h2>
+        <a class="doc-card" href="html/Communication/2026-08-13-CBFC-LLR-PFC.html">
+            <div class="doc-title">PFC / CBFC / LLR 链路层技术深度解析</div>
+            <div class="doc-date">2026-08-13 · IEEE 802.1Qbb + UEC v1.0，无损链路三大机制</div>
+        </a>
+        <a class="doc-card" href="html/Communication/2026-08-13-ScaleUp-Protocol-Analysis.html">
+            <div class="doc-title">Scale-Up 网络协议全景分析</div>
+            <div class="doc-date">2026-08-13 · NVLink/UB/MTLink/GLink/OLink/Alink/SUE/UALink/OISA 九大协议</div>
+        </a>
+        <a class="doc-card" href="html/Communication/2026-08-13-PCIE.html">
+            <div class="doc-title">PCIe 在 Scale-Up 网络中的劣势分析</div>
+            <div class="doc-date">2026-08-13 · 12项根本劣势 + 带宽公平对比 + P2P路由机制</div>
+        </a>
+    </div>
+
+    <!-- Computer -->
+    <div class="category">
+        <h2 class="category-title cat-comp">Computer 计算机<span class="badge badge-comp">暂无</span></h2>
+        <p style="color: #484f58; padding: 8px 0;">暂无文档，后续新增将自动出现在此</p>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base · <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> · 每日自动更新</p>
+    </div>
+</div>
+</body>
+</html>
