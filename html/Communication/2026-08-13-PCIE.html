@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCIe 在 Scale-Up 网络中的劣势深度分析</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-code: #1e1e1e;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --accent3: #f0883e;
+  --accent4: #bc8cff;
+  --red: #ff7b72;
+  --green: #56d364;
+  --yellow: #e3b341;
+  --pcie: #7b61ff;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  line-height: 1.8;
+  font-size: 15px;
+}
+
+/* TOC Sidebar */
+.toc {
+  position: fixed; top: 0; left: 0; width: 270px; height: 100vh;
+  overflow-y: auto; background: var(--bg-card); border-right: 1px solid var(--border);
+  padding: 20px 16px 40px; z-index: 100;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.toc::-webkit-scrollbar { width: 5px; }
+.toc::-webkit-scrollbar-track { background: transparent; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.toc h2 { font-size: 16px; margin-bottom: 10px; color: var(--accent); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.toc-grid { display: flex; flex-direction: column; gap: 2px; }
+.toc a { color: var(--text-dim); text-decoration: none; font-size: 12.5px; line-height: 1.6; display: block; padding: 3px 6px; border-radius: 4px; transition: all 0.2s; }
+.toc a:hover { color: var(--accent); background: rgba(88,166,255,0.08); }
+.toc a.lvl1 { color: var(--text); font-weight: 600; font-size: 13px; margin-top: 10px; padding: 4px 6px; }
+
+.toc-toggle { display: none; }
+
+@media (max-width: 1100px) {
+  .toc { transform: translateX(-100%); transition: transform 0.3s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.5); }
+  .toc.open { transform: translateX(0); }
+  .content-wrapper { margin-left: 0 !important; }
+  .toc-toggle { display: flex; position: fixed; top: 12px; left: 12px; z-index: 200; width: 40px; height: 40px; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border); color: var(--accent); align-items: center; justify-content: center; cursor: pointer; font-size: 18px; }
+  .content-wrapper .container { padding-top: 60px !important; }
+}
+
+.content-wrapper { margin-left: 270px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 20px 40px 80px; }
+
+h1 { font-size: 30px; margin: 40px 0 8px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 16px; }
+h2 { font-size: 24px; margin: 48px 0 16px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+h3 { font-size: 19px; margin: 32px 0 12px; color: var(--accent2); }
+h4 { font-size: 16px; margin: 24px 0 8px; color: var(--accent3); }
+p { margin: 8px 0; color: var(--text); }
+.subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 30px; }
+
+pre, .frame-diagram, .ascii-art {
+  background: var(--bg-code); color: #d4d4d4; border-radius: 8px; padding: 16px 20px;
+  font-family: "JetBrains Mono", "Consolas", "Courier New", monospace; font-size: 12px;
+  overflow-x: auto; margin: 12px 0; line-height: 1.5; white-space: pre; border: 1px solid var(--border);
+}
+code { font-family: "JetBrains Mono", "Consolas", monospace; background: rgba(110,118,129,0.2); padding: 2px 6px; border-radius: 4px; font-size: 13px; color: var(--accent4); }
+
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+th { background: var(--bg-card); color: var(--accent); padding: 10px 14px; text-align: left; border: 1px solid var(--border); font-weight: 600; }
+td { padding: 8px 14px; border: 1px solid var(--border); color: var(--text); vertical-align: top; }
+tr:nth-child(even) td { background: rgba(22,27,34,0.5); }
+tr:hover td { background: rgba(88,166,255,0.05); }
+
+.callout { background: rgba(56,139,253,0.08); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 12px 20px; margin: 16px 0; }
+.callout.warn { background: rgba(240,136,62,0.08); border-left-color: var(--accent3); }
+.callout.danger { background: rgba(255,123,114,0.08); border-left-color: var(--red); }
+.callout.success { background: rgba(63,185,80,0.08); border-left-color: var(--accent2); }
+
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin: 0 2px; }
+.badge-pcie { background: rgba(123,97,255,0.15); color: var(--pcie); }
+.badge-bad { background: rgba(255,123,114,0.15); color: var(--red); }
+.badge-good { background: rgba(63,185,80,0.15); color: var(--green); }
+
+.divider { height: 2px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 50px 0; }
+
+.disadvantage-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 24px; margin: 16px 0; border-left: 4px solid var(--red);
+}
+.disadvantage-card .title { font-size: 17px; font-weight: 700; color: var(--red); margin-bottom: 8px; }
+.disadvantage-card .severity { float: right; }
+
+.metric-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+.metric-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+.metric-box.pcie-box { border-left: 3px solid var(--pcie); }
+.metric-box.scaleup-box { border-left: 3px solid var(--green); }
+.metric-box .label { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.metric-box .value { font-size: 22px; font-weight: 700; }
+.metric-box.pcie-box .value { color: var(--pcie); }
+.metric-box.scaleup-box .value { color: var(--green); }
+.metric-box .detail { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="toc-toggle" onclick="document.querySelector('.toc').classList.toggle('open')">☰</div>
+
+<div class="toc">
+<h2>目录</h2>
+<div class="toc-grid">
+  <a class="lvl1" href="#ch1">第1章 PCIe 协议架构回顾</a>
+  <a href="#ch1-1">1.1 PCIe 协议栈分层</a>
+  <a href="#ch1-2">1.2 TLP 事务层报文格式</a>
+  <a href="#ch1-3">1.3 DLLP 数据链路层报文</a>
+  <a href="#ch1-4">1.4 物理层帧格式</a>
+  <a href="#ch1-5">1.5 PCIe 拓扑模型</a>
+  <a href="#ch1-6">1.6 PCIe 流控机制</a>
+  <a class="lvl1" href="#ch2">第2章 PCIe 在 Scale-Up 场景的根本劣势</a>
+  <a href="#ch2-1">2.1 拓扑局限性：树形 vs 扁平 Mesh</a>
+  <a href="#ch2-2">2.2 带宽瓶颈：数量级差距</a>
+  <a href="#ch2-3">2.3 延迟开销：协议栈穿透</a>
+  <a href="#ch2-4">2.4 内存语义缺失</a>
+  <a href="#ch2-5">2.5 可扩展性天花板</a>
+  <a href="#ch2-6">2.6 编址模型不匹配</a>
+  <a href="#ch2-7">2.7 组播/广播能力缺失</a>
+  <a href="#ch2-8">2.8 链路级可靠性不足</a>
+  <a href="#ch2-9">2.9 报文头开销过大</a>
+  <a href="#ch2-10">2.10 缓存一致性缺失</a>
+  <a href="#ch2-11">2.11 热插拔与动态配置</a>
+  <a href="#ch2-12">2.12 集合通信加速缺失</a>
+  <a class="lvl1" href="#ch3">第3章 PCIe 报文格式逐层拆解与开销分析</a>
+  <a href="#ch3-1">3.1 TLP 完整报文开销</a>
+  <a href="#ch3-2">3.2 一次 Read 事务的完整往返</a>
+  <a href="#ch3-3">3.3 有效负载率计算</a>
+  <a class="lvl1" href="#ch4">第4章 CXL：PCIe 的自救尝试与残余局限</a>
+  <a href="#ch4-1">4.1 CXL 三种协议类型</a>
+  <a href="#ch4-2">4.2 CXL 解决了什么</a>
+  <a href="#ch4-3">4.3 CXL 仍然无法解决的问题</a>
+  <a class="lvl1" href="#ch5">第5章 各厂商自研 Scale-Up 协议的技术动因</a>
+  <a href="#ch5-1">5.1 NVIDIA NVLink</a>
+  <a href="#ch5-2">5.2 华为 UB</a>
+  <a href="#ch5-3">5.3 UALink 联盟</a>
+  <a href="#ch5-4">5.4 Broadcom SUE</a>
+  <a href="#ch5-5">5.5 国产协议阵营</a>
+  <a class="lvl1" href="#ch6">第6章 PCIe vs Scale-Up 协议全景对比</a>
+  <a class="lvl1" href="#ch7">第7章 结论与展望</a>
+</div>
+</div>
+
+<div class="content-wrapper">
+<div class="container">
+
+<h1>PCIe 在 Scale-Up 网络中的劣势深度分析</h1>
+<p class="subtitle">
+  为什么 NVIDIA、华为、UALink、Broadcom 等厂商都要自研 Scale-Up 互联协议，而不继续使用 PCIe？<br>
+  从协议栈、报文格式、拓扑、编址、流控、可靠性、语义等全维度深度解析 · 2026年8月
+</p>
+
+<!-- ==================== Chapter 1 ==================== -->
+<h2 id="ch1">第1章 PCIe 协议架构回顾</h2>
+
+<p>
+PCIe (Peripheral Component Interconnect Express) 是自 2003 年以来主导计算机外设互联的标准协议。
+它采用 <strong>树形拓扑 + 分层协议栈</strong> 设计，通过 Root Complex 连接 CPU 和各 Endpoint，
+中间可通过 Switch 扩展。PCIe 经历了 1.0 → 2.0 → 3.0 → 4.0 → 5.0 → 6.0 多代演进，
+单 lane 速率从 2.5 GT/s 提升到 64 GT/s (PCIe 6.0)。
+</p>
+
+<div class="callout">
+  <strong>PCIe 的设计初衷</strong>是连接 <em>外设</em>（网卡、显卡、存储控制器）到 CPU，
+  而非连接 <em>对等计算节点</em>。这个根本设计目标决定了它在 Scale-Up 场景中的所有局限。
+</div>
+
+<h3 id="ch1-1">1.1 PCIe 协议栈分层</h3>
+
+<div class="frame-diagram">PCIe Protocol Stack (3 Layers + Physical):
+
++=====================================================================+
+|                     Application / Device Driver                       |
++=====================================================================+
+|                                                                      |
+|  +-------------+  Transaction Layer (TL)                            |
+|  | TLP          |  - Read/Write requests (MRd/MWr)                  |
+|  | (Transaction |  - Message requests                              |
+|  |  Layer Pkt)  |  - Completion (CplD)                             |
+|  +-------------+  - Address-based routing (32/64-bit)               |
+|       |             - BDF (Bus:Device:Function) ID routing           |
+|       v                                                              |
+|  +-------------+  Data Link Layer (DLL)                             |
+|  | DLLP         |  - Sequence Number (12-bit)                       |
+|  | (Data Link   |  - LCRC (32-bit)                                  |
+|  |  Layer Pkt)  |  - Ack/Nak flow control                           |
+|  +-------------+  - Credit-based flow control (posted/non-posted)   |
+|       |             - Replay buffer (retransmission)                 |
+|       v                                                              |
+|  +-------------+  Physical Layer (PHY)                              |
+|  | Physical     |  - 8b/10b (Gen1-2) or 128b/130b (Gen3-5)         |
+|  | Layer        |  - 1b/1b + FLIT mode (Gen6, PAM4)               |
+|  |              |  - Link training (LTSSM)                          |
+|  +-------------+  - Lane reversal / polarity inversion               |
+|                                                                      |
++======================================================================+
+
+Key: TLP = Transaction Layer Packet, DLLP = Data Link Layer Packet
+     BDF = Bus:Device:Function (hierarchical device ID)</div>
+
+<h4>各层职责</h4>
+<table>
+<tr><th>层</th><th>核心功能</th><th>关键字段</th><th>Scale-Up 适配性</th></tr>
+<tr><td>事务层 (TL)</td><td>生成/解析 TLP，地址路由，序号管理</td><td>Fmt, Type, Addr(32/64-bit), BDF, Tag, Length, DW payload</td><td><span class="badge badge-bad">不匹配</span> 面向外设 I/O，非内存语义</td></tr>
+<tr><td>数据链路层 (DLL)</td><td>保证可靠传输，流控，CRC 校验</td><td>SeqNum(12b), LCRC(32b), Ack/Nak DLLP</td><td><span class="badge badge-bad">部分不匹配</span> 重传粒度粗，流控信用重</td></tr>
+<tr><td>物理层 (PHY)</td><td>信号传输，编码，链路训练</td><td>8b/10b, 128b/130b, 1b/1b+FLIT (Gen6)</td><td><span class="badge badge-good">可复用</span> SerDes 技术通用</td></tr>
+</table>
+
+<h3 id="ch1-2">1.2 TLP 事务层报文格式</h3>
+
+<div class="frame-diagram">PCIe TLP (Transaction Layer Packet) Format:
+
+  3 DW Header (12 Bytes) for 32-bit addressing:
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |  Fmt  |  Type |    TC     |  |Attr| |  Length   |  DW0 (4B)
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |              Requester ID         |   Tag      |  DW1 (4B)
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |          Last DW BE     |  First DW BE |  Rsvd  |  DW2 (4B)
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |               Memory Address (32-bit)          |  DW3 (4B) -- only for 3DW hdr
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+  4 DW Header (16 Bytes) for 64-bit addressing:
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |  Fmt  |  Type |    TC     |  |Attr| |  Length   |  DW0
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |              Requester ID         |   Tag      |  DW1
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |          Last DW BE     |  First DW BE |  Rsvd  |  DW2
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |               Memory Address [63:32]           |  DW3
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  |               Memory Address [31:02]           |  DW4
+  +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+
+  Then: Payload (1-1024 DW = 4-4096 Bytes, MPS dependent)
+  Then: ECRC (optional, 4B) + LCRC (4B, added by DLL) + SeqNum (2B)
+  Then: STP (1B Start TLP) + 1B framing (Gen3+)
+
+  Total overhead per TLP:
+  - 3DW header:  12 + 4 (LCRC) + 2 (Seq) + 2 (framing) = 20 Bytes
+  - 4DW header:  16 + 4 (LCRC) + 2 (Seq) + 2 (framing) = 24 Bytes
+  - + ECRC (if enabled): +4 Bytes</div>
+
+<h4>TLP 主要事务类型</h4>
+<table>
+<tr><th>Type</th><th>缩写</th><th>方向</th><th>语义</th><th>Scale-Up 需求</th></tr>
+<tr><td>Memory Read Request</td><td>MRd</td><td>RC → EP</td><td>读远端内存，返回 Completion</td><td>需要，但效率极低（拆分请求/完成）</td></tr>
+<tr><td>Memory Write Request</td><td>MWr</td><td>RC → EP</td><td>写远端内存（Posted，无需完成）</td><td>需要，但无内存语义</td></tr>
+<tr><td>Completion with Data</td><td>CplD</td><td>EP → RC</td><td>返回 Read 请求的数据</td><td>额外往返延迟</td></tr>
+<tr><td>AtomicOp (CAS/FetchAdd/Swap)</td><td>Atomic</td><td>RC → EP</td><td>原子操作</td><td>需要，但类型有限</td></tr>
+<tr><td>Message Request</td><td>Msg</td><td>双向</td><td>信号/中断传递</td><td>非核心</td></tr>
+</table>
+
+<h3 id="ch1-3">1.3 DLLP 数据链路层报文</h3>
+
+<div class="frame-diagram">PCIe DLLP (Data Link Layer Packet) Format:
+
+  +--+--+--+--+--+--+--+--+
+  |   DLLP Type  (1B)      |   Ack, Nak, InitFC1, InitFC2, UpdateFC,
+  +--+--+--+--+--+--+--+--+   PM, Vendor, etc.
+  |   DLLP Data  (3B)      |
+  +--+--+--+--+--+--+--+--+
+  |   LCRC        (4B)      |
+  +--+--+--+--+--+--+--+--+
+  Total: 8 Bytes per DLLP
+
+  Credit-based Flow Control DLLPs:
+  +-------------+--------+--------+--------+
+  | Type (1B)   |HdrFC(2)|DataFC(2)| Rsvd  |  + LCRC (4B)
+  +-------------+--------+--------+--------+
+
+  Flow Control Types:
+  - InitFC1 / InitFC2:  Initial credit advertisement
+  - UpdateFC:           Incremental credit update
+  - Posted / Non-Posted / Completion:  separate credit pools
+
+  Credit Format (6-bit header credits, 12-bit data credits):
+  +-----+-----+-----+-----+-----+-----+
+  | H0  | H1  | H2  | H3  | H4  | H5  |  (header credits, 6-bit each)
+  +-----+-----+-----+-----+-----+-----+
+  |     D0 (12-bit)       |    D1 (12-bit)    |  (data credits)
+  +-----+-----+-----+-----+-----+-----+</div>
+
+<h3 id="ch1-4">1.4 物理层帧格式</h3>
+
+<div class="frame-diagram">PCIe Physical Layer Framing (Gen3-5, 128b/130b encoding):
+
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+
+  |STP|         TLP or DLLP data stream               |
+  |(1)|  (128-bit blocks, 130b encoding per 128b)    |
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+
+  |END|  Pad  |           SKP (skip, for clock comp) |
+  |(1)|       |                                      |
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+
+
+  Gen3: 8 GT/s per lane,  128b/130b = 98.46% efficiency
+  Gen4: 16 GT/s per lane, 128b/130b
+  Gen5: 32 GT/s per lane, 128b/130b
+  Gen6: 64 GT/s per lane, 1b/1b + FLIT mode + PAM4
+
+  Lane aggregation: x1, x2, x4, x8, x16, x32
+  Data distribution: Round-robin byte striping across lanes
+
+  Link Training State Machine (LTSSM):
+  Polling -> Configuration -> Recovery -> L0 (Normal) -> L0s/L1 (ASPM)
+  ~20+ states, training takes ~10-50ms (vs Scale-Up protocols: <1ms)</div>
+
+<h3 id="ch1-5">1.5 PCIe 拓扑模型</h3>
+
+<div class="frame-diagram">PCIe Hierarchical Tree Topology:
+
+                    +-----------+
+                    |    CPU    |
+                    |  (Root    |
+                    |  Complex) |
+                    +-----+-----+
+                          |
+                    +-----+-----+
+                    | PCIe RC   |
+                    | (Root     |
+                    |  Complex  |
+                    |  Port)    |
+                    +-----+-----+
+                          |
+          +---------------+---------------+
+          |               |               |
+    +-----+-----+   +-----+-----+   +-----+-----+
+    |  Switch   |   | Endpoint  |   | Endpoint  |
+    |  (PLX)    |   |  (GPU 0)  |   |  (NIC)    |
+    +-----+-----+   +-----------+   +-----------+
+          |
+    +-----+-----+-----+-----+
+    |     |     |     |     |
+  +---+ +---+ +---+ +---+
+  |GPU| |GPU| |GPU| |GPU|
+  | 1 | | 2 | | 3 | | 4 |
+  +---+ +---+ +---+ +---+
+
+  Characteristics:
+  1. STRICTLY hierarchical (tree) - no cycles, no mesh
+  2. Root Complex is the master, endpoints are slaves
+  3. Switch has NO Root Complex - just a multi-port bridge
+     with its own routing table (addr range -> port)
+  4. P2P (same switch): Switch routes locally, RC NOT involved
+     GPU1 -> Switch -> GPU2  (1 hop, no CPU in data path)
+  5. Upstream (system RAM): must reach Root Complex
+     GPU1 -> Switch -> RC -> DRAM  (CPU involved)
+  6. Cross-switch: must traverse Root Complex
+     GPU1 -> SW-A -> RC -> SW-B -> GPU2  (3 hops)
+  7. P2P is OPTIONAL: ACS may block, forcing upstream to RC
+  8. Config space + enumeration: ALWAYS through Root Complex
+  9. Maximum depth: 6 levels (RC -> Switch -> ... -> EP)
+  10. Bus limit: 256 buses, 32 dev/bus, 8 func/dev</div>
+
+<div class="callout">
+  <strong>P2P 路由机制澄清</strong>：PCIe Switch <strong>不包含 Root Complex</strong>。
+  Switch 内部维护地址路由表（枚举时由 RC 建立映射，运行时 Switch 自主查表）。
+  当 Endpoint 发送 Memory Read/Write TLP 时，Switch 检查目标地址：
+  <ul style="margin-left:20px; margin-top:8px;">
+    <li>地址匹配某下游端口范围 → <strong>本地转发（P2P）</strong>，不经过 RC</li>
+    <li>地址不匹配任何下游端口 → <strong>上行转发至 Root Complex</strong></li>
+  </ul>
+  因此，同一 Switch 下的两个 GPU 可以 P2P 直通（GPU→Switch→GPU），
+  但跨 Switch 通信、访问系统内存、配置空间访问仍必须经过 Root Complex。
+</div>
+
+<h3 id="ch1-6">1.6 PCIe 流控机制</h3>
+
+<div class="frame-diagram">PCIe Credit-Based Flow Control:
+
+  Tx Side                          Rx Side
+  +-----------+                    +-----------+
+  | Available |  <-- credits      | Free      |
+  | Credits   |     advertised    | Buffer    |
+  | (Hdr/Data)|     via DLLP      | Space     |
+  +-----------+                    +-----------+
+       |                                |
+       | Send TLP (consume credit)      |
+       |------------------------------>  |  Buffer TLP
+       |                                |  Consume buffer space
+       |                                |
+       |                        Rx processes TLP
+       |                        Rx frees buffer
+       |  <-- UpdateFC DLLP             |
+       |      (incremental credit)      |
+       |  <-----------------------------|
+       |                                |
+  +-----------+                    +-----------+
+  | Available |  credits restored  | Free      |
+  | Credits   |                    | Buffer    |
+  +-----------+                    +-----------+
+
+  Credit Types (6 independent pools):
+  +----------+----------+----------+
+  |          |  Posted  | P0..P5   |  (MWr, Msg)
+  |  Header  |  NonPst  | NP0..NP5 |  (MRd, Atomic)
+  | Credits  |  Cpl     | C0..C5   |  (CplD)
+  +----------+----------+----------+
+  |          |  Posted  |          |
+  |  Data    |  NonPst  |  (12-bit each)
+  | Credits  |  Cpl     |          |
+  +----------+----------+----------+
+
+  Problems for Scale-Up:
+  1. 6 separate credit pools = complex bookkeeping
+  2. Credit granularity = 1 DW (4B) for data, very fine-grained
+  3. UpdateFC DLLP is 8B overhead per credit update
+  4. No prioritized VCs (limited to TC mapping, not true VCs)
+  5. Credit starvation possible if UpdateFC is lost/delayed
+  6. No multicast credit management</div>
+
+<!-- ==================== Chapter 2 ==================== -->
+<h2 id="ch2">第2章 PCIe 在 Scale-Up 场景的根本劣势</h2>
+
+<p>
+以下从 12 个维度逐一分析 PCIe 协议在 AI Scale-Up 场景中的根本性劣势，
+每个劣势都对应一个或多个 Scale-Up 协议的核心设计改进点。
+</p>
+
+<!-- 2.1 Topology -->
+<div class="disadvantage-card" id="ch2-1">
+  <span class="severity"><span class="badge badge-bad">致命</span></span>
+  <div class="title">2.1 拓扑局限性：树形 vs 扁平 Mesh</div>
+  <p>
+    <strong>PCIe 设计</strong>：严格的树形拓扑，Root Complex 是单点根节点，所有设备是从节点。
+    同一 Switch 下的 Endpoint 可通过 P2P 本地路由（Switch 自带路由表，不需要 RC 参与数据路径），
+    但跨 Switch 通信、访问系统内存、配置空间访问仍必须经过 Root Complex 中转。
+    GPU 之间无直达链路——同 Switch P2P 最少 1 跳，跨 Switch 则 3 跳起（GPU→SW→RC→SW→GPU）。
+  </p>
+  <p>
+    <strong>Scale-Up 需求</strong>：任意 GPU 之间需要 <strong>全互联 (Full Mesh)</strong> 或 <strong>多路径交换 (Switch Fabric)</strong>，
+    任意两个 GPU 之间应可直接通信，不经过 CPU。
+  </p>
+  <p>
+    <strong>具体问题</strong>：
+  </p>
+  <ul style="margin-left:20px;">
+    <li>PCIe Switch 端口数有限（典型 24-48 端口），无法支持 72+ GPU 互联</li>
+    <li>同 Switch P2P = 2 跳（GPU → Switch → GPU）；跨 Switch = 3 跳起（GPU → SW → RC → SW → GPU），而非直达</li>
+    <li>跨 Switch 流量和系统内存访问 <strong>必须经过 Root Complex</strong>，造成根节点拥塞瓶颈</li>
+    <li>P2P 为可选特性：ACS（Access Control Services）可阻断 P2P，强制流量绕行 RC</li>
+    <li>不支持 <strong>多路径</strong>：两点之间只有一条路径，无负载均衡能力</li>
+    <li>不支持 <strong>环路</strong>：PCIe 枚举算法假设无环图，无法构建冗余拓扑</li>
+  </ul>
+</div>
+
+<div class="metric-compare">
+  <div class="metric-box pcie-box">
+    <div class="label">PCIe 拓扑</div>
+    <div class="value">Tree / Hierarchy</div>
+    <div class="detail">根节点 RC，单路径，最多 6 级深度，GPU 间需 Switch 中转</div>
+  </div>
+  <div class="metric-box scaleup-box">
+    <div class="label">Scale-Up 拓扑</div>
+    <div class="value">Full Mesh / Fabric</div>
+    <div class="detail">NVL72 全互联，UALink 1024 加速器，多路径负载均衡，无根节点</div>
+  </div>
+</div>
+
+<!-- 2.2 Bandwidth -->
+<div class="disadvantage-card" id="ch2-2">
+  <span class="severity"><span class="badge badge-bad">致命</span></span>
+  <div class="title">2.2 带宽瓶颈：SerDes 数量级差距</div>
+  <p>
+    PCIe 与 Scale-Up 专用协议的带宽差距，本质上不是 SerDes 单通道速率的差距，
+    而是 <strong>SerDes 数量</strong>的差距。二者在同等代际的 SerDes 单通道速率实际处于同一量级，
+    NVLink 等协议通过大幅增加 SerDes 数量来获得数量级的总带宽提升。
+  </p>
+</div>
+
+<h4>2.2.1 常见对比误区</h4>
+<div class="callout danger">
+  <strong>常见误导</strong>：很多资料将 NVLink 的"每链路带宽"（由多个 SerDes 组成）与 PCIe 的"每 SerDes lane 带宽"放在同一列比较。
+  例如 NVLink 4.0 的 "50 GB/s/lane" 中的 "lane" 实际指一个 link（含 4 条 SerDes 差分对），
+  而 PCIe 5.0 x16 的 16 是 16 条独立 SerDes lane。
+  此外，PCIe 通常按<strong>单向</strong>标称带宽（64 GB/s = 单向），
+  而 NVLink 通常按<strong>双向</strong>标称（900 GB/s = 双向），直接相除得到 14x 是虚高的——
+  同维度对比实际只有 <strong>7x</strong>。
+</div>
+
+<h4>2.2.2 SerDes 级别的公平对比</h4>
+<p>
+  将总带宽分解为 <strong>单 SerDes 速率 × SerDes 数量</strong>，可以看清带宽差距的真正来源：
+</p>
+
+<table>
+<tr><th>互连技术</th><th>SerDes 单通道速率</th><th>调制方式</th><th>每方向 SerDes 数</th><th>每 SerDes 有效带宽 (单向)</th><th>每 GPU 聚合带宽 (双向)</th><th>带宽比 (vs PCIe 5.0, 同为双向)</th></tr>
+<tr><td><span class="badge badge-pcie">PCIe 4.0 x16</span></td><td>16 GT/s</td><td>NRZ</td><td>16</td><td>~1.97 GB/s</td><td>~63 GB/s</td><td>0.5x</td></tr>
+<tr><td><span class="badge badge-pcie">PCIe 5.0 x16</span></td><td>32 GT/s</td><td>NRZ</td><td>16</td><td>~3.94 GB/s</td><td>~128 GB/s</td><td>1x (基准)</td></tr>
+<tr><td><span class="badge badge-pcie">PCIe 6.0 x16</span></td><td>64 GT/s</td><td>PAM4</td><td>16</td><td>~7.88 GB/s</td><td>~256 GB/s</td><td>2x</td></tr>
+<tr><td><span class="badge badge-pcie">PCIe 7.0 x16</span></td><td>128 GT/s</td><td>PAM4</td><td>16</td><td>~15.75 GB/s</td><td>~512 GB/s</td><td>4x</td></tr>
+<tr><td><span class="badge badge-good">NVLink 3.0</span></td><td>50 GT/s</td><td>NRZ</td><td>48</td><td>~6.10 GB/s</td><td>~600 GB/s</td><td>4.7x</td></tr>
+<tr><td><span class="badge badge-good">NVLink 4.0</span></td><td>112 Gbps</td><td>PAM4</td><td>36</td><td>~12.50 GB/s</td><td>~900 GB/s</td><td>7.0x</td></tr>
+<tr><td><span class="badge badge-good">NVLink 5.0</span></td><td>224 Gbps</td><td>PAM4</td><td>36</td><td>~25.00 GB/s</td><td>~1.8 TB/s</td><td>14.1x</td></tr>
+</table>
+
+<div class="frame-diagram">Bandwidth Decomposition: Per-SerDes Rate x SerDes Count
+
+  Total Bandwidth = Per-SerDes BW  x  SerDes Count (per dir)  x  2 (bidir)
+                   ----------------     -----------------------     --------
+                   
+  [PCIe 5.0 x16]   3.94 GB/s  x  16  x  2  =  ~126 GB/s bidir
+  [NVLink 4.0]    12.50 GB/s  x  36  x  2  =  ~900 GB/s bidir
+  [NVLink 5.0]    25.00 GB/s  x  36  x  2  =  ~1800 GB/s bidir
+
+  ================================================================
+  
+  NVLink 4.0 vs PCIe 5.0  (both PAM4 vs NRZ):
+  
+  Per-SerDes ratio:   12.50 / 3.94 = 3.2x    (PAM4 modulation advantage)
+  SerDes count ratio:    36 / 16   = 2.25x   (NVLink deploys 2.25x more SerDes)
+  ----------                              -----
+  Total ratio:        3.2 x 2.25  = 7.1x     (matches 900/128 = 7.0x)
+
+  ================================================================
+  
+  NVLink 5.0 vs PCIe 5.0  (224G PAM4 vs 32G NRZ):
+  
+  Per-SerDes ratio:   25.00 / 3.94 = 6.3x    (7x faster SerDes technology)
+  SerDes count ratio:    36 / 16   = 2.25x   (same SerDes count as NVLink 4.0)
+  ----------                              -----
+  Total ratio:        6.3 x 2.25  = 14.2x    (matches 1800/128 = 14.1x)
+
+  ================================================================
+  
+  Same-generation fair comparison (both PAM4, similar SerDes rate):
+  
+  [PCIe 6.0]       7.88 GB/s  x  16  x  2  =  ~252 GB/s bidir
+  [NVLink 4.0]    12.50 GB/s  x  36  x  2  =  ~900 GB/s bidir
+  
+  Per-SerDes ratio:   12.50 / 7.88 = 1.59x   (only 59% faster per SerDes!)
+  SerDes count ratio:    36 / 16   = 2.25x
+  ----------                              -----
+  Total ratio:        1.59 x 2.25 = 3.6x     (NOT 14x!)
+
+  ================================================================
+  
+  NVLink SerDes architecture (per link = 4 SerDes differential pairs):
+
+  +-------+   TX  +--+   +--+        Each NVLink "link" contains:
+  |       |======>|S1|-->|S2|  TX    - 2 SerDes for TX (per direction)
+  | GPU A |       +--+   +--+        - 2 SerDes for RX (per direction)  
+  |       |       +--+   +--+        - Total: 4 SerDes per link
+  |       |<======|S3|<--|S4|  RX    
+  +-------+   RX  +--+   +--+        NVLink 4.0: 18 links x 4 = 72 SerDes
+                    GPU B             NVLink 5.0: 18 links x 4 = 72 SerDes
+  
+  vs PCIe 5.0 x16: 16 SerDes per direction = 32 total differential pairs</div>
+
+<div class="callout">
+  <strong>关键结论</strong>：带宽差距的来源可以拆解为两个独立维度：
+  <br><br>
+  <strong>1. 单 SerDes 速率差距（调制技术驱动）</strong>：同代际对比其实不大。
+  PCIe 6.0 (64G PAM4) 与 NVLink 4.0 (112G PAM4) 单 SerDes 仅差 <strong>1.6x</strong>；
+  即使跨代对比 PCIe 5.0 (32G NRZ) vs NVLink 4.0 (112G PAM4) 也仅 <strong>3.2x</strong>。
+  <br><br>
+  <strong>2. SerDes 数量差距（架构设计驱动）</strong>：这才是根本原因。
+  PCIe x16 仅 <strong>16 条</strong> SerDes/lane，而 NVLink 4.0/5.0 部署了 <strong>72 条</strong> SerDes（18 links × 4/link），
+  是 PCIe 的 <strong>4.5 倍</strong>。PCIe 的 lane 数受限于 PCIe 标准规范和 CPU/PCIe Switch 的引脚预算，
+  而 NVLink 作为 GPU 专用互联，可以自由分配更多 die 面积和引脚给 SerDes。
+  <br><br>
+  对于需要频繁交换梯度的 AllReduce 集合通信，PCIe 的 SerDes 数量不足直接成为训练吞吐的瓶颈。
+  PCIe 6.0 虽然翻倍到 256 GB/s 双向，但同代际的 NVLink 5.0 仍达 1.8 TB/s——
+  差距从 SerDes 速率 (2x) 和 SerDes 数量 (2.25x) 两个维度同时放大。
+</div>
+
+<!-- 2.3 Latency -->
+<div class="disadvantage-card" id="ch2-3">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.3 延迟开销：协议栈穿透</div>
+  <p>
+    PCIe 的延迟来自 <strong>多层协议栈穿透 + 树形拓扑中转 + TLP 拆分/重组</strong>：
+  </p>
+</div>
+
+<div class="frame-diagram">Latency Breakdown: PCIe vs Scale-Up Protocol
+
+PCIe Read Transaction (GPU 0 reads GPU 1's memory):
++================================================================+
+| Step                          | Latency (ns)  | Cumulative (ns)|
++================================================================+
+| 1. GPU 0 issues MRd TLP       |     20        |     20         |
+|    (TL processing)            |               |                |
+| 2. DLL: add SeqNum + LCRC     |     10        |     30         |
+| 3. PHY: 128b/130b encoding    |     15        |     45         |
+| 4. Wire: GPU0 -> Switch       |     15        |     60         |
+| 5. Switch: route lookup       |     50        |    110         |
+|    (BDF table, addr decode)   |               |                |
+| 6. Wire: Switch -> GPU 1      |     15        |    125         |
+| 7. GPU 1: PHY decode          |     15        |    140         |
+| 8. GPU 1: DLL check           |     10        |    150         |
+| 9. GPU 1: TL parse MRd        |     20        |    170         |
+| 10. GPU 1: memory access      |    100        |    270         |
+| 11. GPU 1: build CplD TLP     |     20        |    290         |
+| 12. Return path (same steps)  |    125        |    415         |
+| 13. GPU 0: TL receive CplD    |     20        |    435         |
++================================================================+
+| Total PCIe Read latency:      |               | ~400-600 ns    |
++================================================================+
+
+NVLink Load (GPU 0 loads GPU 1's memory):
++================================================================+
+| Step                          | Latency (ns)  | Cumulative (ns)|
++================================================================+
+| 1. GPU 0 issues LOAD req      |      5        |      5         |
+|    (direct memory semantic)   |               |                |
+| 2. DL: Flit encapsulation     |      5        |     10         |
+| 3. PHY: direct wire (no SW)   |     10        |     20         |
+| 4. GPU 1: Flit decode         |      5        |     25         |
+| 5. GPU 1: memory access       |    100        |    125         |
+| 6. Return: Flit with data     |     20        |    145         |
+| 7. GPU 0: receive data        |      5        |    150         |
++================================================================+
+| Total NVLink Load latency:    |               | ~100-200 ns    |
++================================================================+
+
+Latency Ratio: PCIe / NVLink = ~3-4x</div>
+
+<p><strong>延迟差距的核心原因</strong>：</p>
+<ul style="margin-left:20px;">
+  <li>PCIe 需要 <strong>请求-完成分离</strong>（MRd + CplD 两次往返），而 Scale-Up 协议用 <strong>单次 Load/Store</strong></li>
+  <li>PCIe 的 <strong>Switch 路由查表</strong>（BDF + 地址解码）比 Scale-Up 的 <strong>直接 ID 路由</strong>慢</li>
+  <li>PCIe 的 <strong>128b/130b 编解码</strong> 比 Scale-Up 协议的 <strong>轻量级 Flit 成帧</strong>开销大</li>
+  <li>PCIe 的 <strong>信用流控 DLLP 交换</strong> 增加额外往返</li>
+</ul>
+
+<!-- 2.4 Memory Semantics -->
+<div class="disadvantage-card" id="ch2-4">
+  <span class="severity"><span class="badge badge-bad">致命</span></span>
+  <div class="title">2.4 内存语义缺失</div>
+  <p>
+    <strong>这是 PCIe 与 Scale-Up 协议最本质的差异。</strong>
+  </p>
+  <p>
+    <strong>PCIe 语义</strong>：I/O 语义。CPU 通过 <code>readl()</code>/<code>writel()</code> 或 DMA 引擎发起 MRd/MWr TLP，
+    每次 I/O 都需要 CPU 或 DMA 控制器参与，GPU 不能直接 <code>load</code>/<code>store</code> 另一颗 GPU 的内存。
+  </p>
+  <p>
+    <strong>Scale-Up 语义</strong>：内存语义。GPU 的计算核心（SM/CU）可以直接执行 <code>load</code>/<code>store</code> 指令访问远端 GPU 内存，
+    远端内存映射到本地地址空间，硬件自动路由，<strong>无需 CPU 介入、无需 DMA、无需驱动调用</strong>。
+  </p>
+</div>
+
+<div class="frame-diagram">Memory Semantic Access: PCIe vs Scale-Up
+
+PCIe (I/O Semantic) - GPU 0 writes to GPU 1's memory:
++================================================================+
+|                                                                  |
+|  GPU 0 SM         CPU/Driver        PCIe RC     GPU 1           |
+|    |                 |                |           |               |
+|    |-- cudaMemcpy -->|                |           |               |
+|    |   (API call)    |                |           |               |
+|    |                 |-- build MWr -->|           |               |
+|    |                 |   TLP          |           |               |
+|    |                 |                |-- route ->|               |
+|    |                 |                |           |-- write HBM   |
+|    |                 |                |           |               |
+|    |<-- return ------|                |           |               |
+|    |   (success)     |                |           |               |
+|                                                                  |
+|  Problem: CPU involved, driver overhead, no direct SM access     |
+|  Latency: ~2-5 microseconds (API + driver + PCIe roundtrip)    |
+|                                                                  |
++================================================================+
+
+Scale-Up (Memory Semantic) - GPU 0 loads from GPU 1's memory:
++================================================================+
+|                                                                  |
+|  GPU 0 SM               Scale-Up Link           GPU 1           |
+|    |                        |                      |              |
+|    |-- LOAD [0x80123456] -->|                      |              |
+|    |   (single instruction) |                      |              |
+|    |                        |-- route to GPU 1 --->|              |
+|    |                        |   (hardware auto)    |              |
+|    |                        |                      |-- read HBM   |
+|    |                        |<-- data ------------|              |
+|    |<-- data ---------------|                      |              |
+|    |   (register filled)    |                      |              |
+|    |                        |                      |              |
+|  Advantage: No CPU, no driver, direct SM instruction            |
+|  Latency: ~100-200 nanoseconds                                   |
+|                                                                  |
++================================================================+
+
+Performance Gap: PCIe ~2-5 us  vs  Scale-Up ~100-200 ns  =  ~10-50x</div>
+
+<!-- 2.5 Scalability -->
+<div class="disadvantage-card" id="ch2-5">
+  <span class="severity"><span class="badge badge-bad">致命</span></span>
+  <div class="title">2.5 可扩展性天花板</div>
+  <p>PCIe 的地址空间和拓扑结构有硬性上限：</p>
+</div>
+
+<table>
+<tr><th>维度</th><th>PCIe 限制</th><th>Scale-Up 目标</th><th>差距</th></tr>
+<tr><td>Bus 数量</td><td>256 (8-bit)</td><td>1024+ (UALink)</td><td>4x+</td></tr>
+<tr><td>每 Bus 设备数</td><td>32 (5-bit)</td><td>-</td><td>-</td></tr>
+<tr><td>每设备功能数</td><td>8 (3-bit)</td><td>-</td><td>-</td></tr>
+<tr><td>总 BDF 组合</td><td>256 × 32 × 8 = 65,536</td><td>1024+ 加速器</td><td>BDF 足够但拓扑受限</td></tr>
+<tr><td>Switch 级联深度</td><td>最多 6 级</td><td>无限制（路由式）</td><td>硬限制</td></tr>
+<tr><td>单域 GPU 数</td><td>~8-16 (实用)</td><td>72-1024</td><td>10-100x</td></tr>
+<tr><td>枚举时间</td><td>~100ms-1s</td><td>&lt;10ms (静态配置)</td><td>10-100x</td></tr>
+<tr><td>热添加/移除</td><td>支持但复杂（需重新枚举）</td><td>原生支持</td><td>-</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>PCIe 枚举瓶颈</strong>：PCIe 采用 <strong>深度优先搜索</strong> 枚举总线，
+  每个设备需要发送 Config Read 探测，超时等待后才能继续。
+  在大规模拓扑（72+ GPU）下，枚举时间可达数秒，且每次链路状态变化都需要重新枚举。
+  Scale-Up 协议采用 <strong>静态配置 + 快速发现</strong> 机制，毫秒级完成拓扑建立。
+</div>
+
+<!-- 2.6 Addressing -->
+<div class="disadvantage-card" id="ch2-6">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.6 编址模型不匹配</div>
+  <p>
+    <strong>PCIe 编址</strong>：双重编址——
+    (1) <strong>BDF (Bus:Device:Function)</strong> 用于设备标识和路由；
+    (2) <strong>32/64-bit 内存地址</strong> 用于数据传输。
+    但地址到设备的映射依赖 Switch 路由表（枚举时由 RC 建立映射，运行时 Switch 自主查表），
+    跨 Switch 通信或访问系统内存仍需经过 Root Complex。
+    GPU 无法通过地址直接判断目标在哪颗 GPU 上——地址是平坦的，不含设备 ID 编码。
+  </p>
+  <p>
+    <strong>Scale-Up 编址</strong>：统一扁平编址——
+    <strong>一个全局物理地址空间</strong>，地址的高位直接编码 GPU/XPU ID。
+    GPU SM 执行 <code>LOAD 0x80123456</code>，硬件通过地址高位 <code>0x80</code> 知道目标在 GPU 8，
+    自动路由，无需查表、无需地址翻译。
+  </p>
+</div>
+
+<div class="frame-diagram">Addressing Model Comparison
+
+PCIe Addressing (Two-level, Indirect):
++================================================================+
+|                                                                  |
+|  CPU Memory Map:                                                 |
+|  0x0000_0000_0000 - 0x7FFF_FFFF_FFFF : Local CPU Memory         |
+|  0x8000_0000_0000 - 0x8000_0000_FFFF : GPU 0 BAR0 (MMIO)        |
+|  0x8000_0001_0000 - 0x8000_0001_FFFF : GPU 0 BAR1               |
+|  0x8000_0010_0000 - 0x8000_0010_FFFF : GPU 1 BAR0               |
+|  ...                                                             |
+|                                                                  |
+|  Problem:                                                        |
+|  1. Each GPU's HBM is NOT directly addressable                  |
+|  2. Must use BAR (Base Address Register) window to access       |
+|  3. BAR size limited (typically 256MB - 4GB)                    |
+|  4. To access all of GPU 1's 80GB HBM, must re-map BAR          |
+|  5. Address -> device mapping requires RC lookup table           |
+|  6. No global physical address space across GPUs                |
+|                                                                  |
++================================================================+
+
+Scale-Up Addressing (Flat, Direct):
++================================================================+
+|                                                                  |
+|  Global Physical Address Space (e.g. 48-bit):                   |
+|                                                                  |
+|  [47:40] = GPU ID (8-bit, up to 256 GPUs)                      |
+|  [39: 0] = Local HBM offset (1TB per GPU)                      |
+|                                                                  |
+|  Address: 0x0800_1234_5678                                       |
+|           ^^^^                                                   |
+|           GPU 8's HBM at offset 0x1234_5678                     |
+|                                                                  |
+|  GPU SM executes:                                                |
+|    LOAD R1, [0x0800_1234_5678]                                  |
+|                                                                  |
+|  Hardware automatically:                                         |
+|  1. Extracts GPU ID = 8 from addr[47:40]                        |
+|  2. Routes request to GPU 8 via Scale-Up link                   |
+|  3. GPU 8 reads local HBM[0x1234_5678]                         |
+|  4. Returns data to requesting GPU                               |
+|                                                                  |
+|  No CPU, no driver, no BAR, no address translation              |
+|  Single instruction = direct remote memory access               |
+|                                                                  |
++================================================================+</div>
+
+<!-- 2.7 Multicast -->
+<div class="disadvantage-card" id="ch2-7">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.7 组播/广播能力缺失</div>
+  <p>
+    <strong>PCIe</strong>：原生不支持组播/广播。所有通信都是 <strong>点对点</strong>（一个 Requester → 一个 Completer）。
+    要将同一数据发送到 N 颗 GPU，需要 N 次独立的 TLP 传输，带宽利用率 1/N。
+  </p>
+  <p>
+    <strong>Scale-Up 协议</strong>：NVLink 4.0+、UALink、SUE、OLink 均原生支持 <strong>组播 (Multicast)</strong>。
+    一次发送，交换芯片复制到多个目标端口，集合通信带宽利用率提升 N 倍。
+  </p>
+</div>
+
+<div class="frame-diagram">Multicast: PCIe vs Scale-Up (AllReduce Example)
+
+PCIe (No Multicast) - 8 GPUs AllReduce:
++================================================================+
+|                                                                  |
+|  GPU0 sends to GPU1..7: 7 separate TLPs                         |
+|  GPU1 sends to GPU0,2..7: 7 separate TLPs                       |
+|  ...                                                             |
+|  Total TLPs = 8 x 7 = 56 transmissions                          |
+|  Effective bandwidth = 1/7 of link bandwidth                    |
+|                                                                  |
+|  GPU0 ----MWr---> GPU1                                          |
+|  GPU0 ----MWr---> GPU2                                          |
+|  GPU0 ----MWr---> GPU3                                          |
+|  ...                                                             |
+|  GPU0 ----MWr---> GPU7                                          |
+|  (7 separate transactions, sequential or interleaved)           |
+|                                                                  |
++================================================================+
+
+Scale-Up (Native Multicast) - 8 GPUs AllReduce:
++================================================================+
+|                                                                  |
+|  GPU0 sends 1 multicast packet:                                 |
+|                                                                  |
+|  GPU0 --[MCast]--> Switch --+--> GPU1                          |
+|                              +--> GPU2                          |
+|                              +--> GPU3                          |
+|                              +--> GPU4                          |
+|                              +--> GPU5                          |
+|                              +--> GPU6                          |
+|                              +--> GPU7                          |
+|                                                                  |
+|  Total transmissions = 8 (one per GPU)                          |
+|  Effective bandwidth = full link bandwidth                      |
+|  Switch hardware replicates packet to all destinations          |
+|                                                                  |
+|  Bandwidth efficiency: 7x improvement over PCIe                 |
+|                                                                  |
++================================================================+
+
+For AllReduce with 72 GPUs:
+  PCIe:     72 x 71 = 5112 transmissions  (1/71 efficiency)
+  Scale-Up: 72 transmissions              (100% efficiency)
+  Improvement: 71x</div>
+
+<!-- 2.8 Reliability -->
+<div class="disadvantage-card" id="ch2-8">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.8 链路级可靠性不足</div>
+  <p>
+    PCIe 的可靠性机制虽然包含 <strong>ACK/NAK 重传 + LCRC</strong>，但在 Scale-Up 场景下存在多项不足：
+  </p>
+</div>
+
+<table>
+<tr><th>可靠性维度</th><th>PCIe 机制</th><th>Scale-Up 改进</th><th>差距说明</th></tr>
+<tr><td>重传粒度</td><td>TLP 级（变长，最大 4096B）</td><td>Flit 级（固定 256B/640B）</td><td>PCIe 重传大数据包浪费带宽</td></tr>
+<tr><td>序列号空间</td><td>12-bit (0-4095)</td><td>20-bit+ 循环计数器</td><td>PCIe 序列号易回绕</td></tr>
+<tr><td>CRC 覆盖</td><td>LCRC 32-bit（TLP 级）</td><td>Flit CRC 32-bit + 链路 CRC</td><td>Scale-Up 双重 CRC 更强</td></tr>
+<tr><td>错误隔离</td><td>链路级错误影响整个设备</td><td>按 VC 隔离错误</td><td>PCIe 单链路故障影响所有流量</td></tr>
+<tr><td>前向纠错 (FEC)</td><td>无 (Gen1-5)，Gen6 有轻量 FEC</td><td>始终启用可配置 FEC</td><td>PCIe Gen1-5 完全依赖重传</td></tr>
+<tr><td>链路级重传 (LLR)</td><td>无独立链路重传层</td><td>独立 LLR 层，Go-back-N</td><td>PCIe 重传与事务层耦合</td></tr>
+<tr><td>丢包恢复</td><td>NAK 触发 Replay</td><td>LLR 序列号 + 快速重传</td><td>PCIe 恢复延迟更高</td></tr>
+</table>
+
+<!-- 2.9 Packet Overhead -->
+<div class="disadvantage-card" id="ch2-9">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.9 报文头开销过大</div>
+  <p>
+    PCIe 的 TLP 头部开销在小报文场景下严重影响有效带宽利用率：
+  </p>
+</div>
+
+<div class="frame-diagram">Packet Header Overhead Comparison
+
+PCIe TLP (64B Write, 4DW Header):
++--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+|  TLP Header (16B - 4DW, 64-bit addr)           |
++--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+|  Payload: 64 Bytes                             |
++--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+|  LCRC (4B) + SeqNum (2B) + STP/END (2B)       |
++--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+  Total: 16 + 64 + 8 = 88 Bytes
+  Efficiency: 64 / 88 = 72.7%
+
+PCIe TLP (64B Write, 3DW Header):
+  Total: 12 + 64 + 8 = 84 Bytes
+  Efficiency: 64 / 84 = 76.2%
+
+Scale-Up Protocol (64B Write, e.g. SUE AFH Gen2):
++--+--+--+--+--+--+--+--+
+|  AFH Header (6B)       |
++--+--+--+--+--+--+--+--+
+|  Payload: 64 Bytes     |
++--+--+--+--+--+--+--+--+
+|  Flit CRC (2B)         |
++--+--+--+--+--+--+--+--+
+  Total: 6 + 64 + 2 = 72 Bytes
+  Efficiency: 64 / 72 = 88.9%
+
+NVLink Flit (128B, embedded 64B payload):
+  Header + routing: ~8B
+  Payload: ~64B (in 128B Flit, shared with other data)
+  Efficiency: ~85-90%
+
+Small Message (4B Read) Overhead:
++================================================================+
+| Protocol    | Header | Payload | CRC/Framing | Total | Efficiency|
++================================================================+
+| PCIe 3DW    |  12B   |   4B    |    8B       | 24B   |  16.7%    |
+| PCIe 4DW    |  16B   |   4B    |    8B       | 28B   |  14.3%    |
+| SUE AFH G2  |   6B   |   4B    |    2B       | 12B   |  33.3%    |
+| NVLink      |   8B   |   4B    |    2B       | 14B   |  28.6%    |
++================================================================+
+| For 4B transfer, PCIe wastes 83-86% of bandwidth!              |
++================================================================+</div>
+
+<!-- 2.10 Cache Coherence -->
+<div class="disadvantage-card" id="ch2-10">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.10 缓存一致性缺失</div>
+  <p>
+    <strong>PCIe</strong>：完全不支持硬件缓存一致性。GPU 的 L2 缓存与远端 GPU 的缓存之间无一致性协议。
+    多颗 GPU 访问同一地址需要软件显式刷新缓存（如 <code>__threadfence_system()</code>），开销巨大。
+  </p>
+  <p>
+    <strong>CXL.cache</strong> 尝试解决这个问题，但仅支持 <strong>Host-to-Device</strong> 一致性（CPU 是唯一一致性源），
+    不支持 <strong>Device-to-Device</strong> 一致性。两颗 GPU 之间仍然没有硬件一致性。
+  </p>
+  <p>
+    <strong>Scale-Up 协议</strong>：NVLink 2.0+ 支持 <strong>GPU-to-GPU 硬件缓存一致性</strong>（基于 UVM），
+    UALink 2.0 规划支持全域一致性。GPU 缓存行自动维护一致性，无需软件介入。
+  </p>
+</div>
+
+<!-- 2.11 Hot-plug -->
+<div class="disadvantage-card" id="ch2-11">
+  <span class="severity"><span class="badge badge-bad">中等</span></span>
+  <div class="title">2.11 热插拔与动态配置</div>
+  <p>
+    PCIe 支持热插拔（Hot-Plug），但操作复杂：需要 <strong>链路重训练 + 总线重新枚举 + 驱动重新加载 + 中断重新分配</strong>。
+    在大规模 GPU 集群中，单卡故障需要 <strong>整个子树重新枚举</strong>，影响其他正常运行的 GPU。
+  </p>
+  <p>
+    Scale-Up 协议设计时就考虑了 <strong>故障隔离</strong>：单卡故障只影响该卡的链路，其他 GPU 间通信不受影响，
+    路由表自动更新，无需全局重新枚举。
+  </p>
+</p>
+
+<!-- 2.12 Collective -->
+<div class="disadvantage-card" id="ch2-12">
+  <span class="severity"><span class="badge badge-bad">严重</span></span>
+  <div class="title">2.12 集合通信加速缺失</div>
+  <p>
+    <strong>PCIe</strong>：交换芯片是 <strong>纯存储转发</strong> 设备，没有任何计算能力。
+    AllReduce、Broadcast、ReduceScatter 等集合通信操作必须由 GPU 软件实现，
+    需要 <strong>O(N)</strong> 次数据传输和 <strong>O(N)</strong> 次 GPU 计算。
+  </p>
+  <p>
+    <strong>Scale-Up 协议</strong>：NVSwitch 支持 <strong>SHARP</strong> 在网计算（交换芯片在转发时同时做 Reduce），
+    UALink/OISA/GLink 也规划了在网计算支持。集合通信传输次数从 <strong>O(N) 降到 O(log N)</strong>。
+  </p>
+</div>
+
+<div class="frame-diagram">Collective Communication: PCIe vs In-Network Computing
+
+PCIe AllReduce (Ring, 8 GPUs):
++================================================================+
+|                                                                  |
+|  Step 1: GPU0 -> GPU1 -> GPU2 -> ... -> GPU7 -> GPU0           |
+|  Step 2: GPU0 -> GPU1 -> GPU2 -> ... -> GPU7 -> GPU0           |
+|  ...                                                             |
+|  Step 7: GPU0 -> GPU1 -> GPU2 -> ... -> GPU7 -> GPU0           |
+|                                                                  |
+|  Each step: GPU receives, adds, forwards (3 ops per GPU)        |
+|  Total data transfers: 7 x 8 = 56 (for 8 GPUs)                 |
+|  Total GPU compute ops: 56 additions                            |
+|  PCIe Switch: pure store-and-forward, no computation            |
+|                                                                  |
++================================================================+
+
+NVSwitch + SHARP AllReduce (Tree, 8 GPUs):
++================================================================+
+|                                                                  |
+|       GPU0   GPU1   GPU2   GPU3   GPU4   GPU5   GPU6   GPU7    |
+|         \     /     \     /       \     /     \     /          |
+|          \   /       \   /         \   /       \   /           |
+|     NVSwitch: Reduce = GPU0+GPU1, GPU2+GPU3, ...               |
+|         \          /                \          /                |
+|          \        /                  \        /                 |
+|     NVSwitch: Reduce = (G0+G1)+(G2+G3), (G4+G5)+(G6+G7)       |
+|                  \                        /                     |
+|                   \                      /                      |
+|     NVSwitch: Reduce = full AllReduce result                   |
+|                   /                      \                      |
+|                  /     Broadcast down     \                     |
+|                                                                  |
+|  Total data transfers: ~3 x 8 = 24 (log2(8) x N)               |
+|  GPU compute ops: 0 (Switch does all reductions!)              |
+|  NVSwitch: in-network reduce (SHARP)                            |
+|                                                                  |
+|  Bandwidth saving: 56/24 = 2.3x for 8 GPUs                     |
+|  For 72 GPUs: PCIe = 71x72=5112, SHARP = ~7x72=504            |
+|  Bandwidth saving: 10x+ for 72 GPUs                            |
+|                                                                  |
++================================================================+</div>
+
+<!-- ==================== Chapter 3 ==================== -->
+<h2 id="ch3">第3章 PCIe 报文格式逐层拆解与开销分析</h2>
+
+<h3 id="ch3-1">3.1 TLP 完整报文开销</h3>
+
+<p>以一次 <strong>64B Memory Write</strong> 为例，分析 PCIe TLP 从应用层到物理层的完整开销：</p>
+
+<div class="frame-diagram">PCIe 64B Memory Write - Full Packet Breakdown
+
+Transaction Layer (TLP):
++------------------------------------------------------------------+
+| [Fmt=01][Type=00] [TC=0] [Attr=0] [Length=16DW]   DW0  (4B)     |
+| [Requester ID=00:00:0] [Tag=0x05]                  DW1  (4B)     |
+| [LastBE=0xF] [FirstBE=0xF] [Rsvd]                  DW2  (4B)     |
+| [Address=0x8000_0010_0000]                          DW3  (4B)     |
+| [Payload: 64 Bytes of data]                            (64B)      |
+| [ECRC (optional, disabled here)]                                |
++------------------------------------------------------------------+
+  TLP Total: 12B header + 64B payload = 76B
+
+Data Link Layer:
++------------------------------------------------------------------+
+| [Sequence Number = 0x0042]                                    2B  |
+| [TLP (76B)]                                                  76B  |
+| [LCRC = 0xDEADBEEF]                                           4B  |
++------------------------------------------------------------------+
+  DLL Total: 2 + 76 + 4 = 82B
+
+Physical Layer (Gen3, 128b/130b):
++------------------------------------------------------------------+
+| [STP = 0xFC] (Start of TLP)                                  1B   |
+| [TLP Stream (82B)]                                            82B  |
+| [END = 0xFB] (End of TLP)                                    1B   |
+| [PAD (align to 128b boundary)]                            0-15B   |
+| [SKP (clock compensation, periodic)]                       2-6B   |
++------------------------------------------------------------------+
+  PHY Total: 1 + 82 + 1 + padding = ~84-100B
+
+  Encoding overhead (128b/130b): 84 x (130/128) = ~85.3B on wire
+
+  For 64B payload:
+  Total on wire: ~85-100 Bytes
+  Effective payload: 64 Bytes
+  Efficiency: 64/100 = 64% (best case) to 64/85 = 75% (best case)
+
+  Compare: SUE AFH Gen2 for same 64B write:
+  6B header + 64B payload + 2B CRC = 72B, efficiency = 88.9%</div>
+
+<h3 id="ch3-2">3.2 一次 Read 事务的完整往返</h3>
+
+<div class="frame-diagram">PCIe Read Transaction: Full Round-Trip Analysis
+
+  Requester (GPU 0)                         Completer (GPU 1)
+  ====================                       ==================
+
+  1. Build MRd TLP
+     [Hdr 12B] [Addr 4B] [ReqID] [Tag]
+     Total: 12B (3DW, no data in request)
+
+  2. DLL: add SeqNum(2B) + LCRC(4B)
+     Total: 18B
+
+  3. PHY: STP(1B) + TLP(18B) + END(1B) + PAD
+     Total: ~22B on wire
+
+  4. -------- wire delay (Switch x2) -------->
+
+  5.                                     6. PHY decode + DLL check
+                                            ~40ns processing
+
+  7.                                     8. TL parse MRd, read HBM
+                                            ~100ns memory access
+
+  9.                                     10. Build CplD TLP
+                                          [Hdr 12B] [ReqID] [Tag]
+                                          [Completer ID] [Length]
+                                          [Lower Addr] [Payload 64B]
+                                          Total: 12 + 64 = 76B
+
+  11.                                    12. DLL: SeqNum(2B) + LCRC(4B)
+                                          Total: 82B
+
+  13.                                    14. PHY: STP(1B) + TLP(82B) + END(1B)
+                                          Total: ~84B on wire
+
+  15. <------- wire delay (Switch x2) --------
+
+  16. PHY decode + DLL check
+      ~40ns processing
+
+  17. TL receive CplD, deliver data to SM
+      ~20ns processing
+
+  Summary:
+  +================================================================+
+  | Item                    | PCIe          | Scale-Up (Load)      |
+  +================================================================+
+  | Request packets on wire | ~22B          | ~14B (single Flit)  |
+  | Response packets on wire| ~84B          | ~80B (data Flit)    |
+  | Total bytes on wire     | ~106B         | ~94B                 |
+  | Number of TLPs/Flits    | 2 (MRd + CplD)| 1 (Load+Data resp)  |
+  | Protocol processing     | 2x TL parse   | 1x TL parse         |
+  | Switch traversals       | 2 (req+resp)  | 1 (or 0 if direct)  |
+  | Total latency           | ~400-600 ns   | ~100-200 ns          |
+  +================================================================+
+  | Read operation is 2-4x slower on PCIe due to:                 |
+  | 1. Two separate TLPs (request + completion)                   |
+  | 2. Two switch traversals (up + down)                          |
+  | 3. Two TL parsing operations                                   |
+  | 4. No direct memory semantic (must use MRd+CplD)              |
+  +================================================================+</div>
+
+<h3 id="ch3-3">3.3 有效负载率计算</h3>
+
+<table>
+<tr><th>场景</th><th>Payload</th><th>PCIe 总开销</th><th>PCIe 效率</th><th>SUE AFH 效率</th><th>NVLink 效率</th></tr>
+<tr><td>4B Read Request</td><td>0B (request only)</td><td>22B</td><td>0% (overhead only)</td><td>-</td><td>-</td></tr>
+<tr><td>4B Write</td><td>4B</td><td>24B</td><td>16.7%</td><td>33.3%</td><td>28.6%</td></tr>
+<tr><td>64B Write</td><td>64B</td><td>84B</td><td>76.2%</td><td>88.9%</td><td>~85%</td></tr>
+<tr><td>256B Write</td><td>256B</td><td>276B</td><td>92.8%</td><td>97.0%</td><td>~95%</td></tr>
+<tr><td>4096B Write (MPS)</td><td>4096B</td><td>4116B</td><td>99.5%</td><td>99.8%</td><td>~99%</td></tr>
+<tr><td>4B Read + 4B CplD</td><td>4B</td><td>106B (req+resp)</td><td>3.8%</td><td>-</td><td>-</td></tr>
+</table>
+
+<div class="callout danger">
+  <strong>小报文效率灾难</strong>：AI 训练中大量通信是 <strong>小消息</strong>（梯度同步、控制信号、原子操作）。
+  对于 4B 的 Read 请求，PCIe 的有效负载率仅 <strong>3.8%</strong>——意味着 96.2% 的带宽被协议头浪费。
+  这就是为什么 Scale-Up 协议都在拼命压缩头部（SUE AFH Gen2 仅 6B）。
+</div>
+
+<!-- ==================== Chapter 4 ==================== -->
+<h2 id="ch4">第4章 CXL：PCIe 的自救尝试与残余局限</h2>
+
+<p>
+  CXL (Compute Express Link) 是 Intel 在 2019 年推出的协议，基于 PCIe 5.0+ 物理层，
+  试图在保留 PCIe 生态的同时引入内存语义和缓存一致性。CXL 是 PCIe 阵营对 Scale-Up 需求的回应，
+  但仍未能完全解决核心问题。
+</p>
+
+<h3 id="ch4-1">4.1 CXL 三种协议类型</h3>
+
+<div class="frame-diagram">CXL Protocol Stack (3 Types on same physical link):
+
++====================================================================+
+|                     CXL Physical Layer                              |
+|           (PCIe 5.0 PHY, 32 GT/s, 128b/130b)                      |
++====================================================================+
+       |                    |                    |
+       v                    v                    v
++-----------+     +----------------+     +-----------+
+| CXL.io    |     | CXL.cache      |     | CXL.mem   |
+| (PCIe     |     | (Coherent      |     | (Memory   |
+|  compatible)|    |  cache for     |     |  Semantic |
+|            |     |  Host-Device)  |     |  Access)  |
++-----------+     +----------------+     +-----------+
+  Standard PCIe    H2D (Host to         D2H (Device to
+  I/O semantics    Device coherent)     Host memory)
+  MRd/MWr/CplD     Snoop, Request,      Memory Read/Write
+                   RFO, Writeback        to host memory
+                   (6 protocol msgs)    (70+ protocol msgs
+                                        for cache line mgmt)
+
+  CXL 1.1/2.0: CXL.io + CXL.cache + CXL.mem
+  CXL 3.0:     Adds multi-level switching, GIPS (Global
+               Integrated Persistent Memory fabric)
+  CXL 3.1:     Adds memory expansion, fabric management
+
+  Limitation: CXL.cache only supports Host -> Device coherence
+              (CPU is the coherence authority)
+              NO Device -> Device coherence!</div>
+
+<h3 id="ch4-2">4.2 CXL 解决了什么</h3>
+
+<table>
+<tr><th>PCIe 问题</th><th>CXL 解决方案</th><th>解决程度</th></tr>
+<tr><td>无内存语义</td><td>CXL.mem 提供 Load/Store 到 Host 内存</td><td><span class="badge badge-good">部分</span> 仅 D2H，非 D2D</td></tr>
+<tr><td>无缓存一致性</td><td>CXL.cache 提供 Host-Device 一致性</td><td><span class="badge badge-good">部分</span> 仅 H2D，非 D2D</td></tr>
+<tr><td>协议头开销</td><td>CXL 72B Flit（vs PCIe TLP 变长）</td><td><span class="badge badge-good">改善</span> 但仍比 SUE 大</td></tr>
+<tr><td>延迟</td><td>简化协议栈，减少处理步骤</td><td><span class="badge badge-good">改善</span> 但仍比 NVLink 慢</td></tr>
+</table>
+
+<h3 id="ch4-3">4.3 CXL 仍然无法解决的问题</h3>
+
+<div class="callout danger">
+  <strong>核心结论</strong>：CXL 是对 PCIe 的改良，不是革命。它在 Scale-Up 场景下仍有根本性局限：
+</div>
+
+<table>
+<tr><th>未解决问题</th><th>CXL 现状</th><th>Scale-Up 需求</th></tr>
+<tr><td><strong>D2D 缓存一致性</strong></td><td>不支持（仅 H2D）</td><td>GPU-to-GPU 硬件一致性（NVLink 已实现）</td></tr>
+<tr><td><strong>拓扑</strong></td><td>仍基于 PCIe 树形拓扑 + 有限的多级 Switch</td><td>Full Mesh / 大规模 Fabric</td></tr>
+<tr><td><strong>带宽</strong></td><td>受限于 PCIe 5.0 PHY (128 GB/s 双向 x16)</td><td>TB/s 级</td></tr>
+<tr><td><strong>组播</strong></td><td>CXL 3.0 引入了有限的 Multicast，但支持范围窄</td><td>原生全域组播</td></tr>
+<tr><td><strong>在网计算</strong></td><td>不支持</td><td>SHARP / Reduce in Switch</td></tr>
+<tr><td><strong>GPU 间直连</strong></td><td>需要通过 Host 中转或 PCIe Switch</td><td>GPU-to-GPU 直接路径</td></tr>
+<tr><td><strong>Scale-Up 域大小</strong></td><td>CXL 3.0 支持多级 Switch，理论可达数百设备</td><td>1024+ 加速器</td></tr>
+<tr><td><strong>CPU 依赖</strong></td><td>CXL.cache 需要 CPU 作为一致性源</td><td>去 CPU 化，GPU 自主</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>一句话总结</strong>：CXL 让外设可以像内存一样被 CPU 访问，但没有让 GPU 之间像内存一样互相访问。
+  它解决的是 <em>CPU-to-Device</em> 的问题，不是 <em>Device-to-Device</em> 的问题——而 Scale-Up 的核心需求恰恰是后者。
+</div>
+
+<!-- ==================== Chapter 5 ==================== -->
+<h2 id="ch5">第5章 各厂商自研 Scale-Up 协议的技术动因</h2>
+
+<p>
+  正因为 PCIe 存在上述 12 项根本性劣势，各厂商才不得不自研 Scale-Up 互联协议。
+  以下是各厂商的核心技术动因：
+</p>
+
+<h3 id="ch5-1">5.1 NVIDIA NVLink</h3>
+
+<table>
+<tr><th>PCIe 痛点</th><th>NVLink 解决方案</th></tr>
+<tr><td>带宽不足 (128 GB/s 双向)</td><td>900 GB/s (NVLink 4.0), 1.8 TB/s (5.0) — 同维度对比 7-14x 提升<br><small>PCIe 5.0 x16: 32 GT/s × 16 SerDes = 128 GB/s 双向<br>NVLink 4.0: 112 Gbps × 72 SerDes = 900 GB/s 双向<br>单 SerDes 仅 3.2x 差距，SerDes 数量 4.5x 差距</small></td></tr>
+<tr><td>无内存语义</td><td>原生 Load/Store 内存语义，UVM 统一虚拟内存</td></tr>
+<tr><td>树形拓扑</td><td>NVSwitch 构建全互联 Fabric，NVL72/576 超节点</td></tr>
+<tr><td>无缓存一致性</td><td>NVLink 2.0+ 支持 GPU-to-GPU 硬件一致性</td></tr>
+<tr><td>无在网计算</td><td>SHARP：NVSwitch 内嵌 Reduce 引擎</td></tr>
+<tr><td>报文头开销</td><td>128B Flit，头开销 ~8B（vs PCIe 12-16B）</td></tr>
+<tr><td>延迟高</td><td>~100ns（vs PCIe ~400-600ns），3-4x 降低</td></tr>
+</table>
+
+<div class="callout">
+  <strong>NVIDIA 的决策逻辑</strong>：PCIe 带宽每代翻倍但基数太低（2.5→5→8→16→32→64 GT/s），
+  且 x16 只有 16 条 SerDes，即使追到 PCIe 6.0 的 256 GB/s 双向仍远不够。
+  自研协议可以在<strong> SerDes 数量</strong>上突破 PCIe 标准限制（NVLink 部署 72 条 SerDes，是 PCIe x16 的 4.5 倍），
+  同时不受 PCIe 标准的树形拓扑、BDF 编址、TLP 格式等历史包袱约束。
+</div>
+
+<h3 id="ch5-2">5.2 华为 UB</h3>
+
+<table>
+<tr><th>PCIe 痛点</th><th>UB 解决方案</th></tr>
+<tr><td>无 D2D 一致性</td><td>六层协议栈，事务层 MAETAH 支持全域缓存一致性</td></tr>
+<tr><td>编址模型不匹配</td><td>UMMU + UBFM：CNA(组件网络地址) + EID + UBA 统一编址</td></tr>
+<tr><td>树形拓扑</td><td>UB-Mesh 六层拓扑，支持 8192 NPU 全互联</td></tr>
+<tr><td>可靠性不足</td><td>独立链路层 DLLDB/DLLDP/DLLCB，细粒度重传</td></tr>
+<tr><td>无内存语义</td><td>原生 Load/Store + 原子操作 + 事务向量</td></tr>
+</table>
+
+<h3 id="ch5-3">5.3 UALink 联盟</h3>
+
+<div class="callout">
+  <strong>UALink 的定位</strong>：AMD/Intel/Google/Meta/Microsoft 等组建的开放联盟，
+  目标是打造 <strong>"非 NVIDIA 版的 NVLink"</strong>。
+  核心思路：在以太网 PHY 上构建全新协议栈（不用以太网 MAC），实现与 NVLink 对等的能力。
+</div>
+
+<table>
+<tr><th>PCIe 痛点</th><th>UALink 解决方案</th></tr>
+<tr><td>带宽不足</td><td>~1 TB/s/GPU，200 GB/s/lane</td></tr>
+<tr><td>树形拓扑</td><td>支持 1024 加速器域，多路径 Fabric</td></tr>
+<tr><td>无内存语义</td><td>640B DL Flit + 64B TL Flit，原生 Load/Store</td></tr>
+<tr><td>编址不匹配</td><td>10-bit Accel ID + 54-bit 物理地址，扁平编址</td></tr>
+<tr><td>报文头开销</td><td>64B TL Flit 内含完整路由+事务信息，效率 >90%</td></tr>
+<tr><td>无组播</td><td>原生 Multicast + Virtual Pod 隔离</td></tr>
+<tr><td>安全性缺失</td><td>UALinkSec：链路级加密 + 认证</td></tr>
+</table>
+
+<h3 id="ch5-4">5.4 Broadcom SUE</h3>
+
+<div class="callout">
+  <strong>SUE 的独特路线</strong>：Broadcom 选择 <strong>"改造以太网"</strong> 而非全新协议。
+  保留以太网 PHY + 部分 MAC，通过 AI Fabric Header (AFH) 替换以太网头，
+  将 54B 以太网头压缩到 6-12B，在以太网基础设施上实现 Scale-Up 性能。
+</div>
+
+<table>
+<tr><th>PCIe 痛点</th><th>SUE 解决方案</th></tr>
+<tr><td>报文头过大</td><td>AFH Gen2 仅 6B（vs PCIe TLP 12-16B，以太网 54B）</td></tr>
+<tr><td>无内存语义</td><td>RM100 事务层：Load/Store/Atomic + Memory Semantic</td></tr>
+<tr><td>编址不匹配</td><td>10-bit XPU ID 扁平编址</td></tr>
+<tr><td>无组播</td><td>以太网 Multicast 基础上优化</td></tr>
+<tr><td>拓扑受限</td><td>以太网 Switch Fabric，支持大规模网络</td></tr>
+</table>
+
+<h3 id="ch5-5">5.5 国产协议阵营</h3>
+
+<table>
+<tr><th>厂商</th><th>协议</th><th>绕过 PCIe 的核心动因</th></tr>
+<tr><td>摩尔线程</td><td>MTLink</td><td>原生内存语义 + ACE 异步通信引擎，突破 PCIe 带宽天花板</td></tr>
+<tr><td>紫光</td><td>GLink</td><td>基于 UCIe 芯片级互联 + GT-Fabric 在网计算，异构混插</td></tr>
+<tr><td>中兴</td><td>OLink</td><td>"网络总线化"：保留以太网生态 + 添加总线语义，突破 PCIe 树形拓扑</td></tr>
+<tr><td>阿里</td><td>Alink</td><td>非以太网自研协议，单级交换极致低延迟，多协议兼容平台</td></tr>
+</table>
+
+<div class="callout success">
+  <strong>国产协议的共同策略</strong>：都选择了 <strong>"非 PCIe 路线"</strong>。
+  因为 PCIe 的树形拓扑、BDF 编址、TLP 报文格式、I/O 语义是 <strong>架构级</strong> 的限制，
+  无法通过提高 SerDes 速率来解决。必须从协议栈底层重新设计。
+</div>
+
+<!-- ==================== Chapter 6 ==================== -->
+<h2 id="ch6">第6章 PCIe vs Scale-Up 协议全景对比</h2>
+
+<table>
+<tr><th>维度</th><th>PCIe 5.0</th><th>PCIe 6.0</th><th>CXL 3.0</th><th>NVLink 4.0</th><th>UALink 1.0</th><th>SUE</th></tr>
+<tr><td><strong>设计目标</strong></td><td>外设互联</td><td>外设互联</td><td>CPU-设备内存</td><td>GPU 互联</td><td>加速器互联</td><td>以太网 Scale-Up</td></tr>
+<tr><td><strong>拓扑</strong></td><td>树形</td><td>树形</td><td>树形+多级 SW</td><td>Full Mesh/Fabric</td><td>Fabric</td><td>Fabric</td></tr>
+<tr><td><strong>带宽/GPU (双向)</strong></td><td>128 GB/s</td><td>256 GB/s</td><td>128 GB/s</td><td>900 GB/s</td><td>~1 TB/s</td><td>~800 GB/s</td></tr>
+<tr><td><strong>SerDes 速率</strong></td><td>32 GT/s NRZ</td><td>64 GT/s PAM4</td><td>32 GT/s NRZ</td><td>112 Gbps PAM4</td><td>112 Gbps PAM4</td><td>112 Gbps PAM4</td></tr>
+<tr><td><strong>SerDes 数量/方向</strong></td><td>16</td><td>16</td><td>16</td><td>36</td><td>~48</td><td>~36</td></tr>
+<tr><td><strong>语义</strong></td><td>I/O (MRd/MWr)</td><td>I/O</td><td>内存 (D2H)</td><td>内存 (D2D)</td><td>内存 (D2D)</td><td>内存 (D2D)</td></tr>
+<tr><td><strong>缓存一致性</strong></td><td>无</td><td>无</td><td>H2D only</td><td>D2D</td><td>规划中 2.0</td><td>无</td></tr>
+<tr><td><strong>编址</strong></td><td>BDF + BAR</td><td>BDF + BAR</td><td>BDF + 内存映射</td><td>49-bit UVM</td><td>10-bit + 54-bit</td><td>10-bit XPU</td></tr>
+<tr><td><strong>报文头</strong></td><td>12-16B</td><td>12-16B</td><td>~8B (72B Flit)</td><td>~8B (128B Flit)</td><td>~8B (64B Flit)</td><td>6-12B (AFH)</td></tr>
+<tr><td><strong>组播</strong></td><td>不支持</td><td>不支持</td><td>有限支持</td><td>支持</td><td>支持</td><td>支持</td></tr>
+<tr><td><strong>在网计算</strong></td><td>不支持</td><td>不支持</td><td>不支持</td><td>SHARP</td><td>规划中</td><td>规划中</td></tr>
+<tr><td><strong>流控</strong></td><td>6-pool 信用</td><td>6-pool 信用</td><td>类似 PCIe</td><td>轻量信用</td><td>CBFC</td><td>CBFC</td></tr>
+<tr><td><strong>LLR 重传</strong></td><td>TLP Replay</td><td>Flit Replay</td><td>TLP Replay</td><td>Flit 级</td><td>Flit 级</td><td>Flit 级</td></tr>
+<tr><td><strong>FEC</strong></td><td>无</td><td>轻量 FEC</td><td>无</td><td>可配置</td><td>可配置</td><td>可配置</td></tr>
+<tr><td><strong>延迟</strong></td><td>~400-600ns</td><td>~300-500ns</td><td>~200-400ns</td><td>~100-200ns</td><td>~100-200ns</td><td>~150-300ns</td></tr>
+<tr><td><strong>Scale-Up 域</strong></td><td>8-16</td><td>8-16</td><td>~64</td><td>72-576</td><td>1024</td><td>~1024</td></tr>
+<tr><td><strong>开放性</strong></td><td>开放标准</td><td>开放标准</td><td>开放标准</td><td>专有</td><td>开放联盟</td><td>开放 (OCP)</td></tr>
+<tr><td><strong>生态成熟度</strong></td><td>极高</td><td>高</td><td>中</td><td>极高</td><td>发展中</td><td>发展中</td></tr>
+</table>
+
+<!-- ==================== Chapter 7 ==================== -->
+<h2 id="ch7">第7章 结论与展望</h2>
+
+<h3>7.1 为什么不能用 PCIe 做 Scale-Up？</h3>
+
+<div class="callout danger">
+  <strong>核心结论</strong>：PCIe 的 12 项劣势可以归纳为 <strong>3 个根本矛盾</strong>：
+</div>
+
+<div class="frame-diagram">Three Fundamental Contradictions of PCIe in Scale-Up
+
++====================================================================+
+|                     PCIe Design DNA vs Scale-Up Needs              |
++====================================================================+
+|                                                                     |
+|  1. I/O Semantic vs Memory Semantic                               |
+|  +-----------------------+    +-------------------------+          |
+|  | PCIe: CPU-centric     |    | Scale-Up: GPU-centric   |          |
+|  | CPU masters, device   |    | GPU self-mastered,      |          |
+|  | slaves, need driver   |    | direct load/store,      |          |
+|  | and DMA               |    | no CPU needed           |          |
+|  +-----------------------+    +-------------------------+          |
+|  --> Fundamentally incompatible, cannot be fixed by speedup       |
+|                                                                     |
+|  2. Tree Topology vs Flat Fabric                                   |
+|  +-----------------------+    +-------------------------+          |
+|  | PCIe: hierarchical,   |    | Scale-Up: peer-to-peer, |          |
+|  | root complex master,  |    | full mesh / switch      |          |
+|  | single path, limited  |    | fabric, multi-path,     |          |
+|  | depth                 |    | unlimited scale         |          |
+|  +-----------------------+    +-------------------------+          |
+|  --> Architecture-level conflict, not a bandwidth issue           |
+|                                                                     |
+|  3. BDF + BAR vs Global Flat Address                              |
+|  +-----------------------+    +-------------------------+          |
+|  | PCIe: device = BDF,   |    | Scale-Up: device =      |          |
+|  | memory = BAR window,  |    | address prefix,         |          |
+|  | indirect mapping      |    | direct mapping,         |          |
+|  | through RC            |    | hardware routing        |          |
+|  +-----------------------+    +-------------------------+          |
+|  --> Addressing model mismatch, cannot be patched                 |
+|                                                                     |
++=====================================================================+</div>
+
+<h3>7.2 PCIe 的未来定位</h3>
+
+<p>PCIe 不会消失，但它的角色将从 <strong>"GPU 互联"</strong> 退化为 <strong>"I/O 互联"</strong>：</p>
+
+<table>
+<tr><th>场景</th><th>当前方案</th><th>未来方案</th><th>理由</th></tr>
+<tr><td>GPU-to-GPU 训练</td><td>PCIe (低端) + NVLink (高端)</td><td>纯 Scale-Up 协议</td><td>带宽/延迟/语义不可替代</td></tr>
+<tr><td>GPU-to-CPU</td><td>PCIe</td><td>CXL / Scale-Up</td><td>CXL 提供内存语义</td></tr>
+<tr><td>GPU-to-NIC (Scale-Out)</td><td>PCIe</td><td>PCIe (继续) / 融合协议</td><td>Scale-Out 对延迟不敏感</td></tr>
+<tr><td>GPU-to-Storage</td><td>PCIe (NVMe)</td><td>PCIe (继续)</td><td>存储 I/O 语义匹配</td></tr>
+<tr><td>CPU-to-加速器</td><td>PCIe</td><td>CXL</td><td>内存语义 + 一致性</td></tr>
+<tr><td>管理/控制通道</td><td>PCIe</td><td>PCIe (继续)</td><td>低带宽，PCIe 足够</td></tr>
+</table>
+
+<h3>7.3 Scale-Up 协议演进趋势</h3>
+
+<div class="frame-diagram">Scale-Up Protocol Evolution Timeline & Trends
+
+  2014  2016  2018  2020  2022  2024  2026  2028
+   |     |     |     |     |     |     |     |
+   NVLink1   NVLink3  NVLink4  NVLink5
+         NVLink2                  UALink1.0
+                        CXL1.1  CXL3.0
+                                    SUE     SUE-T
+                              UB1.0  UB2.0
+                                    MTLink2  MTLink4
+                                    GLink    GLink2
+                                    OLink    OLink2
+                                    Alink    UPN512
+
+  Five Key Trends:
+  +================================================================+
+  | 1. Protocol header compression:                                |
+  |    Ethernet 54B --> SUE AFH 12B --> AFH Gen2 6B               |
+  |    PCIe TLP 16B --> UALink TL Flit ~8B                        |
+  |                                                                 |
+  | 2. LLR + CBFC becomes standard:                                |
+  |    All new protocols adopt link-level retransmit +             |
+  |    credit-based flow control (from UEC spec)                   |
+  |                                                                 |
+  | 3. In-network computing:                                       |
+  |    NVLink SHARP --> UALink ICN --> OISA in-switch compute     |
+  |                                                                 |
+  | 4. Convergence of Scale-Up and Scale-Out:                     |
+  |    OLink: shared L1 switch for Up+Out                         |
+  |    SUE-T: Scale-Up + Scale-Out unified                        |
+  |                                                                 |
+  | 5. Open standards challenge proprietary:                      |
+  |    UALink vs NVLink, SUE vs NVSwitch                          |
+  |    Multi-vendor interoperability becoming requirement          |
+  +================================================================+</div>
+
+<div class="callout success">
+  <strong>最终判断</strong>：PCIe 在 Scale-Up 场景下的退出是 <strong>不可逆的技术趋势</strong>。
+  正如 InfiniBand 在 HPC 领域取代了以太网（后又部分被以太网夺回），
+  Scale-Up 协议在 GPU 互联领域取代 PCIe 是 <strong>架构范式的必然更替</strong>——
+  不是因为 PCIe 不够快，而是因为 PCIe 的 <strong>设计基因</strong>（I/O 语义、树形拓扑、BDF 编址）
+  与 Scale-Up 的 <strong>核心需求</strong>（内存语义、扁平 Fabric、全局编址）根本不匹配。
+</div>
+
+<div class="divider"></div>
+
+<div class="callout">
+<strong>文档信息：</strong><br>
+本文档系统分析了 PCIe 在 AI Scale-Up 网络中的 12 项根本劣势，并解释了各厂商自研 Scale-Up 协议的技术动因。<br>
+覆盖协议：PCIe 5.0/6.0 · CXL 3.0 · NVLink · UALink · SUE · UB · MTLink · GLink · OLink · Alink · OISA<br>
+数据截至：2026年8月 | 参考来源：PCI-SIG 规范、CXL 联盟、OCP、UALink Consortium、各厂商技术白皮书
+</div>
+
+</div>
+</div>
+</body>
+</html>

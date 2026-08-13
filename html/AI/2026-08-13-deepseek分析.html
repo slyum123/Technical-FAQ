@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek V3 深度分析</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-code: #1e1e1e;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #f78166;
+  --accent3: #7ee787;
+  --accent4: #d2a8ff;
+  --border: #30363d;
+  --warn: #f0883e;
+  --danger: #f85149;
+  --sidebar-w: 300px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  font-size: 15px;
+}
+/* Sidebar */
+.sidebar {
+  position: fixed; left: 0; top: 0; width: var(--sidebar-w); height: 100vh;
+  background: var(--bg-card); border-right: 1px solid var(--border);
+  overflow-y: auto; z-index: 1000; padding: 20px 0;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: var(--bg); }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.sidebar-title {
+  font-size: 16px; font-weight: 700; color: var(--accent); padding: 0 20px 12px;
+  border-bottom: 1px solid var(--border); margin-bottom: 10px;
+}
+.sidebar-section { margin-bottom: 6px; }
+.sidebar-section-title {
+  font-size: 12px; font-weight: 700; color: var(--accent3); padding: 8px 20px 4px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sidebar a {
+  display: block; padding: 4px 20px 4px 36px; color: var(--text-dim);
+  text-decoration: none; font-size: 13px; transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+.sidebar a:hover { color: var(--accent); background: rgba(88,166,255,0.08); border-left-color: var(--accent); }
+.sidebar a.lvl1 { color: var(--text); font-weight: 600; font-size: 13px; padding-left: 24px; }
+/* Mobile */
+.mobile-toggle {
+  display: none; position: fixed; top: 12px; left: 12px; z-index: 1001;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; cursor: pointer; color: var(--text); font-size: 18px;
+}
+@media (max-width: 1100px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-toggle { display: block; }
+  .content-wrapper { margin-left: 0 !important; }
+}
+/* Content */
+.content-wrapper { margin-left: var(--sidebar-w); }
+.container { max-width: 1100px; margin: 0 auto; padding: 40px 50px 100px; }
+h1 { font-size: 28px; margin-bottom: 8px; color: var(--text); }
+h2 {
+  font-size: 24px; margin-top: 48px; margin-bottom: 16px; color: var(--accent);
+  padding-bottom: 8px; border-bottom: 2px solid var(--border);
+}
+h3 { font-size: 19px; margin-top: 32px; margin-bottom: 12px; color: var(--accent3); }
+h4 { font-size: 16px; margin-top: 24px; margin-bottom: 8px; color: var(--accent4); }
+p { margin-bottom: 12px; }
+ul, ol { margin-left: 24px; margin-bottom: 12px; }
+li { margin-bottom: 4px; }
+strong { color: var(--text); font-weight: 600; }
+code {
+  background: rgba(110,118,129,0.2); padding: 2px 6px; border-radius: 4px;
+  font-family: "JetBrains Mono", "Consolas", "Monaco", monospace; font-size: 13px;
+  color: var(--accent3);
+}
+pre {
+  background: var(--bg-code); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; overflow-x: auto; margin: 12px 0; line-height: 1.5;
+}
+pre code {
+  background: none; padding: 0; color: #d4d4d4; font-size: 13px;
+  display: block; white-space: pre;
+}
+/* Keyword colors in code */
+.kw { color: #c586c0; }
+.fn { color: #dcdcaa; }
+.str { color: #ce9178; }
+.num { color: #b5cea8; }
+.cm { color: #6a9955; }
+.cls { color: #4ec9b0; }
+.var { color: #9cdcfe; }
+.op { color: #d4d4d4; }
+table {
+  width: 100%; border-collapse: collapse; margin: 12px 0;
+  font-size: 14px;
+}
+th {
+  background: var(--bg-card); color: var(--accent); font-weight: 600;
+  padding: 10px 14px; border: 1px solid var(--border); text-align: left;
+}
+td { padding: 8px 14px; border: 1px solid var(--border); color: var(--text-dim); }
+tr:hover td { background: rgba(88,166,255,0.05); }
+.frame-diagram, .ascii-art {
+  background: var(--bg-code); color: #d4d4d4; border-radius: 8px; padding: 20px;
+  font-family: "JetBrains Mono", "Consolas", monospace; font-size: 12px;
+  overflow-x: auto; margin: 16px 0; line-height: 1.5; white-space: pre;
+  border: 1px solid var(--border);
+}
+.note {
+  background: rgba(88,166,255,0.08); border-left: 4px solid var(--accent);
+  padding: 12px 20px; margin: 16px 0; border-radius: 0 8px 8px 0;
+}
+.note.warn {
+  background: rgba(240,136,62,0.08); border-left-color: var(--warn);
+}
+.note.danger {
+  background: rgba(248,81,73,0.08); border-left-color: var(--danger);
+}
+.note strong { color: var(--accent); }
+.note.warn strong { color: var(--warn); }
+.note.danger strong { color: var(--danger); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 12px;
+  font-size: 11px; font-weight: 600; margin-left: 6px;
+}
+.badge-train { background: rgba(126,231,135,0.15); color: var(--accent3); }
+.badge-infer { background: rgba(88,166,255,0.15); color: var(--accent); }
+.badge-both { background: rgba(210,168,255,0.15); color: var(--accent4); }
+.divider { height: 2px; background: var(--border); margin: 40px 0; border-radius: 1px; }
+.subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 32px; }
+.toc-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin-bottom: 32px;
+}
+.toc-card h3 { margin-top: 0; }
+.toc-card ul { list-style: none; margin-left: 0; }
+.toc-card li { padding: 4px 0; }
+.toc-card a { color: var(--accent); text-decoration: none; }
+.toc-card a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</div>
+
+<!-- ==================== SIDEBAR ==================== -->
+<div class="sidebar">
+<div class="sidebar-title">DeepSeek V3 深度分析</div>
+
+<div class="sidebar-section">
+  <a class="lvl1" href="#overview">总览</a>
+</div>
+
+<div class="sidebar-section">
+  <div class="sidebar-section-title">deepseekV3/01-架构介绍</div>
+  <a href="#arch-overview">总体架构</a>
+  <a href="#arch-mla">MLA 多头潜在注意力</a>
+  <a href="#arch-moe">DeepSeekMoE 架构</a>
+  <a href="#arch-mtp">多 Token 预测 (MTP)</a>
+  <a href="#arch-fp8">FP8 混合精度</a>
+  <a href="#arch-dualpipe">DualPipe 并行调度</a>
+  <a href="#arch-dims">模型规格总表</a>
+</div>
+
+<div class="sidebar-section">
+  <div class="sidebar-section-title">deepseekV3/02-关键功能与组件</div>
+  <a href="#comp-overview">组件总览</a>
+  <a href="#comp-mla">MLA 组件详解</a>
+  <a href="#comp-gate">MoE 门控组件</a>
+  <a href="#comp-mtp">MTP 组件详解</a>
+  <a href="#comp-fp8">FP8 训练组件</a>
+  <a href="#comp-parallel">分布式并行组件</a>
+  <a href="#comp-deploy">组件部署架构图</a>
+  <a href="#comp-context">上下文对接关系</a>
+</div>
+
+<div class="sidebar-section">
+  <div class="sidebar-section-title">deepseekV3/03-代码分析</div>
+  <a href="#code-structure">代码文件结构</a>
+  <a href="#code-modelargs">ModelArgs 配置类</a>
+  <a href="#code-base">基础组件代码</a>
+  <a href="#code-mla">MLA 代码分析</a>
+  <a href="#code-moe">MoE 代码分析</a>
+  <a href="#code-block">Block 与 Transformer</a>
+  <a href="#code-kernel">kernel.py 分析</a>
+  <a href="#code-mainflow">主流程详解</a>
+</div>
+
+<div class="sidebar-section">
+  <div class="sidebar-section-title">deepseekV3/04-训练场景</div>
+  <a href="#train-pretrain">预训练流程</a>
+  <a href="#train-fp8">FP8 训练框架</a>
+  <a href="#train-dualpipe">DualPipe 调度详解</a>
+  <a href="#train-parallel">分布式并行策略</a>
+  <a href="#train-context">长上下文扩展</a>
+  <a href="#train-post">后训练 (SFT+RL)</a>
+</div>
+
+<div class="sidebar-section">
+  <div class="sidebar-section-title">deepseekV3/05-推理场景</div>
+  <a href="#infer-init">推理初始化</a>
+  <a href="#infer-prefill">预填充阶段</a>
+  <a href="#infer-decode">解码阶段</a>
+  <a href="#infer-mla">MLA 缓存优化</a>
+  <a href="#infer-dist">分布式推理</a>
+  <a href="#infer-opt">推理优化技术</a>
+</div>
+
+</div>
+
+<!-- ==================== CONTENT ==================== -->
+<div class="content-wrapper">
+<div class="container">
+
+<h1>DeepSeek V3 深度分析</h1>
+<p class="subtitle">
+  架构 · 关键功能与组件 · 代码逐段分析 · 训练执行流程 · 推理执行流程<br>
+  基于 DeepSeek-V3 Technical Report (arXiv:2412.19437) 及官方开源代码 (github.com/deepseek-ai/DeepSeek-V3)
+</p>
+
+<div class="toc-card">
+  <h3>文档目录结构</h3>
+  <ul>
+    <li>📁 <strong>deepseekV3/</strong></li>
+    <li>&nbsp;&nbsp;├── 📁 <strong>01-架构介绍/</strong> — 总体架构、MLA、MoE、MTP、FP8、DualPipe</li>
+    <li>&nbsp;&nbsp;├── 📁 <strong>02-关键功能与组件/</strong> — 组件详解、部署位置、上下文对接关系</li>
+    <li>&nbsp;&nbsp;├── 📁 <strong>03-代码分析/</strong> — model.py 逐段分析、kernel.py、主流程</li>
+    <li>&nbsp;&nbsp;├── 📁 <strong>04-训练场景执行流程/</strong> — 预训练、FP8、DualPipe、并行、后训练</li>
+    <li>&nbsp;&nbsp;└── 📁 <strong>05-推理场景执行流程/</strong> — 初始化、预填充、解码、MLA缓存、优化</li>
+  </ul>
+</div>
+
+<!-- ================================================================== -->
+<!-- ==================== PART 1: ARCHITECTURE ======================== -->
+<!-- ================================================================== -->
+
+<h2 id="overview">总览</h2>
+<p>DeepSeek-V3 是一个 671B 参数的 Mixture-of-Experts (MoE) 语言模型，每个 token 仅激活 37B 参数。它在架构上继承 DeepSeek-V2 的 MLA 注意力和 DeepSeekMoE 架构，并引入了无辅助损失负载均衡和多 Token 预测两项创新。整个训练仅消耗 2.788M H800 GPU 小时，训练过程零回滚、零不可恢复 loss spike。</p>
+
+<!-- ==================== 01-架构介绍 ==================== -->
+
+<h2 id="arch-overview">01-架构介绍 / 总体架构</h2>
+
+<h3>架构全景</h3>
+<p>DeepSeek-V3 采用 Transformer 解码器架构，核心创新集中在三个层面：</p>
+<ol>
+  <li><strong>注意力层</strong>：Multi-head Latent Attention (MLA) — 通过低秩压缩 KV 缓存，将每 token 的 KV 缓存从 40,960 维降至 576 维（压缩率 98.6%）</li>
+  <li><strong>前馈层</strong>：DeepSeekMoE — 256 个路由专家 + 2 个共享专家，每 token 仅激活 8 个路由专家，配合无辅助损失的动态偏置负载均衡</li>
+  <li><strong>训练目标</strong>：Multi-Token Prediction (MTP) — 预测未来 D 个 token，增强训练信号密度，推理时可丢弃或用于投机解码</li>
+</ol>
+
+<div class="frame-diagram">DeepSeek-V3 Architecture Overview:
+
++=====================================================================+
+|                     DeepSeek-V3 (671B / 37B active)                 |
++=====================================================================+
+|                                                                       |
+|  Input Tokens                                                         |
+|  [t_1, t_2, t_3, ..., t_n]                                            |
+|       |                                                               |
+|       v                                                               |
+|  +------------------+                                                 |
+|  | ParallelEmbedding |  (vocab=129280, dim=7168)                     |
+|  | (vocab parallel)  |                                                |
+|  +--------+---------+                                                 |
+|           |                                                           |
+|  +--------v---------+     +-----------------------+                   |
+|  |   Layer 0-2      |---->| MLA (Multi-head       |                   |
+|  |   (Dense Layer)  |     |  Latent Attention)    |                   |
+|  |                  |---->| MLP (Dense FFN)       |                   |
+|  +------------------+     +-----------------------+                   |
+|           |                                                           |
+|  +--------v---------+     +-----------------------+                   |
+|  |   Layer 3-60     |---->| MLA (Multi-head       |                   |
+|  |   (MoE Layer)    |     |  Latent Attention)    |                   |
+|  |   x 58 layers    |---->| DeepSeekMoE           |                   |
+|  |                  |     |  (256 experts, 8 act) |                   |
+|  +------------------+     +-----------------------+                   |
+|           |                                                           |
+|  +--------v---------+                                                 |
+|  | RMSNorm          |                                                 |
+|  | + Linear (head)  |  (dim=7168 -> vocab=129280)                    |
+|  +------------------+                                                 |
+|           |                                                           |
+|       Logits                                                          |
+|           |                                                           |
+|  +--------v---------+     +-----------------------+                   |
+|  | MTP Module 1     |---->| Transformer Block     |                   |
+|  | (Training only)  |---->| + Shared Embed/Head   |                   |
+|  | MTP Module 2     |     +-----------------------+                   |
+|  | ...              |                                                 |
+|  | MTP Module D     |                                                 |
+|  +------------------+                                                 |
+|                                                                       |
+|  Key Parameters:                                                      |
+|  - Total layers:        61 (3 dense + 58 MoE)                        |
+|  - Model dim:           7168                                          |
+|  - Attention heads:     128                                           |
+|  - KV LoRA rank:        512                                           |
+|  - Q LoRA rank:         1536                                          |
+|  - Routed experts:      256                                           |
+|  - Activated experts:   8 (per token)                                |
+|  - Shared experts:      2                                             |
+|  - Expert inter dim:    1408                                          |
+|  - Vocab size:          129280                                        |
+|  - Max context:         128K                                          |
++=====================================================================+</div>
+
+<h3>层级结构</h3>
+<p>DeepSeek-V3 共 61 层 Transformer Block。前 3 层（Layer 0-2）使用密集 MLP 前馈网络，后 58 层（Layer 3-60）使用 MoE 稀疏前馈网络。这种设计使得早期层能学习通用特征表示，后期层通过专家路由实现容量扩展。</p>
+
+<table>
+<tr><th>层级</th><th>层数</th><th>前馈网络类型</th><th>注意力</th><th>说明</th></tr>
+<tr><td>Layer 0-2</td><td>3</td><td>MLP (Dense)</td><td>MLA</td><td>通用特征提取，全参数参与</td></tr>
+<tr><td>Layer 3-60</td><td>58</td><td>DeepSeekMoE (Sparse)</td><td>MLA</td><td>256路由专家+2共享专家，8激活</td></tr>
+</table>
+
+<!-- ==================== MLA ==================== -->
+
+<h2 id="arch-mla">01-架构介绍 / MLA 多头潜在注意力</h2>
+
+<h3>核心思想</h3>
+<p>MLA (Multi-head Latent Attention) 通过低秩投影压缩 Key-Value 对，将 KV 缓存从传统的 <code>n_heads × (d_k + d_v)</code> 维降至 <code>kv_lora_rank + qk_rope_head_dim</code> 维。在 671B 模型中，这意味着每 token 的 KV 缓存从 40,960 维降至 576 维——压缩率 98.6%。</p>
+
+<h3>架构设计</h3>
+<p>MLA 采用混合位置编码策略，将 Query 和 Key 分解为两个分量：</p>
+<ul>
+  <li><strong>NOPE 分量</strong> (Non-Positional)：不包含位置信息，用于内容匹配</li>
+  <li><strong>ROPE 分量</strong> (Rotary Positional Embedding)：使用旋转位置编码，捕捉位置信息</li>
+</ul>
+
+<div class="frame-diagram">MLA Architecture (Low-Rank Compression):
+
++=====================================================================+
+|                     MLA Forward Pass                                 |
++=====================================================================+
+|                                                                       |
+|  Input x (bsz, seqlen, dim=7168)                                     |
+|       |                                                               |
+|       +--------+--------+                                             |
+|       |                 |                                             |
+|       v                 v                                             |
+|  +----------+    +--------------+                                     |
+|  | Query    |    | KV Compress  |                                     |
+|  | Path     |    | Path         |                                     |
+|  +----------+    +--------------+                                     |
+|  | wq_a     |    | wkv_a        |  dim -> kv_lora_rank(512)           |
+|  | (dim->   |    | (dim ->      |        + qk_rope_dim(64)            |
+|  |  1536)   |    |  576)        |                                     |
+|  | q_norm   |    | split        |                                     |
+|  | wq_b     |    |  kv(512)     |  k_pe(64)                           |
+|  | (1536 -> |    |  kv_norm     |  apply RoPE                         |
+|  |  128*192)|    |  wkv_b       |                                     |
+|  | split    |    |  (512 ->     |                                     |
+|  | q_nope   |    |   128*256)   |                                     |
+|  |  (128)   |    |              |                                     |
+|  | q_pe(64) |    |  k_nope(128) |  v(128)                             |
+|  | RoPE     |    |              |                                     |
+|  +----------+    +--------------+                                     |
+|       |                 |                                             |
+|       v                 v                                             |
+|  Attention Computation                                                |
+|  scores = q_nope @ k_nope^T + q_pe @ k_pe^T                          |
+|  scores *= softmax_scale                                              |
+|  output = softmax(scores) @ v                                         |
+|       |                                                               |
+|       v                                                               |
+|  +----------+                                                         |
+|  | wo       |  (128*128 -> dim)                                      |
+|  | RowPar.  |                                                         |
+|  +----------+                                                         |
+|       |                                                               |
+|  Output (bsz, seqlen, dim)                                           |
++=====================================================================+
+
+KV Cache Comparison (per token, per layer):
++-----------------------------------+----------+----------+
+| Mode                              | Naive    | Absorb   |
++-----------------------------------+----------+----------+
+| K cache dims                      | 128*192  | 512      |
+| V cache dims                      | 128*128  | (in 512) |
+| PE cache dims                     | -        | 64       |
+| Total per token                   | 40,960   | 576      |
+| Compression ratio                 | 1x       | 98.6%    |
++-----------------------------------+----------+----------+</div>
+
+<h3>两种实现模式</h3>
+<table>
+<tr><th>模式</th><th>attn_impl</th><th>缓存内容</th><th>缓存大小/token</th><th>适用场景</th></tr>
+<tr><td>Naive</td><td>"naive"</td><td>完整 K/V 张量</td><td>40,960 维</td><td>精度优先，小规模推理</td></tr>
+<tr><td>Absorb</td><td>"absorb"</td><td>压缩潜在表示 kv + pe</td><td>576 维</td><td>内存优先，大规模推理（默认）</td></tr>
+</table>
+
+<p><strong>Absorb 模式的核心优化</strong>：将 <code>wkv_b</code> 上投影矩阵"吸收"到注意力计算中，不再预先展开 K/V，而是在注意力计算后才做投影。这样缓存只需存储 512 维的压缩 KV + 64 维的 PE。</p>
+
+<!-- ==================== MoE ==================== -->
+
+<h2 id="arch-moe">01-架构介绍 / DeepSeekMoE 架构</h2>
+
+<h3>核心设计</h3>
+<p>DeepSeekMoE 采用细粒度专家架构：将传统的大 FFN 拆分为更多更小的专家，配合共享专家处理通用模式，路由专家处理特化模式。</p>
+
+<table>
+<tr><th>参数</th><th>671B 模型值</th><th>说明</th></tr>
+<tr><td>n_routed_experts</td><td>256</td><td>路由专家总数</td></tr>
+<tr><td>n_activated_experts</td><td>8</td><td>每 token 激活的路由专家数</td></tr>
+<tr><td>n_shared_experts</td><td>2</td><td>始终激活的共享专家</td></tr>
+<tr><td>n_expert_groups</td><td>8</td><td>专家分组数（用于组路由）</td></tr>
+<tr><td>n_limited_groups</td><td>1</td><td>受限组数（组路由限制）</td></tr>
+<tr><td>score_func</td><td>sigmoid</td><td>路由评分函数</td></tr>
+<tr><td>route_scale</td><td>2.5</td><td>路由权重缩放因子</td></tr>
+<tr><td>moe_inter_dim</td><td>1408</td><td>每个专家的中间维度</td></tr>
+</table>
+
+<h3>无辅助损失负载均衡</h3>
+<p>传统 MoE 通过辅助损失函数强制负载均衡，但这会干扰模型主目标的梯度。DeepSeek-V3 创新性地采用<strong>动态偏置项</strong>策略：</p>
+
+<div class="frame-diagram">Auxiliary-Loss-Free Load Balancing:
+
++=====================================================================+
+|                Dynamic Bias Update Mechanism                        |
++=====================================================================+
+|                                                                       |
+|  Traditional MoE (with auxiliary loss):                              |
+|  L_total = L_main + alpha * L_aux                                    |
+|  L_aux forces load balance but pollutes gradients!                   |
+|                                                                       |
+|  DeepSeek-V3 (auxiliary-loss-free):                                   |
+|  L_total = L_main  (+ tiny L_balance for sequence-level)            |
+|                                                                       |
+|  Routing with bias:                                                   |
+|  s_i,t = Sigmoid(u_t^T * e_i)         # affinity score              |
+|  g_i,t = s_i,t  if (s_i,t + b_i) in TopK  else  0                  |
+|                                                                       |
+|  b_i = dynamic bias term (NOT in gradient path!)                     |
+|                                                                       |
+|  Bias Update Rule (per training step):                                |
+|  +-------------------------------+                                   |
+|  | if expert_i is overloaded:    |                                   |
+|  |   b_i -= gamma                |   # decrease bias                 |
+|  | if expert_i is underloaded:   |                                   |
+|  |   b_i += gamma                |   # increase bias                 |
+|  +-------------------------------+                                   |
+|                                                                       |
+|  Key insight: bias adjusts routing WITHOUT entering                  |
+|  the loss function's gradient. Main objective is clean!              |
+|                                                                       |
+|  Additional: tiny sequence-level balance loss L_bal                  |
+|  L_bal = alpha * sum(load_per_expert / N)                           |
+|  (alpha is very small, just a safety net)                           |
++=====================================================================+</div>
+
+<h3>路由机制</h3>
+<p>DeepSeek-V3 使用 Sigmoid 评分函数 + 组路由限制（Node-Limited Routing）。256 个专家分为 8 组，每 token 从受限组中选择 Top-K 专家。这种设计限制了跨节点通信开销——因为每个 GPU 节点承载一组专家（EP=64，8 节点 × 8 GPU/节点 = 64 GPU，每组 32 专家）。</p>
+
+<div class="frame-diagram">MoE Routing Flow (Per Token):
+
+Step 1: Compute affinity scores
+  u_t (token hidden state, dim=7168)
+  s_i = Sigmoid(u_t^T * e_i)   for i = 1..256
+  (e_i = gate.weight[i], shape=[7168])
+
+Step 2: Add dynamic bias
+  s_i' = s_i + b_i
+
+Step 3: Group-Limited Top-K Selection
+  256 experts = 8 groups x 32 experts
+  Limited groups = 1 (only select from top-1 groups)
+  Select Top-8 from allowed groups based on s_i'
+
+Step 4: Normalize weights
+  g_i = s_i / sum(selected s_j)   (for selected experts)
+  g_i = 0                          (for non-selected)
+
+Step 5: Expert computation
+  output = sum(g_i * Expert_i(u_t)) + SharedExperts(u_t)
+  where Expert_i(x) = w2(silu(w1(x)) * w3(x))
+  and SharedExperts = 2 always-active MLPs</div>
+
+<!-- ==================== MTP ==================== -->
+
+<h2 id="arch-mtp">01-架构介绍 / 多 Token 预测 (MTP)</h2>
+
+<h3>核心思想</h3>
+<p>MTP 在训练时不仅预测下一个 token，还顺序预测未来 D 个 token。这增加了训练信号密度，让模型学会"提前规划"其表示。推理时 MTP 模块可丢弃（不影响主模型性能），也可用于投机解码加速推理。</p>
+
+<div class="frame-diagram">Multi-Token Prediction (MTP) Architecture:
+
++=====================================================================+
+|                     MTP Training Pipeline                            |
++=====================================================================+
+|                                                                       |
+|  Input Tokens:  t_1, t_2, t_3, t_4, t_5                             |
+|                                                                       |
+|  Main Model (Next Token Prediction):                                 |
+|  t_1 -> [Transformer x61] -> h_1 -> [Head] -> P(t_2)  -> L_main     |
+|  t_2 -> [Transformer x61] -> h_2 -> [Head] -> P(t_3)  ->            |
+|  ...                                                                  |
+|                                                                       |
+|  MTP Module 1 (predict t_3 from h_1, t_2):                           |
+|  +-------+   +-----------+   +-----------+   +-------+              |
+|  | h_1   |-->| Concat    |-->| Transformer|-->| Head  |--> P(t_3)  |
+|  | (main)|   | + emb(t_2)|   | Block      |   |(shared)|   L_MTP1  |
+|  +-------+   +-----------+   +-----------+   +-------+              |
+|       ^                                                           |
+|       |   h'_1 (MTP1 output)                                      |
+|       |                                                           |
+|  MTP Module 2 (predict t_4 from h'_1, t_3):                       |
+|  +-------+   +-----------+   +-----------+   +-------+              |
+|  | h'_1  |-->| Concat    |-->| Transformer|-->| Head  |--> P(t_4)  |
+|  |(MTP1) |   | + emb(t_3)|   | Block      |   |(shared)|   L_MTP2  |
+|  +-------+   +-----------+   +-----------+   +-------+              |
+|       ^                                                           |
+|       |   h''_1 (MTP2 output)                                     |
+|       |                                                           |
+|  ... (up to D modules)                                             |
+|                                                                       |
+|  Total Loss:                                                         |
+|  L = L_main + (lambda/D) * sum(L_MTP_k for k=1..D)                 |
+|                                                                       |
+|  Shared Components:                                                  |
+|  - Embedding layer (weight sharing with main model)                 |
+|  - Output head (weight sharing with main model)                     |
+|                                                                       |
+|  Independent Components:                                             |
+|  - Transformer Block (each MTP module has its own)                  |
+|  - Linear projection (concat -> dim)                                |
+|  - RMSNorm                                                           |
+|                                                                       |
+|  At Inference:                                                       |
+|  - MTP modules can be REMOVED (main model works standalone)        |
+|  - OR used for Speculative Decoding (predict D candidates,         |
+|    verify in parallel)                                               |
++=====================================================================+</div>
+
+<h3>MTP 参数</h3>
+<table>
+<tr><th>参数</th><th>值</th><th>说明</th></tr>
+<tr><td>MTP 参数量</td><td>14B</td><td>独立于主模型 671B</td></tr>
+<tr><td>总模型大小</td><td>685B</td><td>671B 主模型 + 14B MTP</td></tr>
+<tr><td>预测深度 D</td><td>1（实际使用）</td><td>论文中验证 D=1 已有显著效果</td></tr>
+<tr><td>共享组件</td><td>Embedding, Output Head</td><td>与主模型权重共享</td></tr>
+<tr><td>独立组件</td><td>Transformer Block, Linear Proj, RMSNorm</td><td>每个 MTP 模块独立</td></tr>
+</table>
+
+<!-- ==================== FP8 ==================== -->
+
+<h2 id="arch-fp8">01-架构介绍 / FP8 混合精度</h2>
+
+<h3>概述</h3>
+<p>DeepSeek-V3 是首个在超大规模模型上验证 FP8 混合精度训练可行性的模型。通过 FP8 计算和存储，训练速度显著提升，GPU 内存使用大幅降低，且相对于 BF16 基线的损失误差低于 0.25%。</p>
+
+<h3>FP8 数据格式</h3>
+<p>采用 E4M3 格式（4 位指数，3 位尾数），优先尾数精度而非指数范围。所有 FP8 张量统一使用此格式。</p>
+
+<div class="frame-diagram">FP8 Mixed Precision Framework:
+
++=====================================================================+
+|                FP8 Mixed Precision Training                         |
++=====================================================================+
+|                                                                       |
+|  Precision Assignment by Component:                                  |
+|                                                                       |
+|  +----------------------------+----------+----------------------------+|
+|  | Component                  | Precision| Rationale                 ||
+|  +----------------------------+----------+----------------------------+|
+|  | GEMM (MatMul)              | FP8      | Max throughput            ||
+|  |   - Activations            | FP8 E4M3 | 1x128 tile quantization   ||
+|  |   - Weights                | FP8 E4M3 | 128x128 block quant.      ||
+|  |   - Accumulation           | FP32     | Every Nc=128 elements    ||
+|  |                            |          | promote to FP32 on CUDA  ||
+|  +----------------------------+----------+----------------------------+|
+|  | Embedding layers           | BF16/FP32| Sensitive to precision   ||
+|  | Output projection (head)   | BF16/FP32| Sensitive to precision   ||
+|  | Attention score computation| BF16/FP32| Sensitive to precision   ||
+|  | MoE gating (routing)       | BF16/FP32| Must be precise          ||
+|  | LayerNorm/RMSNorm          | BF16     | Standard practice        ||
+|  +----------------------------+----------+----------------------------+|
+|  | Master weights (optimizer) | FP32     | Gradient update precision ||
+|  | Optimizer states (AdamW)   | BF16     | Memory saving            ||
+|  | Activation checkpoints     | FP8      | Memory saving            ||
+|  | All-to-All communication   | FP8      | Bandwidth saving         ||
+|  +----------------------------+----------+----------------------------+|
+|                                                                       |
+|  Fine-Grained Quantization Strategy:                                 |
+|                                                                       |
+|  Activations:                                                        |
+|  +---+---+---+---+---+---+---+---+---+---+---+---+                 |
+|  | 1 | 1 | 1 | 1 | ... (each tile = 1 row x 128 cols)              |
+|  +---+---+---+---+---+---+---+---+---+---+---+---+                 |
+|  Each 1x128 tile gets its own scaling factor                         |
+|  => handles outliers at fine granularity                            |
+|                                                                       |
+|  Weights:                                                            |
+|  +-----------+-----------+-----------+                                |
+|  | 128 x 128 | 128 x 128 | 128 x 128 | ...                          |
+|  | block     | block     | block     |                                |
+|  +-----------+-----------+-----------+                                |
+|  Each 128x128 block gets its own scaling factor                      |
+|                                                                       |
+|  Result: <0.25% relative loss error vs BF16 baseline                 |
++=====================================================================+</div>
+
+<!-- ==================== DualPipe ==================== -->
+
+<h2 id="arch-dualpipe">01-架构介绍 / DualPipe 并行调度</h2>
+
+<h3>设计动机</h3>
+<p>MoE 架构的跨节点 All-to-All 通信开销巨大（计算通信比接近 1:1）。DualPipe 算法通过将前向和后向计算分块，与通信重叠执行，实现接近零的 All-to-All 通信开销。</p>
+
+<div class="frame-diagram">DualPipe Algorithm: Computation-Communication Overlap:
+
++=====================================================================+
+|                DualPipe Pipeline Schedule                           |
++=====================================================================+
+|                                                                       |
+|  Traditional Pipeline (with bubbles):                                |
+|  GPU0: [F1][F2][F3]........[B3][B2][B1]                             |
+|  GPU1: ....[F1][F2][F3]........[B3][B2][B1]                        |
+|  GPU2: ........[F1][F2][F3]........[B3][B2][B1]                   |
+|         ^^^^                    ^^^^                                |
+|         bubbles                 bubbles                              |
+|                                                                       |
+|  DualPipe (bidirectional, overlap):                                  |
+|                                                                       |
+|  Forward chunks:  F1a | F1b | F2a | F2b | ...                       |
+|  Backward chunks: B1a | B1b | B2a | B2b | ...                       |
+|  Communication:   C1  | C2  | C3  | C4  | ... (All-to-All)        |
+|                                                                       |
+|  GPU0: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
+|  GPU1: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
+|  GPU2: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
+|        ^^^^^^^^  ^^^^^^^^  ^^^^^^^^  ^^^^^^^^                       |
+|        compute||comm  compute||comm  compute||comm                  |
+|                                                                       |
+|  Key: [compute] overlaps with [communication]                        |
+|  => Near-zero pipeline bubbles                                       |
+|  => Near-zero All-to-All overhead                                    |
+|                                                                       |
+|  Cross-Node All-to-All Kernel:                                       |
+|  - Custom kernel using ~20 SMs (out of ~132 on H800)               |
+|  - Remaining ~112 SMs available for GEMM compute                    |
+|  - Adapts to both IB (50GB/s) and NVLink (160GB/s)                 |
+|  - IB for cross-node, NVLink for intra-node                         |
++=====================================================================+</div>
+
+<!-- ==================== Model Dimensions ==================== -->
+
+<h2 id="arch-dims">01-架构介绍 / 模型规格总表</h2>
+
+<table>
+<tr><th>维度</th><th>参数</th><th>值</th></tr>
+<tr><td>模型规模</td><td>总参数</td><td>671B</td></tr>
+<tr><td></td><td>激活参数/token</td><td>37B</td></tr>
+<tr><td></td><td>MTP 参数</td><td>14B</td></tr>
+<tr><td></td><td>总权重大小</td><td>685B</td></tr>
+<tr><td>架构</td><td>层数</td><td>61 (3 dense + 58 MoE)</td></tr>
+<tr><td></td><td>模型维度 (dim)</td><td>7,168</td></tr>
+<tr><td></td><td>词表大小</td><td>129,280</td></tr>
+<tr><td></td><td>最大上下文</td><td>128K</td></tr>
+<tr><td>注意力 (MLA)</td><td>头数</td><td>128</td></tr>
+<tr><td></td><td>Q LoRA rank</td><td>1,536</td></tr>
+<tr><td></td><td>KV LoRA rank</td><td>512</td></tr>
+<tr><td></td><td>QK NOPE head dim</td><td>128</td></tr>
+<tr><td></td><td>QK ROPE head dim</td><td>64</td></tr>
+<tr><td></td><td>V head dim</td><td>128</td></tr>
+<tr><td>MoE</td><td>路由专家数</td><td>256</td></tr>
+<tr><td></td><td>每token激活专家</td><td>8</td></tr>
+<tr><td></td><td>共享专家</td><td>2</td></tr>
+<tr><td></td><td>专家组数</td><td>8</td></tr>
+<tr><td></td><td>专家中间维度</td><td>1,408</td></tr>
+<tr><td></td><td>评分函数</td><td>sigmoid</td></tr>
+<tr><td>训练</td><td>训练数据</td><td>14.8T tokens</td></tr>
+<tr><td></td><td>GPU</td><td>2,048 × H800</td></tr>
+<tr><td></td><td>GPU 小时</td><td>2.788M</td></tr>
+<tr><td></td><td>并行策略</td><td>PP16 + EP64 + ZeRO-1</td></tr>
+<tr><td></td><td>精度</td><td>FP8 混合精度</td></tr>
+<tr><td></td><td>优化器</td><td>AdamW (β1=0.9, β2=0.95, wd=0.1)</td></tr>
+<tr><td></td><td>学习率</td><td>2.2e-4 (cosine → 7.3e-6)</td></tr>
+<tr><td></td><td>批次大小</td><td>3,072 → 15,360 sequences</td></tr>
+<tr><td></td><td>序列长度</td><td>4,096 (预训练)</td></tr>
+</table>
+
+<!-- ================================================================== -->
+<!-- ==================== PART 2: KEY FEATURES ======================== -->
+<!-- ================================================================== -->
+
+<h2 id="comp-overview">02-关键功能与组件 / 组件总览</h2>
+
+<p>DeepSeek-V3 的每个关键功能都由特定的代码组件实现，部署在模型的不同位置。下表汇总了所有核心组件、其实现类、部署位置和上下文对接关系。</p>
+
+<table>
+<tr><th>功能</th><th>实现组件</th><th>代码文件</th><th>部署位置</th><th>阶段</th></tr>
+<tr><td>Token 嵌入</td><td>ParallelEmbedding</td><td>model.py</td><td>模型入口（第 0 层前）</td><td>训练+推理</td></tr>
+<tr><td>注意力计算</td><td>MLA</td><td>model.py</td><td>每层 Block 内（61 层）</td><td>训练+推理</td></tr>
+<tr><td>位置编码</td><td>precompute_freqs_cis + apply_rotary_emb</td><td>model.py</td><td>MLA 内部（Q/K 的 ROPE 分量）</td><td>训练+推理</td></tr>
+<tr><td>密集前馈</td><td>MLP</td><td>model.py</td><td>Layer 0-2 的 Block 内</td><td>训练+推理</td></tr>
+<tr><td>稀疏专家路由</td><td>Gate</td><td>model.py</td><td>Layer 3-60 的 MoE 内</td><td>训练+推理</td></tr>
+<tr><td>专家计算</td><td>Expert (x256)</td><td>model.py</td><td>Layer 3-60 的 MoE 内</td><td>训练+推理</td></tr>
+<tr><td>共享专家</td><td>MLP (shared_experts)</td><td>model.py</td><td>Layer 3-60 的 MoE 内</td><td>训练+推理</td></tr>
+<tr><td>负载均衡</td><td>动态偏置项 b_i</td><td>训练框架（非开源推理代码）</td><td>Gate 路由决策层</td><td>仅训练</td></tr>
+<tr><td>多 Token 预测</td><td>MTP Module (x D)</td><td>model.py (权重结构)</td><td>模型输出后（主模型 logits 之后）</td><td>训练（推理可选）</td></tr>
+<tr><td>FP8 量化计算</td><td>fp8_gemm, act_quant, weight_dequant</td><td>kernel.py</td><td>所有 Linear 层内部</td><td>训练+推理</td></tr>
+<tr><td>层归一化</td><td>RMSNorm</td><td>model.py</td><td>每层 Block 的 attn 和 ffn 前</td><td>训练+推理</td></tr>
+<tr><td>分布式通信</td><td>ColumnParallelLinear, RowParallelLinear</td><td>model.py</td><td>所有需要并行的 Linear 层</td><td>训练+推理</td></tr>
+<tr><td>流水线并行</td><td>DualPipe 调度器</td><td>HAI-LLM 框架（非开源）</td><td>跨 16 个 Pipeline Stage</td><td>仅训练</td></tr>
+<tr><td>专家并行</td><td>EP 分片 + All-to-All</td><td>训练框架 + kernel.py</td><td>跨 64 GPU（8 节点）</td><td>训练+推理</td></tr>
+<tr><td>输出投影</td><td>Linear (head)</td><td>model.py</td><td>模型出口（最后一层后）</td><td>训练+推理</td></tr>
+</table>
+
+<h2 id="comp-mla">02-关键功能与组件 / MLA 组件详解</h2>
+
+<h3>组件定位</h3>
+<p>MLA 部署在<strong>每一个 Transformer Block 的注意力位置</strong>（共 61 个 MLA 实例）。它接收上一层输出的隐藏状态 <code>x</code>，输出注意力加权后的表示。</p>
+
+<h3>上下文对接关系</h3>
+<div class="frame-diagram">MLA Context Flow (within a Block):
+
+  Previous Layer Output
+        |
+        v
+  +----------+
+  | attn_norm|  (RMSNorm, dim=7168)
+  +----+-----+
+       |
+       v
+  +----------+         +-----------+
+  |   MLA    |<------->| freqs_cis |  (precomputed RoPE)
+  |  (attn)  |         +-----------+
+  +----+-----+
+       |
+       v
+  x = x + MLA_output   (residual connection)
+       |
+       v
+  +----------+
+  | ffn_norm |  (RMSNorm)
+  +----+-----+
+       |
+       v
+  [MLP or MoE] (FFN layer)</div>
+
+<h3>MLA 内部组件结构</h3>
+<table>
+<tr><th>子组件</th><th>类型</th><th>输入维度</th><th>输出维度</th><th>说明</th></tr>
+<tr><td>wq_a</td><td>Linear</td><td>7168</td><td>1536</td><td>Query 下投影（压缩）</td></tr>
+<tr><td>q_norm</td><td>RMSNorm</td><td>1536</td><td>1536</td><td>Query 压缩表示归一化</td></tr>
+<tr><td>wq_b</td><td>ColumnParallelLinear</td><td>1536</td><td>128×192=24576</td><td>Query 上投影（分 128 头）</td></tr>
+<tr><td>wkv_a</td><td>Linear</td><td>7168</td><td>576 (512+64)</td><td>KV 下投影 + PE 提取</td></tr>
+<tr><td>kv_norm</td><td>RMSNorm</td><td>512</td><td>512</td><td>KV 压缩表示归一化</td></tr>
+<tr><td>wkv_b</td><td>ColumnParallelLinear</td><td>512</td><td>128×256=32768</td><td>KV 上投影（分 128 头）</td></tr>
+<tr><td>wo</td><td>RowParallelLinear</td><td>128×128=16384</td><td>7168</td><td>输出投影</td></tr>
+</table>
+
+<h3>两种缓存模式对比</h3>
+<div class="frame-diagram">MLA Cache Modes:
+
+NAIVE MODE (full K/V cache):
++---+---+---+---+---+---+---+---+     x 128 heads
+|K_1|K_2|K_3|K_4|K_5|...|K_n|   |     K dim = 192 (128 nope + 64 rope)
++---+---+---+---+---+---+---+---+
++---+---+---+---+---+---+---+---+     x 128 heads
+|V_1|V_2|V_3|V_4|V_5|...|V_n|   |     V dim = 128
++---+---+---+---+---+---+---+---+
+Total per token: 128 * (192 + 128) = 40,960 dims
+
+ABSORB MODE (compressed cache, DEFAULT):
++---+---+---+---+---+---+---+---+
+|kv_1|kv_2|kv_3|kv_4|...|kv_n| |     kv dim = 512 (latent)
++---+---+---+---+---+---+---+---+
++---+---+---+---+---+---+---+---+
+|pe_1|pe_2|pe_3|pe_4|...|pe_n| |     pe dim = 64 (RoPE only)
++---+---+---+---+---+---+---+---+
+Total per token: 512 + 64 = 576 dims  (98.6% reduction!)
+
+In Absorb mode:
+- wkv_b is NOT applied before caching
+- wkv_b is "absorbed" into the attention computation
+- scores = q_nope_c @ kv_cache^T + q_pe @ pe_cache^T
+- output = scores @ kv_cache, then project via wkv_b[*, -v_head_dim:]</div>
+
+<h2 id="comp-gate">02-关键功能与组件 / MoE 门控组件</h2>
+
+<h3>组件定位</h3>
+<p>Gate 部署在<strong>Layer 3-60 的每个 MoE 层内部</strong>（共 58 个 Gate 实例）。它接收归一化后的隐藏状态，输出路由权重和专家索引。</p>
+
+<h3>Gate 工作流程</h3>
+<div class="frame-diagram">Gate Routing Mechanism:
+
+Input: x (bsz*seqlen, dim=7168)
+
+Step 1: Compute scores
+  scores = Sigmoid(x @ gate.weight^T)  # (N, 256)
+  # gate.weight shape: [256, 7168]
+
+Step 2: Group-Limited Selection
+  # 256 experts = 8 groups x 32 experts
+  # n_limited_groups = 1 (select from top-1 group only)
+  # This limits cross-node communication!
+
+  For each token:
+  +-------------------------------------------+
+  | Group 0  | Group 1  | ... | Group 7       |
+  | Exp 0-31 | Exp 32-63| ... | Exp 224-255   |
+  +-------------------------------------------+
+       |         |               |
+  Select top-1 groups (by max score in group)
+       |         |               |
+  From selected groups, pick Top-8 experts
+
+Step 3: Normalize weights
+  # For sigmoid: normalize AFTER selection
+  weights = scores[selected] / sum(scores[selected])
+  # scale by route_scale (2.5)
+  weights *= 2.5
+
+Output:
+  - indices: (N, 8)    selected expert IDs
+  - weights: (N, 8)    routing weights for each selected expert</div>
+
+<h3>负载均衡偏置项</h3>
+<p>偏置项 <code>b_i</code> 是一个长度为 256 的向量，<strong>不参与梯度计算</strong>。每个训练步骤后，根据每个专家的实际负载动态调整：</p>
+<ul>
+  <li>专家过载 → <code>b_i -= γ</code>（降低偏置，减少被选中概率）</li>
+  <li>专家欠载 → <code>b_i += γ</code>（增加偏置，提高被选中概率）</li>
+</ul>
+<p>此外还有一个极小权重的序列级平衡损失 <code>L_bal = α × Σ(load_i / N)</code> 作为安全网。</p>
+
+<h2 id="comp-mtp">02-关键功能与组件 / MTP 组件详解</h2>
+
+<h3>组件定位</h3>
+<p>MTP 模块部署在<strong>主模型输出之后</strong>。训练时串联 D 个 MTP 模块，每个模块接收前一个模块的隐藏状态和真实 token 嵌入，预测下一个 token。推理时可完全移除。</p>
+
+<h3>上下文对接关系</h3>
+<div class="frame-diagram">MTP Module Context Flow:
+
+  Main Model Output: h_t (hidden state at position t)
+       |
+       |     +-------------------+
+       +----->| Linear Projection |  (dim -> dim, combine h + emb)
+       |      +---------+---------+
+       |                |
+  emb(t_{t+1})         v  (concatenated representation)
+       |      +---------+---------+
+       +----->|  Transformer Block |  (1 layer, MTP-specific)
+              +---------+---------+
+                        |
+                        v
+              +---------+---------+
+              |  RMSNorm          |
+              +---------+---------+
+                        |
+                        v
+              +---------+---------+
+              |  Output Head      |  (shared with main model)
+              |  (Linear: dim->vocab)
+              +---------+---------+
+                        |
+                        v
+                   P(t_{t+2})  -> L_MTP_k (cross-entropy loss)
+
+  Shared with Main Model:
+  - Embedding layer (weight tied)
+  - Output head (weight tied)
+
+  Independent per MTP Module:
+  - Linear Projection (combines previous h + current emb)
+  - Transformer Block (1 layer)
+  - RMSNorm</div>
+
+<h2 id="comp-fp8">02-关键功能与组件 / FP8 训练组件</h2>
+
+<h3>组件定位</h3>
+<p>FP8 量化逻辑分布在 <code>kernel.py</code> 中，由 <code>model.py</code> 的 Linear 类自动调用。部署在<strong>所有 Linear 层内部</strong>，但敏感操作（Embedding、attention scores、gating）保持 BF16/FP32。</p>
+
+<h3>量化流程</h3>
+<div class="frame-diagram">FP8 Quantization Pipeline:
+
+Weight Storage (offline, during checkpoint):
+  Original weight W (FP32/BF16, shape [out, in])
+    |
+    v
+  Block-wise quantization (128x128 blocks)
+    |
+    v
+  W_fp8 (FP8 E4M3, shape [out, in])  +  scale (FP32, shape [out//128, in//128])
+
+Runtime Forward (per Linear layer):
+  Activation x (BF16, shape [N, in])
+    |
+    v
+  act_quant(x)  -- tile-wise 1x128 quantization
+    |
+    v
+  x_fp8 (FP8 E4M3) + x_scale (FP32, shape [N, in//128])
+    |
+    v
+  fp8_gemm(x_fp8, W_fp8, x_scale, W_scale)
+    |
+    |  Internal: FP8 MMA on Tensor Cores
+    |  Every Nc=128 elements: promote accumulation to FP32
+    |
+    v
+  output (BF16, shape [N, out])
+
+  [Note: Embedding, attention scores, gating → BF16/FP32 path
+   → uses weight_dequant() to convert FP8 weights back to BF16]</div>
+
+<h2 id="comp-parallel">02-关键功能与组件 / 分布式并行组件</h2>
+
+<h3>三种并行层类型</h3>
+<table>
+<tr><th>组件</th><th>并行方式</th><th>输入分片</th><th>输出分片</th><th>通信操作</th><th>部署位置</th></tr>
+<tr><td>ParallelEmbedding</td><td>词表并行</td><td>不分片</td><td>词表维度分片</td><td>All-Reduce</td><td>模型入口</td></tr>
+<tr><td>ColumnParallelLinear</td><td>列并行（输出分片）</td><td>不分片</td><td>out_features / world_size</td><td>无（后续 RowPar 补偿）</td><td>Q/K/V 投影、MLP w1/w3</td></tr>
+<tr><td>RowParallelLinear</td><td>行并行（输入分片）</td><td>in_features / world_size</td><td>不分片</td><td>All-Reduce</td><td>MLA wo、MLP w2</td></tr>
+</table>
+
+<h3>专家并行 (EP)</h3>
+<div class="frame-diagram">Expert Parallelism (EP=64, across 8 nodes x 8 GPUs):
+
+Node 0 (GPU 0-7)     Node 1 (GPU 0-7)    ...    Node 7 (GPU 0-7)
++---------------+    +---------------+         +---------------+
+| Experts 0-31  |    | Experts 32-63 |   ...   | Experts 224-255|
++---------------+    +---------------+         +---------------+
+
+Token Routing Flow:
+1. Gate computes which expert each token needs
+2. All-to-All dispatch: tokens sent to the GPU hosting their expert
+3. Expert computation on target GPU
+4. All-to-All return: results sent back to origin GPU
+5. All-Reduce: combine with shared experts output
+
+Communication Optimization:
+- Custom kernel uses ~20 SMs for All-to-All (out of ~132)
+- Remaining ~112 SMs do GEMM in parallel
+- IB (50GB/s) for cross-node, NVLink (160GB/s) for intra-node
+- => Near-zero communication overhead via DualPipe overlap</div>
+
+<h2 id="comp-deploy">02-关键功能与组件 / 组件部署架构图</h2>
+
+<div class="frame-diagram">Component Deployment Architecture:
+
++=====================================================================+
+|                DeepSeek-V3 Full Deployment Map                      |
++=====================================================================+
+|                                                                       |
+|  [TRAINING CLUSTER: 2048 x H800 GPU]                                 |
+|                                                                       |
+|  +-------------------+  16-way Pipeline Parallelism                  |
+|  | Pipeline Stage 0  |  <==========>  Stage 1  <==> ... <==> Stage 15|
+|  | (Layer 0-3)       |     DualPipe overlap                          |
+|  | - ParallelEmbed   |                                               |
+|  | - MLA x4          |     Each stage: ~4 layers                     |
+|  | - MLP x3          |                                               |
+|  | - MoE x1          |                                               |
+|  +--------+----------+                                               |
+|           |                                                          |
+|     EP=64 (Expert Parallel)                                          |
+|     +-----+-----+-----+-----+                                        |
+|     | GPU | GPU | GPU | ... |  (8 nodes x 8 GPUs = 64 GPUs)        |
+|     | 0   | 1   | 2   |     |                                       |
+|     |Exp  |Exp  |Exp  |     |  256 experts / 64 GPUs = 4 per GPU   |
+|     |0-3  |4-7  |8-11 |     |                                       |
+|     +-----+-----+-----+-----+                                        |
+|           |                                                          |
+|     ZeRO-1 (Data Parallel)                                           |
+|     Optimizer states sharded across all data-parallel replicas       |
+|                                                                       |
+|  [INFERENCE: single node or multi-node]                              |
+|                                                                       |
+|  +-------------------+                                               |
+|  | GPU 0 (TP rank 0) |  Model Parallel (TP/EP)                     |
+|  | - Embedding (1/N) |                                               |
+|  | - MLA heads 0-15  |  (128 heads / 8 GPUs = 16 per GPU)          |
+|  | - Experts 0-31    |  (256 / 8 = 32 per GPU)                      |
+|  | - KV cache (absorb)|                                              |
+|  +-------------------+                                               |
+|  | GPU 1 (TP rank 1) |                                               |
+|  | ...                |                                               |
+|  +-------------------+                                               |
+|                                                                       |
+|  FP8 kernel.py deployed in EVERY Linear layer                        |
+|  RMSNorm deployed before attn and ffn in EVERY Block                 |
+|  MTP modules (14B) only loaded if speculative decoding is used      |
++=====================================================================+</div>
+
+<h2 id="comp-context">02-关键功能与组件 / 上下文对接关系</h2>
+
+<h3>数据流上下文链</h3>
+<p>以下展示一个 token 从输入到输出的完整上下文对接链：</p>
+
+<div class="frame-diagram">Full Context Chain (per token):
+
+  [Input] token_ids (bsz, seqlen)
+     |
+     v
+  [ParallelEmbedding] --vocab parallel--> all_reduce --> embeddings (bsz, seqlen, 7168)
+     |
+     v
+  [freqs_cis] = precompute_freqs_cis(seqlen, dim)  -- precomputed, shared across all layers
+     |
+     v
+  +--- For each of 61 layers: ---+
+  |   [RMSNorm (attn_norm)] -- normalizes x
+  |        |
+  |        v
+  |   [MLA (attn)]
+  |     - receives: x_normed, start_pos, freqs_cis, mask
+  |     - internal: wq_a -> q_norm -> wq_b -> split(q_nope, q_pe)
+  |     - internal: wkv_a -> split(kv, k_pe) -> kv_norm
+  |     - internal: apply_rotary_emb(q_pe, freqs_cis), apply_rotary_emb(k_pe, freqs_cis)
+  |     - internal: attention (naive or absorb mode)
+  |     - internal: wo projection
+  |     - outputs: attn_out (bsz, seqlen, 7168)
+  |        |
+  |        v
+  |   x = x + attn_out  (residual)
+  |        |
+  |        v
+  |   [RMSNorm (ffn_norm)]
+  |        |
+  |        v
+  |   if layer_id < 3:
+  |     [MLP (dense)]
+  |       - w1 (ColumnPar), w3 (ColumnPar), w2 (RowPar)
+  |       - silu(w1(x)) * w3(x) -> w2
+  |   else:
+  |     [MoE (sparse)]
+  |       - [Gate] receives x_normed -> scores -> topk -> indices, weights
+  |       - [Expert_i] for each selected: w2(silu(w1(x)) * w3(x)) * weight_i
+  |       - [SharedExperts] always active: MLP(x)
+  |       - all_reduce (if distributed)
+  |       - output = routed_experts_out + shared_experts_out
+  |        |
+  |        v
+  |   x = x + ffn_out  (residual)
+  +------------------------------+
+     |
+     v (after 61 layers)
+  [RMSNorm (final norm)]
+     |
+     v
+  [Linear (head)] -- dim=7168 -> vocab=129280
+     |
+     v
+  [Logits] (bsz, seqlen, 129280)
+     |
+     v
+  (Training: cross-entropy loss + MTP loss)
+  (Inference: argmax/sampling -> next token)</div>
+
+<!-- ================================================================== -->
+<!-- ==================== PART 3: CODE ANALYSIS ======================= -->
+<!-- ================================================================== -->
+
+<h2 id="code-structure">03-代码分析 / 代码文件结构</h2>
+
+<p>DeepSeek-V3 的开源代码位于 <code>github.com/deepseek-ai/DeepSeek-V3</code>，核心代码集中在 <code>inference/</code> 目录下。</p>
+
+<div class="frame-diagram">Repository File Structure:
+
+DeepSeek-V3/
+|
+|-- inference/
+|   |-- model.py          # 核心: 模型架构定义 (912 lines)
+|   |   |-- ModelArgs     # 配置数据类 (L19-85)
+|   |   |-- ParallelEmbedding  # 词表并行嵌入 (L87-127)
+|   |   |-- linear()      # FP8/BF16 自适应线性函数 (L129-162)
+|   |   |-- Linear        # 带量化的线性层 (L165-206)
+|   |   |-- ColumnParallelLinear  # 列并行线性层 (L208-232)
+|   |   |-- RowParallelLinear     # 行并行线性层 (L234-265)
+|   |   |-- RMSNorm      # RMS 归一化 (L267-290)
+|   |   |-- precompute_freqs_cis  # RoPE 频率预计算 (L292-340)
+|   |   |-- apply_rotary_emb      # RoPE 应用 (L342-391)
+|   |   |-- MLA         # 多头潜在注意力 (L393-495)
+|   |   |-- MLP         # 密集前馈网络 (L497-529)
+|   |   |-- Gate        # MoE 门控路由 (L532-595)
+|   |   |-- Expert      # 单个专家 (L598-631)
+|   |   |-- MoE         # 混合专家层 (L633-691)
+|   |   |-- Block       # Transformer 块 (L693-732)
+|   |   |-- Transformer # 完整模型 (L735-795)
+|   |
+|   |-- generate.py      # 推理生成入口
+|   |   |-- generate()   # 单步生成函数 (L30-70)
+|   |   |-- main()       # CLI 入口 (L100-185)
+|   |
+|   |-- kernel.py        # FP8 高性能计算核
+|   |   |-- fp8_gemm     # FP8 矩阵乘法 (Triton)
+|   |   |-- weight_dequant # 权重反量化
+|   |   |-- act_quant    # 激活值量化
+|   |
+|   |-- convert.py       # 权重格式转换工具
+|   |-- fp8_cast_bf16.py  # FP8 -> BF16 精度转换
+|   |-- configs/
+|       |-- config_671B.json  # 671B 模型配置
+|       |-- config_236B.json  # 236B 模型配置
+|       |-- config_16B.json   # 16B 模型配置
+|
+|-- README.md
+|-- README_WEIGHTS.md    # 权重结构说明
+|-- DeepSeek_V3.pdf      # 技术论文</div>
+
+<h2 id="code-modelargs">03-代码分析 / ModelArgs 配置类</h2>
+
+<p><code>ModelArgs</code> 是一个 dataclass，定义了模型的全部超参数。以下是 671B 模型的配置：</p>
+
+<pre><code><span class="kw">@dataclass</span>
+<span class="kw">class</span> <span class="cls">ModelArgs</span>:
+    <span class="cm"># 基本架构参数</span>
+    max_batch_size: <span class="cls">int</span> = <span class="num">8192</span>
+    max_seq_len: <span class="cls">int</span> = <span class="num">4096</span>      <span class="cm"># 预训练序列长度，推理可扩展到 128K</span>
+    dtype: <span class="cls">str</span> = <span class="str">"fp8"</span>         <span class="cm"># 精度模式: "fp8" 或 "bf16"</span>
+    vocab_size: <span class="cls">int</span> = <span class="num">129280</span>    <span class="cm"># 词表大小</span>
+
+    <span class="cm"># 模型维度</span>
+    dim: <span class="cls">int</span> = <span class="num">7168</span>           <span class="cm"># 模型隐藏维度</span>
+    n_layers: <span class="cls">int</span> = <span class="num">61</span>         <span class="cm"># Transformer 层数</span>
+    n_dense_layers: <span class="cls">int</span> = <span class="num">3</span>   <span class="cm"># 前 3 层为密集层</span>
+
+    <span class="cm"># 注意力参数 (MLA)</span>
+    n_heads: <span class="cls">int</span> = <span class="num">128</span>        <span class="cm"># 注意力头数</span>
+    q_lora_rank: <span class="cls">int</span> = <span class="num">1536</span>   <span class="cm"># Query LoRA 压缩维度</span>
+    kv_lora_rank: <span class="cls">int</span> = <span class="num">512</span>    <span class="cm"># KV LoRA 压缩维度</span>
+    qk_nope_head_dim: <span class="cls">int</span> = <span class="num">128</span>  <span class="cm"># Q/K 非位置分量维度</span>
+    qk_rope_head_dim: <span class="cls">int</span> = <span class="num">64</span>   <span class="cm"># Q/K RoPE 分量维度</span>
+    v_head_dim: <span class="cls">int</span> = <span class="num">128</span>      <span class="cm"># V 头维度</span>
+
+    <span class="cm"># MoE 参数</span>
+    n_routed_experts: <span class="cls">int</span> = <span class="num">256</span>      <span class="cm"># 路由专家总数</span>
+    n_shared_experts: <span class="cls">int</span> = <span class="num">2</span>       <span class="cm"># 共享专家数</span>
+    n_activated_experts: <span class="cls">int</span> = <span class="num">8</span>   <span class="cm"># 每 token 激活专家数</span>
+    n_expert_groups: <span class="cls">int</span> = <span class="num">8</span>       <span class="cm"># 专家组数</span>
+    n_limited_groups: <span class="cls">int</span> = <span class="num">1</span>     <span class="cm"># 受限组数</span>
+    score_func: <span class="cls">str</span> = <span class="str">"sigmoid"</span>    <span class="cm"># 评分函数</span>
+    route_scale: <span class="cls">float</span> = <span class="num">2.5</span>       <span class="cm"># 路由权重缩放</span>
+    moe_inter_dim: <span class="cls">int</span> = <span class="num">1408</span>      <span class="cm"># 专家中间维度</span>
+
+    <span class="cm"># FFN 参数 (dense layers)</span>
+    inter_dim: <span class="cls">int</span> = <span class="num">18432</span>      <span class="cm"># 密集层 FFN 中间维度</span>
+
+    <span class="cm"># RoPE 扩展参数</span>
+    original_seq_len: <span class="cls">int</span> = <span class="num">4096</span>  <span class="cm"># 原始序列长度</span>
+    rope_factor: <span class="cls">float</span> = <span class="num">40</span>       <span class="cm"># YaRN 缩放因子</span>
+    beta_fast: <span class="cls">float</span> = <span class="num">32</span>
+    beta_slow: <span class="cls">float</span> = <span class="num">1</span>
+    mscale: <span class="cls">float</span> = <span class="num">1.0</span></code></pre>
+
+<h2 id="code-base">03-代码分析 / 基础组件代码</h2>
+
+<h3>ParallelEmbedding — 词表并行嵌入</h3>
+<pre><code><span class="kw">class</span> <span class="cls">ParallelEmbedding</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, vocab_size, dim):
+        <span class="kw">super</span>().<span class="fn">__init__()
+        <span class="cm"># 将词表按 world_size 切分，每个 rank 只存储部分词嵌入</span>
+        part = vocab_size <span class="op">//</span> world_size
+        self.vocab_start = rank <span class="op">*</span> part
+        self.vocab_end = self.vocab_start <span class="op">+</span> part
+        self.weight = nn.Parameter(torch.<span class="fn">empty</span>(part, dim))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="cm"># 对超出本 rank 词表范围的 token 填零</span>
+        mask = (x < self.vocab_start) <span class="op">|</span> (x <span class="op">>=</span> self.vocab_end)
+        x_clamped = x.<span class="fn">clamp</span>(self.vocab_start, self.vocab_end <span class="op">-</span> <span class="num">1</span>)
+        <span class="cm"># 查表</span>
+        out = F.<span class="fn">embedding</span>(x_clamped <span class="op">-</span> self.vocab_start, self.weight)
+        out[mask] = <span class="num">0</span>
+        <span class="cm"># 跨 rank 汇总</span>
+        <span class="kw">if</span> world_size <span class="op">></span> <span class="num">1</span>:
+            dist.<span class="fn">all_reduce</span>(out)
+        <span class="kw">return</span> out</code></pre>
+
+<h3>Linear — 带 FP8 量化的线性层</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Linear</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_features, out_features, bias=<span class="kw">False</span>, dtype=<span class="kw">None</span>):
+        <span class="kw">super</span>().<span class="fn">__init__()
+        self.weight = nn.Parameter(torch.<span class="fn">empty</span>(out_features, in_features))
+        <span class="cm"># FP8 量化: 存储缩放因子</span>
+        <span class="kw">if</span> dtype <span class="op">==</span> <span class="str">"fp8"</span>:
+            self.scale = nn.Parameter(torch.<span class="fn">ones</span>(
+                (out_features <span class="op">+</span> <span class="num">127</span>) <span class="op">//</span> <span class="num">128</span>,
+                (in_features <span class="op">+</span> <span class="num">127</span>) <span class="op">//</span> <span class="num">128</span>
+            ), requires_grad=<span class="kw">False</span>)
+        self.in_features = in_features
+        self.out_features = out_features
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> <span class="fn">linear</span>(x, self.weight, self.scale)
+
+<span class="kw">def</span> <span class="fn">linear</span>(x, weight, scale=<span class="kw">None</span>):
+    <span class="cm"># 如果权重量化 (element_size == 1, 即 FP8)</span>
+    <span class="kw">if</span> weight.<span class="fn">element_size</span>() == <span class="num">1</span>:
+        <span class="kw">if</span> gemm_impl == <span class="str">"bf16"</span>:
+            <span class="cm"># BF16 模式: 先反量化再做标准 matmul</span>
+            w = <span class="fn">weight_dequant</span>(weight, scale)
+            <span class="kw">return</span> x <span class="op">@</span> w.t()
+        <span class="kw">else</span>:
+            <span class="cm"># FP8 模式: 激活量化 + FP8 GEMM</span>
+            x_fp8, x_scale = <span class="fn">act_quant</span>(x)
+            <span class="kw">return</span> <span class="fn">fp8_gemm</span>(x_fp8, weight, x_scale, scale)
+    <span class="kw">else</span>:
+        <span class="cm"># BF16 权重: 直接 matmul</span>
+        <span class="kw">return</span> x <span class="op">@</span> weight.t()</code></pre>
+
+<h3>ColumnParallelLinear / RowParallelLinear</h3>
+<pre><code><span class="kw">class</span> <span class="cls">ColumnParallelLinear</span>(Linear):
+    <span class="cm"># 列并行: 输出维度按 world_size 切分</span>
+    <span class="cm"># 每个 rank 只计算 part_out_features = out_features // world_size</span>
+    <span class="cm"># 不需要通信, 后续 RowParallelLinear 会做 all_reduce 补偿</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_features, out_features):
+        part_out = out_features <span class="op">//</span> world_size
+        <span class="kw">super</span>().<span class="fn">__init__</span>(in_features, part_out)
+
+<span class="kw">class</span> <span class="cls">RowParallelLinear</span>(Linear):
+    <span class="cm"># 行并行: 输入维度按 world_size 切分</span>
+    <span class="cm"># 每个 rank 只处理 part_in_features = in_features // world_size</span>
+    <span class="cm"># 输出需要 all_reduce 聚合</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, in_features, out_features):
+        part_in = in_features <span class="op">//</span> world_size
+        <span class="kw">super</span>().<span class="fn">__init__</span>(part_in, out_features)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        out = <span class="kw">super</span>().<span class="fn">forward</span>(x)
+        <span class="kw">if</span> world_size <span class="op">></span> <span class="num">1</span>:
+            dist.<span class="fn">all_reduce</span>(out)
+        <span class="kw">return</span> out</code></pre>
+
+<h3>RMSNorm</h3>
+<pre><code><span class="kw">class</span> <span class="cls">RMSNorm</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim, eps=<span class="num">1e-6</span>):
+        self.eps = eps
+        self.weight = nn.Parameter(torch.<span class="fn">ones</span>(dim))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> x <span class="op">*</span> torch.<span class="fn">rsqrt</span>(x.<span class="fn">pow</span>(<span class="num">2</span>).<span class="fn">mean</span>(<span class="op">-</span><span class="num">1</span>, keepdim=<span class="kw">True</span>) <span class="op">+</span> self.eps) <span class="op">*</span> self.weight</code></pre>
+
+<h2 id="code-mla">03-代码分析 / MLA 代码分析</h2>
+
+<p>MLA 是 DeepSeek-V3 最核心的架构创新。以下是完整的 <code>MLA</code> 类分析：</p>
+
+<h3>初始化 (<strong>init</strong>)</h3>
+<pre><code><span class="kw">class</span> <span class="cls">MLA</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, args: ModelArgs):
+        <span class="kw">super</span>().<span class="fn">__init__()
+        self.dim = args.dim                    <span class="cm"># 7168</span>
+        self.n_heads = args.n_heads            <span class="cm"># 128</span>
+        self.n_local_heads = args.n_heads <span class="op">//</span> world_size  <span class="cm"># 16 (8 GPU)</span>
+        self.q_lora_rank = args.q_lora_rank    <span class="cm"># 1536</span>
+        self.kv_lora_rank = args.kv_lora_rank  <span class="cm"># 512</span>
+        self.qk_nope_head_dim = args.qk_nope_head_dim  <span class="cm"># 128</span>
+        self.qk_rope_head_dim = args.qk_rope_head_dim  <span class="cm"># 64</span>
+        self.qk_head_dim = self.qk_nope_head_dim <span class="op">+</span> self.qk_rope_head_dim  <span class="cm"># 192</span>
+        self.v_head_dim = args.v_head_dim      <span class="cm"># 128</span>
+
+        <span class="cm"># Query 投影: 如果 q_lora_rank > 0 使用 LoRA 压缩</span>
+        <span class="kw">if</span> self.q_lora_rank == <span class="num">0</span>:
+            self.wq = <span class="cls">ColumnParallelLinear</span>(self.dim, self.n_heads <span class="op">*</span> self.qk_head_dim)
+        <span class="kw">else</span>:
+            self.wq_a = <span class="cls">Linear</span>(self.dim, self.q_lora_rank)           <span class="cm"># 下投影 7168->1536</span>
+            self.q_norm = <span class="cls">RMSNorm</span>(self.q_lora_rank)
+            self.wq_b = <span class="cls">ColumnParallelLinear</span>(self.q_lora_rank, self.n_heads <span class="op">*</span> self.qk_head_dim)
+
+        <span class="cm"># KV 投影: 总是使用 LoRA 压缩</span>
+        self.wkv_a = <span class="cls">Linear</span>(self.dim, self.kv_lora_rank <span class="op">+</span> self.qk_rope_head_dim)  <span class="cm"># 7168->576</span>
+        self.kv_norm = <span class="cls">RMSNorm</span>(self.kv_lora_rank)
+        self.wkv_b = <span class="cls">ColumnParallelLinear</span>(
+            self.kv_lora_rank,
+            self.n_heads <span class="op">*</span> (self.qk_nope_head_dim <span class="op">+</span> self.v_head_dim)  <span class="cm"># 512->128*256</span>
+        )
+        self.wo = <span class="cls">RowParallelLinear</span>(self.n_heads <span class="op">*</span> self.v_head_dim, self.dim)
+
+        self.softmax_scale = self.qk_head_dim <span class="op">**</span> <span class="op">-</span><span class="num">0.5</span>
+        <span class="cm"># YaRN 长上下文缩放</span>
+        <span class="kw">if</span> args.max_seq_len <span class="op">></span> args.original_seq_len:
+            mscale = <span class="fn">yarn_get_mscale</span>(args.rope_factor, args.beta_fast)
+            self.softmax_scale <span class="op">*=</span> mscale
+
+        <span class="cm"># 缓存: 两种模式</span>
+        <span class="kw">if</span> attn_impl == <span class="str">"naive"</span>:
+            <span class="cm"># 完整 K/V 缓存</span>
+            self.<span class="fn">register_buffer</span>(<span class="str">"k_cache"</span>, torch.<span class="fn">zeros</span>(max_batch, max_seq, n_local_heads, qk_head_dim))
+            self.<span class="fn">register_buffer</span>(<span class="str">"v_cache"</span>, torch.<span class="fn">zeros</span>(max_batch, max_seq, n_local_heads, v_head_dim))
+        <span class="kw">elif</span> attn_impl == <span class="str">"absorb"</span>:
+            <span class="cm"># 压缩 KV 缓存 (默认, 节省 98.6% 内存)</span>
+            self.<span class="fn">register_buffer</span>(<span class="str">"kv_cache"</span>, torch.<span class="fn">zeros</span>(max_batch, max_seq, kv_lora_rank))
+            self.<span class="fn">register_buffer</span>(<span class="str">"pe_cache"</span>, torch.<span class="fn">zeros</span>(max_batch, max_seq, qk_rope_head_dim))</code></pre>
+
+<h3>前向传播 (forward) — Naive 模式</h3>
+<pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, x, start_pos, freqs_cis, mask=<span class="kw">None</span>):
+    bsz, seqlen, _ = x.size()
+    end_pos = start_pos <span class="op">+</span> seqlen
+
+    <span class="cm"># === Query 路径 ===</span>
+    <span class="kw">if</span> self.q_lora_rank <span class="op">></span> <span class="num">0</span>:
+        q = self.<span class="fn">wq_b</span>(self.<span class="fn">q_norm</span>(self.<span class="fn">wq_a</span>(x)))  <span class="cm"># 7168->1536->norm->128*192</span>
+    <span class="kw">else</span>:
+        q = self.<span class="fn">wq</span>(x)
+    q = q.<span class="fn">view</span>(bsz, seqlen, self.n_local_heads, self.qk_head_dim)
+
+    <span class="cm"># 分离 NOPE 和 ROPE 分量</span>
+    q_nope, q_pe = torch.<span class="fn">split</span>(q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=<span class="op">-</span><span class="num">1</span>)
+    q_pe = <span class="fn">apply_rotary_emb</span>(q_pe, freqs_cis)
+
+    <span class="cm"># === KV 路径 ===</span>
+    kv = self.<span class="fn">wkv_a</span>(x)                          <span class="cm"># 7168->576</span>
+    kv, k_pe = torch.<span class="fn">split</span>(kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=<span class="op">-</span><span class="num">1</span>)
+    k_pe = <span class="fn">apply_rotary_emb</span>(k_pe.<span class="fn">unsqueeze</span>(<span class="num">2</span>), freqs_cis)
+
+    <span class="cm"># 上投影到完整 K, V</span>
+    kv = self.<span class="fn">kv_norm</span>(kv)
+    k = self.<span class="fn">wkv_b</span>(kv)                         <span class="cm"># 512->128*256</span>
+    k = k.<span class="fn">view</span>(bsz, seqlen, self.n_local_heads, self.qk_nope_head_dim <span class="op">+</span> self.v_head_dim)
+    k_nope, v = torch.<span class="fn">split</span>(k, [self.qk_nope_head_dim, self.v_head_dim], dim=<span class="op">-</span><span class="num">1</span>)
+
+    <span class="cm"># 拼接完整 Key (NOPE + ROPE)</span>
+    k = torch.<span class="fn">cat</span>([k_nope, k_pe.<span class="fn">expand</span>(<span class="op">-</span><span class="num">1</span>, <span class="op">-</span><span class="num">1</span>, self.n_local_heads, <span class="op">-</span><span class="num">1</span>)], dim=<span class="op">-</span><span class="num">1</span>)
+
+    <span class="cm"># 更新缓存</span>
+    self.k_cache[:bsz, start_pos:end_pos] = k
+    self.v_cache[:bsz, start_pos:end_pos] = v
+
+    <span class="cm"># 注意力计算</span>
+    scores = torch.<span class="fn">einsum</span>(<span class="str">"bshd,bthd->bsht"</span>, q, self.k_cache[:bsz, :end_pos])
+    scores <span class="op">*=</span> self.softmax_scale
+    <span class="kw">if</span> mask <span class="op">is not</span> <span class="kw">None</span>:
+        scores <span class="op">+=</span> mask
+    scores = scores.<span class="fn">softmax</span>(dim=<span class="op">-</span><span class="num">1</span>)
+    output = torch.<span class="fn">einsum</span>(<span class="str">"bsht,bthd->bshd"</span>, scores, self.v_cache[:bsz, :end_pos])
+
+    <span class="kw">return</span> self.<span class="fn">wo</span>(output.<span class="fn">flatten</span>(<span class="num">2</span>))</code></pre>
+
+<h3>前向传播 (forward) — Absorb 模式（默认，推理优化）</h3>
+<pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, x, start_pos, freqs_cis, mask=<span class="kw">None</span>):
+    bsz, seqlen, _ = x.size()
+    end_pos = start_pos <span class="op">+</span> seqlen
+
+    <span class="cm"># === Query 路径 (同 naive) ===</span>
+    q = self.<span class="fn">wq_b</span>(self.<span class="fn">q_norm</span>(self.<span class="fn">wq_a</span>(x)))
+    q = q.<span class="fn">view</span>(bsz, seqlen, self.n_local_heads, self.qk_head_dim)
+    q_nope, q_pe = torch.<span class="fn">split</span>(q, [self.qk_nope_head_dim, self.qk_rope_head_dim], dim=<span class="op">-</span><span class="num">1</span>)
+    q_pe = <span class="fn">apply_rotary_emb</span>(q_pe, freqs_cis)
+
+    <span class="cm"># === KV 路径 (关键差异: 不上投影!) ===</span>
+    kv = self.<span class="fn">wkv_a</span>(x)                          <span class="cm"># 7168->576</span>
+    kv, k_pe = torch.<span class="fn">split</span>(kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=<span class="op">-</span><span class="num">1</span>)
+    k_pe = <span class="fn">apply_rotary_emb</span>(k_pe.<span class="fn">unsqueeze</span>(<span class="num">2</span>), freqs_cis)
+
+    <span class="cm"># 缓存压缩表示 (512维 + 64维), 而非完整的 K/V!</span>
+    self.kv_cache[:bsz, start_pos:end_pos] = self.<span class="fn">kv_norm</span>(kv)
+    self.pe_cache[:bsz, start_pos:end_pos] = k_pe.<span class="fn">squeeze</span>(<span class="num">2</span>)
+
+    <span class="cm"># === "吸收" wkv_b 到注意力计算 ===</span>
+    <span class="cm"># 将 wkv_b 权重 reshape 为 [n_local_heads, -1, kv_lora_rank]</span>
+    wkv_b_weight = self.wkv_b.weight  <span class="cm"># [n_local_heads * 256, 512]</span>
+    wkv_b_weight = wkv_b_weight.<span class="fn">view</span>(self.n_local_heads, <span class="op">-</span><span class="num">1</span>, self.kv_lora_rank)
+
+    <span class="cm"># 将 q_nope 投影到 kv_lora_rank 空间 (吸收 wkv_b 的 K 部分)</span>
+    q_nope_c = torch.<span class="fn">einsum</span>(<span class="str">"bshd,hdc->bshc"</span>,
+                          q_nope, wkv_b_weight[:, :self.qk_nope_head_dim])
+
+    <span class="cm"># 注意力: 分别计算 NOPE 和 ROPE 分量</span>
+    scores = (torch.<span class="fn">einsum</span>(<span class="str">"bshc,btc->bsht"</span>, q_nope_c, self.kv_cache[:bsz, :end_pos])
+              <span class="op">+</span> torch.<span class="fn">einsum</span>(<span class="str">"bshr,btr->bsht"</span>, q_pe, self.pe_cache[:bsz, :end_pos]))
+    scores <span class="op">*=</span> self.softmax_scale
+    <span class="kw">if</span> mask <span class="op">is not</span> <span class="kw">None</span>:
+        scores <span class="op">+=</span> mask
+    scores = scores.<span class="fn">softmax</span>(dim=<span class="op">-</span><span class="num">1</span>)
+
+    <span class="cm"># 注意力输出在压缩空间, 再通过 wkv_b 的 V 部分投影回来</span>
+    x = torch.<span class="fn">einsum</span>(<span class="str">"bsht,btc->bshc"</span>, scores, self.kv_cache[:bsz, :end_pos])
+    x = torch.<span class="fn">einsum</span>(<span class="str">"bshc,hdc->bshd"</span>, x, wkv_b_weight[:, <span class="op">-</span>self.v_head_dim:])
+
+    <span class="kw">return</span> self.<span class="fn">wo</span>(x.<span class="fn">flatten</span>(<span class="num">2</span>))</code></pre>
+
+<div class="note"><strong>Absorb 模式的核心优化</strong>：Naive 模式缓存 128×(192+128)=40,960 维/token，Absorb 模式只缓存 512+64=576 维/token。wkv_b 矩阵被"吸收"到 attention 计算中，不需要预先展开 K/V，从而实现 98.6% 的缓存压缩。</div>
+
+<h2 id="code-moe">03-代码分析 / MoE 代码分析</h2>
+
+<h3>MLP — 密集前馈网络（也用作共享专家）</h3>
+<pre><code><span class="kw">class</span> <span class="cls">MLP</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim, inter_dim):
+        self.w1 = <span class="cls">ColumnParallelLinear</span>(dim, inter_dim)    <span class="cm"># gate projection</span>
+        self.w2 = <span class="cls">RowParallelLinear</span>(inter_dim, dim)       <span class="cm"># down projection</span>
+        self.w3 = <span class="cls">ColumnParallelLinear</span>(dim, inter_dim)    <span class="cm"># up projection</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.<span class="fn">w2</span>(F.<span class="fn">silu</span>(self.<span class="fn">w1</span>(x)) <span class="op">*</span> self.<span class="fn">w3</span>(x))</code></pre>
+
+<h3>Gate — MoE 门控路由</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Gate</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, args):
+        self.weight = nn.Parameter(torch.<span class="fn">empty</span>(args.n_routed_experts, args.dim))
+        <span class="cm"># 256 x 7168 的路由权重矩阵</span>
+        <span class="kw">if</span> args.n_expert_groups <span class="op">></span> <span class="num">1</span>:
+            <span class="cm"># 组路由参数</span>
+            self.n_expert_groups = args.n_expert_groups  <span class="cm"># 8</span>
+            self.n_limited_groups = args.n_limited_groups  <span class="cm"># 1</span>
+        self.score_func = args.score_func      <span class="cm"># "sigmoid"</span>
+        self.route_scale = args.route_scale    <span class="cm"># 2.5</span>
+        self.topk = args.n_activated_experts   <span class="cm"># 8</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="cm"># Step 1: 计算亲和度分数</span>
+        scores = x <span class="op">@</span> self.weight.t()         <span class="cm"># (N, 256)</span>
+        <span class="kw">if</span> self.score_func == <span class="str">"softmax"</span>:
+            scores = scores.<span class="fn">softmax</span>(dim=<span class="op">-</span><span class="num">1</span>)
+        <span class="kw">else</span>:  <span class="cm"># "sigmoid"</span>
+            scores = scores.<span class="fn">sigmoid</span>()
+
+        <span class="cm"># Step 2: 组限制选择 (Node-Limited Routing)</span>
+        <span class="kw">if</span> self.n_expert_groups <span class="op">></span> <span class="num">1</span>:
+            <span class="cm"># 将 256 专家分为 8 组, 每组 32 个</span>
+            group_scores = scores.<span class="fn">view</span>(x.size(<span class="num">0</span>), self.n_expert_groups, <span class="op">-</span><span class="num">1</span>).<span class="fn">max</span>(dim=<span class="op">-</span><span class="num">1</span>)
+            <span class="cm"># 选出 Top-1 组</span>
+            group_idx = torch.<span class="fn">topk</span>(group_scores, self.n_limited_groups, dim=<span class="op">-</span><span class="num">1</span>)[<span class="num">1</span>]
+            <span class="cm"># 构造组掩码</span>
+            group_mask = torch.<span class="fn">zeros_like</span>(group_scores)
+            group_mask.<span class="fn">scatter_</span>(<span class="num">1</span>, group_idx, <span class="num">1</span>)
+            <span class="cm"># 屏蔽非选中组的专家</span>
+            scores = scores.<span class="fn">view</span>(x.size(<span class="num">0</span>), self.n_expert_groups, <span class="op">-</span><span class="num">1</span>)
+            scores = scores <span class="op">*</span> group_mask.<span class="fn">unsqueeze</span>(<span class="op">-</span><span class="num">1</span>).<span class="fn">expand_as</span>(scores)
+            scores = scores.<span class="fn">view</span>(x.size(<span class="num">0</span>), <span class="op">-</span><span class="num">1</span>)
+
+        <span class="cm"># Step 3: Top-K 选择</span>
+        indices = torch.<span class="fn">topk</span>(scores, self.topk, dim=<span class="op">-</span><span class="num">1</span>)[<span class="num">1</span>]
+        <span class="cm"># Step 4: 提取并归一化权重</span>
+        weights = torch.<span class="fn">gather</span>(scores, <span class="num">1</span>, indices)
+        <span class="kw">if</span> self.score_func == <span class="str">"sigmoid"</span>:
+            weights <span class="op">/=</span> weights.<span class="fn">sum</span>(dim=<span class="op">-</span><span class="num">1</span>, keepdim=<span class="kw">True</span>)  <span class="cm"># 归一化</span>
+        weights <span class="op">*=</span> self.route_scale    <span class="cm"># x2.5</span>
+        <span class="kw">return</span> weights, indices</code></pre>
+
+<h3>Expert — 单个专家网络</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Expert</span>(nn.Module):
+    <span class="cm"># 与 MLP 结构相同, 但使用非并行 Linear (专家已通过 EP 分布)</span>
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, dim, inter_dim):
+        self.w1 = <span class="cls">Linear</span>(dim, inter_dim)       <span class="cm"># 7168 -> 1408</span>
+        self.w2 = <span class="cls">Linear</span>(inter_dim, dim)      <span class="cm"># 1408 -> 7168</span>
+        self.w3 = <span class="cls">Linear</span>(dim, inter_dim)       <span class="cm"># 7168 -> 1408</span>
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        <span class="kw">return</span> self.<span class="fn">w2</span>(F.<span class="fn">silu</span>(self.<span class="fn">w1</span>(x)) <span class="op">*</span> self.<span class="fn">w3</span>(x))</code></pre>
+
+<h3>MoE — 完整混合专家层</h3>
+<pre><code><span class="kw">class</span> <span class="cls">MoE</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, args):
+        self.gate = <span class="cls">Gate</span>(args)
+        self.n_shared_experts = args.n_shared_experts  <span class="cm"># 2</span>
+        <span class="cm"># 共享专家: 始终激活, 使用 MLP</span>
+        self.shared_experts = <span class="cls">MLP</span>(args.dim, args.moe_inter_dim <span class="op">*</span> self.n_shared_experts)
+
+        <span class="cm"># 专家分片: 每个 GPU 只创建自己负责的专家</span>
+        self.n_local_experts = args.n_routed_experts <span class="op">//</span> world_size  <span class="cm"># 256/8=32</span>
+        self.experts_start_idx = rank <span class="op">*</span> self.n_local_experts
+        self.experts_end_idx = self.experts_start_idx <span class="op">+</span> self.n_local_experts
+
+        self.experts = nn.<span class="fn">ModuleList</span>([
+            <span class="cls">Expert</span>(args.dim, args.moe_inter_dim)
+            <span class="kw">if</span> self.experts_start_idx <span class="op"><=</span> i <span class="op"><</span> self.experts_end_idx
+            <span class="kw">else</span> <span class="kw">None</span>
+            <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(args.n_routed_experts)
+        ])
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        shape = x.size()
+        x = x.<span class="fn">view</span>(<span class="op">-</span><span class="num">1</span>, self.dim)           <span class="cm"># (N, 7168)</span>
+
+        <span class="cm"># 路由</span>
+        weights, indices = self.<span class="fn">gate</span>(x)    <span class="cm"># (N, 8), (N, 8)</span>
+
+        <span class="cm"># 初始化输出</span>
+        y = torch.<span class="fn">zeros_like</span>(x)
+
+        <span class="cm"># 统计每个专家收到的 token 数</span>
+        counts = torch.<span class="fn">bincount</span>(indices.<span class="fn">flatten</span>(), minlength=args.n_routed_experts)
+
+        <span class="cm"># 遍历本 GPU 的专家, 处理分配到的 token</span>
+        <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(self.experts_start_idx, self.experts_end_idx):
+            <span class="kw">if</span> counts[i] == <span class="num">0</span>:
+                <span class="kw">continue</span>
+            expert = self.experts[i]
+            idx, top = torch.<span class="fn">where</span>(indices == i)  <span class="cm"># 找到分配给专家 i 的 token</span>
+            y[idx] <span class="op">+=</span> <span class="fn">expert</span>(x[idx]) <span class="op">*</span> weights[idx, top, <span class="kw">None</span>]  <span class="cm"># 加权累加</span>
+
+        <span class="cm"># 共享专家: 对所有 token 始终激活</span>
+        z = self.<span class="fn">shared_experts</span>(x)
+
+        <span class="cm"># 分布式: 跨 GPU 聚合路由专家输出</span>
+        <span class="kw">if</span> world_size <span class="op">></span> <span class="num">1</span>:
+            dist.<span class="fn">all_reduce</span>(y)
+
+        <span class="kw">return</span> (y <span class="op">+</span> z).<span class="fn">view</span>(shape)</code></pre>
+
+<h2 id="code-block">03-代码分析 / Block 与 Transformer</h2>
+
+<h3>Block — Transformer 块</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Block</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, layer_id, args):
+        self.n_heads = args.n_heads
+        self.dim = args.dim
+        self.head_dim = args.qk_nope_head_dim <span class="op">+</span> args.qk_rope_head_dim
+        self.attn = <span class="cls">MLA</span>(args)
+
+        <span class="cm"># 关键: 前 n_dense_layers 层用 MLP, 其余用 MoE</span>
+        self.ffn = <span class="cls">MLP</span>(args.dim, args.inter_dim) <span class="kw">if</span> layer_id <span class="op"><</span> args.n_dense_layers \
+              <span class="kw">else</span> <span class="cls">MoE</span>(args)
+
+        self.attn_norm = <span class="cls">RMSNorm</span>(args.dim)
+        self.ffn_norm = <span class="cls">RMSNorm</span>(args.dim)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, x, start_pos, freqs_cis, mask):
+        <span class="cm"># Pre-Norm 架构 + 残差连接</span>
+        x = x <span class="op">+</span> self.<span class="fn">attn</span>(self.<span class="fn">attn_norm</span>(x), start_pos, freqs_cis, mask)
+        x = x <span class="op">+</span> self.<span class="fn">ffn</span>(self.<span class="fn">ffn_norm</span>(x))
+        <span class="kw">return</span> x</code></pre>
+
+<h3>Transformer — 完整模型</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Transformer</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, args):
+        <span class="kw">super</span>().<span class="fn">__init__()
+        self.embed = <span class="cls">ParallelEmbedding</span>(args.vocab_size, args.dim)
+
+        <span class="cm"># 创建 61 个 Block</span>
+        self.layers = nn.Module.<span class="fn">Dict</span>({
+            <span class="fn">str</span>(i): <span class="cls">Block</span>(i, args) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(args.n_layers)
+        })
+
+        self.norm = <span class="cls">RMSNorm</span>(args.dim)
+        self.head = <span class="cls">ColumnParallelLinear</span>(args.dim, args.vocab_size)
+
+        <span class="cm"># 预计算 RoPE 频率</span>
+        self.<span class="fn">register_buffer</span>(<span class="str">"freqs_cis"</span>, <span class="fn">precompute_freqs_cis</span>(args))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, tokens, start_pos):
+        bsz, seqlen = tokens.size()
+        <span class="kw">if</span> seqlen == <span class="num">1</span>:
+            <span class="cm"># 解码阶段: 无需 mask</span>
+            mask = <span class="kw">None</span>
+        <span class="kw">else</span>:
+            <span class="cm"># 预填充阶段: 因果 mask</span>
+            mask = torch.<span class="fn">full</span>((seqlen, seqlen), <span class="fn">float</span>(<span class="str">"-inf"</span>))
+            mask = torch.<span class="fn">triu</span>(mask, diagonal=<span class="num">1</span>)
+            <span class="kw">if</span> start_pos <span class="op">></span> <span class="num">0</span>:
+                mask = torch.<span class="fn">hstack</span>([torch.<span class="fn">zeros</span>(seqlen, start_pos), mask])
+
+        <span class="cm"># Token 嵌入</span>
+        x = self.<span class="fn">embed</span>(tokens)
+        <span class="cm"># 提取当前位置的 RoPE 频率</span>
+        freqs_cis = self.freqs_cis[start_pos : start_pos <span class="op">+</span> seqlen]
+
+        <span class="cm"># 逐层前向传播</span>
+        <span class="kw">for</span> layer <span class="kw">in</span> self.layers.<span class="fn">values</span>():
+            x = <span class="fn">layer</span>(x, start_pos, freqs_cis, mask)
+
+        <span class="cm"># 最终归一化 + 输出投影</span>
+        x = self.<span class="fn">norm</span>(x)
+        logits = self.<span class="fn">head</span>(x)
+
+        <span class="kw">return</span> logits</code></pre>
+
+<h2 id="code-kernel">03-代码分析 / kernel.py 分析</h2>
+
+<p><code>kernel.py</code> 实现了 FP8 量化计算的核心 Triton 算子，部署在<strong>所有 Linear 层内部</strong>。</p>
+
+<h3>act_quant — 激活值量化</h3>
+<pre><code><span class="kw">@triton.jit</span>
+<span class="kw">def</span> <span class="fn">act_quant_kernel</span>(x_ptr, x_scale_ptr, M, N, ...):
+    <span class="cm"># 按 1x128 tile 量化激活值</span>
+    <span class="cm"># 每个 tile 独立计算缩放因子</span>
+    <span class="cm"># 输出: FP8 E4M3 张量 + FP32 缩放因子</span>
+
+<span class="kw">def</span> <span class="fn">act_quant</span>(x):
+    <span class="cm"># x: (N, in_features) in BF16</span>
+    <span class="cm"># 输出: (N, in_features) in FP8 + (N, in_features//128) in FP32</span>
+    <span class="kw">return</span> x_fp8, x_scale</code></pre>
+
+<h3>weight_dequant — 权重反量化</h3>
+<pre><code><span class="kw">def</span> <span class="fn">weight_dequant</span>(weight, scale):
+    <span class="cm"># weight: (out, in) in FP8 E4M3</span>
+    <span class="cm"># scale: (out//128, in//128) in FP32</span>
+    <span class="cm"># 输出: (out, in) in BF16</span>
+    <span class="cm"># 用于非 FP8 GEMM 路径 (Embedding, attention scores, gating)</span>
+    <span class="kw">return</span> weight_bf16</code></pre>
+
+<h3>fp8_gemm — FP8 矩阵乘法</h3>
+<pre><code><span class="kw">@triton.jit</span>
+<span class="kw">def</span> <span class="fn">fp8_gemm_kernel</span>(a_ptr, b_ptr, c_ptr, a_scale, b_scale, M, N, K, ...):
+    <span class="cm"># FP8 输入: a (activations), b (weights)</span>
+    <span class="cm"># 内部累加: 每 Nc=128 个元素提升到 FP32</span>
+    <span class="cm"># 输出: BF16 结果</span>
+
+<span class="kw">def</span> <span class="fn">fp8_gemm</span>(a, b, a_scale, b_scale):
+    <span class="cm"># a: (N, K) in FP8, b: (K, M) in FP8</span>
+    <span class="cm"># 输出: (N, M) in BF16</span>
+    <span class="kw">return</span> c_bf16</code></pre>
+
+<h2 id="code-mainflow">03-代码分析 / 主流程详解</h2>
+
+<p>以下是从用户输入到生成输出的完整主流程：</p>
+
+<div class="frame-diagram">Main Flow: From Input to Output (inference/generate.py):
+
++=====================================================================+
+|  Step 1: Initialization (main function)                              |
++=====================================================================+
+|                                                                       |
+|  1. Load config from JSON --> ModelArgs                              |
+|  2. Set default dtype to bfloat16                                    |
+|  3. Create model = Transformer(ModelArgs) on CUDA                   |
+|  4. Load tokenizer from checkpoint path                              |
+|  5. Warmup: generate 2 tokens (trigger JIT, init caches)            |
+|  6. Load weights from safetensors (model{rank}-mp{world_size})     |
+|                                                                       |
++=====================================================================+
+|  Step 2: Generation Loop (generate function)                         |
++=====================================================================+
+|                                                                       |
+|  @torch.inference_mode()                                             |
+|  def generate(model, tokens, max_new_tokens, temperature):          |
+|                                                                       |
+|    for cur_pos in range(start_pos, start_pos + max_new_tokens):     |
+|                                                                       |
+|      +-------------------------------------------------------+       |
+|      | 2a. Forward Pass                                      |       |
+|      |     logits = model.forward(tokens[:, :cur_pos],       |       |
+|      |                              prev_pos)                 |       |
+|      |     --> Transformer.forward()                         |       |
+|      |         embed -> 61 layers -> norm -> head -> logits  |       |
+|      +-------------------------------------------------------+       |
+|                              |                                        |
+|      +-------------------------------------------------------+       |
+|      | 2b. Get Next Token                                    |       |
+|      |     if temperature == 0:                              |       |
+|      |       next_token = argmax(logits[:, -1])             |       |
+|      |     else:                                              |       |
+|      |       probs = softmax(logits[:, -1] / temp)          |       |
+|      |       next_token = multinomial(probs, 1)              |       |
+|      +-------------------------------------------------------+       |
+|                              |                                        |
+|      +-------------------------------------------------------+       |
+|      | 2c. Update Token Array                                |       |
+|      |     tokens[:, cur_pos] = next_token                   |       |
+|      |     prev_pos = cur_pos                                |       |
+|      +-------------------------------------------------------+       |
+|                              |                                        |
+|      +-------------------------------------------------------+       |
+|      | 2d. Check Stop Condition                              |       |
+|      |     if next_token == EOS: break                      |       |
+|      |     if cur_pos >= max_seq_len: break                 |       |
+|      +-------------------------------------------------------+       |
+|                                                                       |
+|    return tokens                                                      |
+|                                                                       |
++=====================================================================+
+|  Step 3: Output                                                      |
++=====================================================================+
+|                                                                       |
+|  Interactive mode: print decoded text, wait for next input          |
+|  Batch mode: write decoded text to output file                      |
+|                                                                       |
++=====================================================================+</div>
+
+<h3>Transformer.forward() 内部流程详解</h3>
+<pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, tokens, start_pos):
+    bsz, seqlen = tokens.size()
+
+    <span class="cm"># 1. 构造 mask</span>
+    <span class="kw">if</span> seqlen == <span class="num">1</span>:  <span class="cm"># Decode (逐 token 生成)</span>
+        mask = <span class="kw">None</span>      <span class="cm"># 无需 mask, KV cache 自动处理</span>
+    <span class="kw">else</span>:           <span class="cm"># Prefill (处理整个 prompt)</span>
+        mask = <span class="fn">causal_mask</span>(seqlen, start_pos)  <span class="cm"># 下三角掩码</span>
+
+    <span class="cm"># 2. Token 嵌入</span>
+    x = self.<span class="fn">embed</span>(tokens)         <span class="cm"># (bsz, seqlen, 7168)</span>
+    <span class="kw">if</span> world_size <span class="op">></span> <span class="num">1</span>:
+        dist.<span class="fn">all_reduce</span>(x)     <span class="cm"># 词表并行聚合</span>
+
+    <span class="cm"># 3. 提取 RoPE 频率</span>
+    freqs_cis = self.freqs_cis[start_pos : start_pos <span class="op">+</span> seqlen]
+
+    <span class="cm"># 4. 逐层前向传播 (61 层)</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(self.n_layers):
+        layer = self.layers[<span class="fn">str</span>(i)]
+        x = <span class="fn">layer</span>(x, start_pos, freqs_cis, mask)
+        <span class="cm"># Block.forward 内部:</span>
+        <span class="cm">#   x = x + MLA(RMSNorm(x), start_pos, freqs_cis, mask)</span>
+        <span class="cm">#   x = x + FFN(RMSNorm(x))</span>
+        <span class="cm">#   FFN = MLP (layer 0-2) 或 MoE (layer 3-60)</span>
+
+    <span class="cm"># 5. 最终归一化</span>
+    x = self.<span class="fn">norm</span>(x)
+
+    <span class="cm"># 6. 输出投影 (logits)</span>
+    logits = self.<span class="fn">head</span>(x)        <span class="cm"># (bsz, seqlen, 129280)</span>
+    <span class="kw">if</span> world_size <span class="op">></span> <span class="num">1</span>:
+        dist.<span class="fn">all_gather</span>(logits)  <span class="cm"># 列并行输出聚合</span>
+
+    <span class="kw">return</span> logits</code></pre>
+
+<!-- ================================================================== -->
+<!-- ==================== PART 4: TRAINING FLOW ======================= -->
+<!-- ================================================================== -->
+
+<h2 id="train-pretrain">04-训练场景执行流程 / 预训练流程</h2>
+
+<h3>训练数据构建</h3>
+<p>DeepSeek-V3 在 14.8 万亿高质量 token 上进行预训练。数据构成优化了数学和编程样本比例，扩展了中英文之外的多语言覆盖。约 10% 的训练序列使用 Fill-in-Middle (FIM) 策略（PSM 格式），增强模型预测中间文本的能力。</p>
+
+<h3>训练超参数</h3>
+<table>
+<tr><th>超参数</th><th>值</th><th>说明</th></tr>
+<tr><td>序列长度</td><td>4,096 tokens</td><td>预训练阶段</td></tr>
+<tr><td>优化器</td><td>AdamW (β1=0.9, β2=0.95, wd=0.1)</td><td>标准 AdamW</td></tr>
+<tr><td>峰值学习率</td><td>2.2e-4</td><td>余弦衰减到 7.3e-6</td></tr>
+<tr><td>批次大小</td><td>3,072 → 15,360 sequences</td><td>逐步增长</td></tr>
+<tr><td>梯度裁剪</td><td>1.0</td><td>范数裁剪</td></tr>
+<tr><td>训练数据</td><td>14.8T tokens</td><td>多领域多语言</td></tr>
+<tr><td>GPU 集群</td><td>2,048 × H800</td><td>NVLink 160GB/s + IB 50GB/s</td></tr>
+<tr><td>总 GPU 小时</td><td>2.788M (2.664M 预训练 + 0.1M 后训练)</td><td>约 $5.576M</td></tr>
+</table>
+
+<h3>训练执行流程全景</h3>
+<div class="frame-diagram">Training Execution Flow Overview:
+
++=====================================================================+
+|                DeepSeek-V3 Training Pipeline                         |
++=====================================================================+
+|                                                                       |
+|  Phase 1: PRETRAINING (2.664M GPU-hours)                            |
+|  ================================================================    |
+|                                                                       |
+|  [Data Pipeline]                                                      |
+|  14.8T tokens --> tokenize --> batch (3072->15360 seqs)             |
+|       |                                                               |
+|       v                                                               |
+|  [Forward Pass]                                                       |
+|  tokens --> Embedding --> 61 Blocks --> Norm --> Head --> logits     |
+|       |                                |                              |
+|       |                    [MTP Modules] (D=1)                       |
+|       |                         |                                    |
+|       v                         v                                    |
+|  L_main = CE(logits, targets)  L_MTP = CE(MTP_logits, future)       |
+|  L_bal  = alpha * sum(load_i / N)  (tiny sequence balance)          |
+|  L_total = L_main + (lambda/D) * L_MTP + L_bal                     |
+|       |                                                               |
+|       v                                                               |
+|  [Backward Pass]                                                      |
+|  L_total.backward() --> gradients (FP32 master)                     |
+|       |                                                               |
+|       v                                                               |
+|  [DualPipe Schedule]                                                  |
+|  Forward chunk + Backward chunk + All-to-All communication           |
+|  overlapped across 16 pipeline stages                                |
+|       |                                                               |
+|       v                                                               |
+|  [Optimizer Update]                                                   |
+|  AdamW: m = beta1*m + (1-beta1)*grad                                 |
+|         v = beta2*v + (1-beta2)*grad^2                               |
+|         w = w - lr * m / (sqrt(v) + eps)                             |
+|  (ZeRO-1: optimizer states sharded across DP replicas)              |
+|       |                                                               |
+|       v                                                               |
+|  [Bias Update] (auxiliary-loss-free)                                 |
+|  for each expert i:                                                   |
+|    if load_i > avg: b_i -= gamma                                     |
+|    if load_i < avg: b_i += gamma                                     |
+|  (bias NOT in gradient path)                                         |
+|       |                                                               |
+|       v                                                               |
+|  Repeat for 14.8T tokens                                              |
+|                                                                       |
+|  Phase 2: LONG CONTEXT EXTENSION                                     |
+|  ================================================================    |
+|  Stage 1: 4K --> 32K (YaRN, rope_factor)                            |
+|  Stage 2: 32K --> 128K (YaRN, extended training)                    |
+|                                                                       |
+|  Phase 3: POST-TRAINING (0.1M GPU-hours)                            |
+|  ================================================================    |
+|  SFT: 1.5M samples (reasoning + non-reasoning)                     |
+|  RL: GRPO (Group Relative Policy Optimization)                      |
+|  R1 Distillation: inject CoT reasoning from DeepSeek-R1             |
+|                                                                       |
++=====================================================================+</div>
+
+<h2 id="train-fp8">04-训练场景执行流程 / FP8 训练框架</h2>
+
+<h3>FP8 混合精度训练执行流程</h3>
+<div class="frame-diagram">FP8 Training Execution (per training step):
+
+Step 1: Forward Pass
+  +--------------------------------------------------+
+  | Activations flow through layers:                |
+  |                                                   |
+  | x (BF16) --> act_quant --> x_fp8 (FP8 E4M3)    |
+  | x_fp8 + W_fp8 --> fp8_gemm --> out (BF16)       |
+  | out (BF16) --> next layer                       |
+  |                                                   |
+  | Sensitive operations stay in BF16/FP32:          |
+  | - Embedding lookup                                |
+  | - Attention score computation                    |
+  | - MoE gate routing                               |
+  | - Output head projection                         |
+  +--------------------------------------------------+
+
+Step 2: Activation Checkpointing
+  +--------------------------------------------------+
+  | Only FP8-compressed activations are cached       |
+  | for backward pass (saves memory)                 |
+  | RMSNorm activations recomputed (not cached)     |
+  +--------------------------------------------------+
+
+Step 3: Backward Pass
+  +--------------------------------------------------+
+  | Gradients computed in FP32 (master weights)      |
+  | FP8 GEMM used for gradient computation           |
+  | where possible                                    |
+  +--------------------------------------------------+
+
+Step 4: Optimizer Update
+  +--------------------------------------------------+
+  | Master weights: FP32                              |
+  | Optimizer states (m, v): BF16                    |
+  | Weight update: FP32                               |
+  | After update: weights re-quantized to FP8        |
+  +--------------------------------------------------+
+
+Step 5: Communication
+  +--------------------------------------------------+
+  | All-to-All (MoE dispatch): FP8                   |
+  | All-Reduce (gradient sync): BF16                 |
+  | Pipeline communication: FP8 where possible       |
+  +--------------------------------------------------+
+
+Result: less than 0.25% relative loss error vs BF16 baseline</div>
+
+<h2 id="train-dualpipe">04-训练场景执行流程 / DualPipe 调度详解</h2>
+
+<h3>并行策略组合</h3>
+<table>
+<tr><th>并行维度</th><th>度数</th><th>覆盖范围</th><th>通信方式</th></tr>
+<tr><td>流水线并行 (PP)</td><td>16</td><td>层间切分（61层/16约4层/stage）</td><td>点对点 (Pipeline)</td></tr>
+<tr><td>专家并行 (EP)</td><td>64</td><td>256专家/64GPU=4专家/GPU</td><td>All-to-All</td></tr>
+<tr><td>数据并行 (DP)</td><td>ZeRO-1</td><td>优化器状态分片</td><td>All-Reduce</td></tr>
+<tr><td>张量并行 (TP)</td><td>不使用</td><td>-</td><td>-</td></tr>
+</table>
+
+<h3>DualPipe 调度原理</h3>
+<div class="frame-diagram">DualPipe Schedule Detail:
+
+Traditional 1F1B Pipeline:
+  Time --->
+  GPU0: [F0][F1][F2][F3]............[B3][B2][B1][B0]
+  GPU1: ....[F0][F1][F2][F3]........[B3][B2][B1][B0]
+  GPU2: ........[F0][F1][F2][F3]....[B3][B2][B1][B0]
+  Bubbles: ^^^^              ^^^^
+
+DualPipe (bidirectional + overlap):
+  Time --->
+  GPU0: [F0a|C][F0b|C][B0a|C][B0b|C]  <-- forward+backward from LEFT
+  GPU1: [F1a|C][F1b|C][B1a|C][B1b|C]
+  GPU2: [F2a|C][F2b|C][B2a|C][B2b|C]
+  GPU3: [B3a|C][B3b|C][F3a|C][F3b|C]  <-- backward from RIGHT
+
+  F = Forward chunk, B = Backward chunk
+  C = Communication (All-to-All for MoE + Pipeline transfer)
+  | = overlapping (compute + comm on different SMs)
+
+  Key: Both forward and backward flow BIDIRECTIONALLY,
+       meeting in the middle. Communication is fully hidden
+       behind computation on separate SMs.
+
+  SM Allocation (H800 has ~132 SMs):
+  - ~20 SMs: All-to-All communication kernel
+  - ~112 SMs: GEMM computation (fully utilized)
+
+  Result: Near-zero pipeline bubbles
+          Near-zero All-to-All overhead</div>
+
+<h3>跨节点 All-to-All 通信优化</h3>
+<p>MoE 的核心通信开销是跨节点的 All-to-All dispatch/return。DeepSeek 开发了定制通信内核：</p>
+<ul>
+  <li><strong>SM 分配</strong>：仅使用约 20 个 SM 执行 All-to-All，其余 112 个 SM 可并行做 GEMM 计算</li>
+  <li><strong>带宽自适应</strong>：同时利用 InfiniBand（跨节点 50GB/s）和 NVLink（节点内 160GB/s）</li>
+  <li><strong>FP8 传输</strong>：All-to-All 通信使用 FP8 格式，减少 50% 通信量</li>
+  <li><strong>与计算重叠</strong>：DualPipe 确保 All-to-All 被前向/后向计算完全隐藏</li>
+</ul>
+
+<h3>内存优化策略</h3>
+<table>
+<tr><th>策略</th><th>实现</th><th>节省效果</th></tr>
+<tr><td>激活检查点</td><td>仅缓存 FP8 压缩激活，RMSNorm 等重计算</td><td>O(n^2) to O(n) 内存</td></tr>
+<tr><td>无张量并行</td><td>不使用 TP，避免其高内存开销</td><td>消除 TP 缓存冗余</td></tr>
+<tr><td>ZeRO-1</td><td>优化器状态分片到所有 DP 副本</td><td>优化器内存/DP_size</td></tr>
+<tr><td>FP8 存储</td><td>权重和激活以 FP8 存储</td><td>权重内存 x0.5</td></tr>
+<tr><td>BF16 优化器状态</td><td>AdamW 的 m, v 使用 BF16 而非 FP32</td><td>优化器内存 x0.5</td></tr>
+</table>
+
+<h2 id="train-context">04-训练场景执行流程 / 长上下文扩展</h2>
+
+<p>预训练后，通过两阶段 YaRN (Yet another RoPE extensioN) 方法扩展上下文长度：</p>
+
+<div class="frame-diagram">Long Context Extension (YaRN):
+
+Phase 1: 4K --> 32K
+  - Method: YaRN with rope_factor
+  - Training data: Long context sequences
+  - Batch size: reduced for longer sequences
+  - Steps: ~1000 steps
+
+Phase 2: 32K --> 128K
+  - Method: YaRN with extended rope_factor
+  - Training data: Very long context sequences
+  - Batch size: further reduced
+  - Steps: ~1000 steps
+
+YaRN Scaling in MLA:
+  - RoPE frequencies adjusted by rope_factor
+  - softmax_scale *= yarn_get_mscale(rope_factor, beta_fast)
+  - mscale compensates for attention distribution spreading
+
+Result: 128K context window with maintained quality</div>
+
+<h2 id="train-post">04-训练场景执行流程 / 后训练 (SFT+RL)</h2>
+
+<h3>监督微调 (SFT)</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>训练样本</td><td>1.5M 条</td></tr>
+<tr><td>推理数据</td><td>来自 DeepSeek-R1 的 CoT 推理样本</td></tr>
+<tr><td>非推理数据</td><td>多任务多语言指令数据</td></tr>
+<tr><td>关键策略</td><td>系统提示引导反思与验证模式</td></tr>
+<tr><td>GPU 小时</td><td>包含在 0.1M 后训练预算中</td></tr>
+</table>
+
+<h3>强化学习 (GRPO)</h3>
+<div class="frame-diagram">GRPO (Group Relative Policy Optimization):
+
+  Traditional RL (PPO):
+  +-----+     +-----+     +-------+
+  | Actor |-->| Critic |-->| Reward |
+  +-----+     +-----+     +-------+
+  (needs separate critic model = expensive!)
+
+  GRPO:
+  +-----+     +-------+
+  | Actor |-->| Reward |
+  +-----+     +-------+
+  (no critic! uses group statistics as baseline)
+
+  Algorithm:
+  1. Sample G outputs for same prompt (group)
+  2. Score each output with reward model
+  3. Compute advantage: A_i = (r_i - mean(r)) / std(r)
+  4. Policy gradient: optimize actor with A_i
+  5. KL regularization to prevent drift
+
+  Reward Sources:
+  - Rule-based (math, code: execution verification)
+  - Model-based (general tasks: DeepSeek-V3 self-evaluation)
+  - Self-Rewarding (constitutional AI approach)</div>
+
+<h3>R1 蒸馏</h3>
+<p>从 DeepSeek-R1 系列模型蒸馏长思维链推理能力到 DeepSeek-V3。通过精心设计的系统提示，将 R1 的验证和反思模式注入 V3，显著提升数学和编程性能，同时控制输出风格和长度。</p>
+
+<!-- ================================================================== -->
+<!-- ==================== PART 5: INFERENCE FLOW ====================== -->
+<!-- ================================================================== -->
+
+<h2 id="infer-init">05-推理场景执行流程 / 推理初始化</h2>
+
+<div class="frame-diagram">Inference Initialization Flow:
+
++=====================================================================+
+|                DeepSeek-V3 Inference Startup                         |
++=====================================================================+
+|                                                                       |
+|  Step 1: Distributed Setup                                           |
+|  +---------------------------------------------------+               |
+|  | torchrun --nproc_per_node=8 generate.py           |               |
+|  |   --> WORLD_SIZE, RANK, LOCAL_RANK set             |               |
+|  |   --> init_process_group(backend="nccl")           |               |
+|  |   --> each process assigned to its GPU             |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
+|  Step 2: Configuration Loading                                       |
+|  +---------------------------------------------------+               |
+|  | Load JSON config --> ModelArgs                     |               |
+|  | Set attn_impl = "absorb" (default, memory saving) |               |
+|  | Set dtype = "fp8" (or "bf16")                     |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
+|  Step 3: Model Construction                                          |
+|  +---------------------------------------------------+               |
+|  | model = Transformer(ModelArgs)                     |               |
+|  |   - ParallelEmbedding (vocab split across GPUs)   |               |
+|  |   - 61 Blocks (MLA + MLP/MoE)                     |               |
+|  |   - RMSNorm + Linear head                         |               |
+|  |   - All Linear layers have FP8 quantized weights  |               |
+|  |   - KV cache buffers pre-allocated (absorb mode)  |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
+|  Step 4: Warmup                                                      |
+|  +---------------------------------------------------+               |
+|  | Generate 2 dummy tokens to trigger:                |               |
+|  |   - JIT compilation of Triton kernels              |               |
+|  |   - CUDA graph capture (if enabled)               |               |
+|  |   - KV cache initialization                        |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
+|  Step 5: Weight Loading                                              |
+|  +---------------------------------------------------+               |
+|  | Load model{rank}-mp{world_size}.safetensors       |               |
+|  |   - Each GPU loads its weight shard                |               |
+|  |   - FP8 weights + BF16 scale factors               |               |
+|  |   - Expert weights for local experts only         |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
+|  Step 6: Ready for Inference                                         |
+|  +---------------------------------------------------+               |
+|  | rank 0: handles user I/O, broadcasts prompts      |               |
+|  | rank 1+: receive broadcasts, participate silently |               |
+|  +---------------------------------------------------+               |
+|                                                                       |
++=====================================================================+</div>
+
+<h2 id="infer-prefill">05-推理场景执行流程 / 预填充阶段</h2>
+
+<p>预填充（Prefilling）阶段处理整个输入 prompt，为所有输入 token 计算 KV 缓存。这是计算密集型操作，可以充分利用 GPU 并行性。</p>
+
+<div class="frame-diagram">Prefilling Phase Execution:
+
++=====================================================================+
+|                Prefilling (seqlen > 1)                               |
++=====================================================================+
+|                                                                       |
+|  Input: tokens (bsz, prompt_len)  e.g. (1, 4096)                    |
+|                                                                       |
+|  1. Embedding                                                        |
+|     tokens --> ParallelEmbedding --> all_reduce --> x (bsz, 4096, 7168)|
+|                                                                       |
+|  2. Causal Mask Construction                                         |
+|     mask = full((4096, 4096), -inf)                                  |
+|     mask = triu(mask, diagonal=1)  # upper triangle = -inf           |
+|     # shape: (4096, 4096) -- allows attending to all previous tokens |
+|                                                                       |
+|  3. RoPE Frequencies                                                 |
+|     freqs_cis = precomputed[0 : 4096]                                |
+|                                                                       |
+|  4. Forward Through 61 Layers                                        |
+|     For each layer:                                                   |
+|       x = x + MLA(RMSNorm(x), start_pos=0, freqs_cis, mask)          |
+|         - Compute Q, K, V for ALL 4096 tokens at once               |
+|         - Q: wq_a -> q_norm -> wq_b -> split (nope, pe)             |
+|         - KV: wkv_a -> split (kv, k_pe) -> kv_norm                  |
+|         - Apply RoPE to q_pe and k_pe                               |
+|         - Cache: kv_cache[0:4096] = kv_norm(kv)                     |
+|         - Attention: full (4096 x 4096) matrix                     |
+|         - Absorb mode: q_nope_c @ kv_cache^T + q_pe @ pe_cache^T   |
+|       x = x + FFN(RMSNorm(x))                                       |
+|         - Dense (layer 0-2): MLP(x)                                 |
+|         - MoE (layer 3-60): Gate routes -> Expert compute -> merge  |
+|                                                                       |
+|  5. Output                                                            |
+|     x = RMSNorm(x)                                                   |
+|     logits = head(x)  # (bsz, 4096, 129280)                         |
+|     next_token = argmax/sample(logits[:, -1])                       |
+|                                                                       |
+|  Key Characteristics:                                                 |
+|  - Full parallelism: all prompt tokens computed simultaneously      |
+|  - KV cache populated for ALL positions                              |
+|  - Memory intensive: large attention matrix (4096^2)                |
+|  - GEMM dominant: good GPU utilization                              |
+|                                                                       |
++=====================================================================+</div>
+
+<h2 id="infer-decode">05-推理场景执行流程 / 解码阶段</h2>
+
+<p>解码（Decoding）阶段逐 token 生成输出。每个 step 只处理 1 个 token，主要瓶颈是内存带宽（KV cache 读取）而非计算。</p>
+
+<div class="frame-diagram">Decoding Phase Execution:
+
++=====================================================================+
+|                Decoding (seqlen == 1)                                |
++=====================================================================+
+|                                                                       |
+|  Input: tokens (bsz, 1)  -- single token                            |
+|                                                                       |
+|  1. Embedding                                                        |
+|     tokens --> ParallelEmbedding --> all_reduce --> x (bsz, 1, 7168) |
+|                                                                       |
+|  2. No Mask Needed                                                   |
+|     mask = None  (KV cache handles causality)                       |
+|                                                                       |
+|  3. RoPE Frequencies                                                 |
+|     freqs_cis = precomputed[cur_pos : cur_pos + 1]                  |
+|                                                                       |
+|  4. Forward Through 61 Layers                                        |
+|     For each layer:                                                   |
+|       x = x + MLA(RMSNorm(x), start_pos=cur_pos, freqs_cis, None)   |
+|         - Compute Q, K, V for 1 token only                          |
+|         - Q: wq_a -> q_norm -> wq_b -> split                        |
+|         - KV: wkv_a -> split -> kv_norm                             |
+|         - Apply RoPE                                                 |
+|         - Cache: kv_cache[cur_pos] = kv_norm(kv)  (512 dims)        |
+|         -          pe_cache[cur_pos] = k_pe          (64 dims)      |
+|         - Attention: (1 x cur_pos) -- read entire KV cache          |
+|         - Absorb: q_nope_c @ kv_cache[:cur_pos+1]^T                |
+|         -          + q_pe @ pe_cache[:cur_pos+1]^T                 |
+|       x = x + FFN(RMSNorm(x))                                       |
+|         - Dense: MLP(1 token)                                       |
+|         - MoE: Gate(1 token) -> route to 8 experts -> compute      |
+|                                                                       |
+|  5. Output                                                            |
+|     logits = head(x)  # (bsz, 1, 129280)                            |
+|     next_token = argmax/sample(logits)                              |
+|     tokens[:, cur_pos+1] = next_token                               |
+|                                                                       |
+|  Key Characteristics:                                                 |
+|  - Sequential: one token at a time                                  |
+|  - Memory bound: KV cache read dominates (576 dims x 61 layers)    |
+|  - MoE routing: 1 token -> 8 experts (low GPU utilization)          |
+|  - Absorb mode critical: 576 vs 40960 dims per token per layer     |
+|                                                                       |
++=====================================================================+</div>
+
+<h2 id="infer-mla">05-推理场景执行流程 / MLA 缓存优化</h2>
+
+<h3>Absorb 模式推理优化详解</h3>
+<p>Absorb 模式是推理时的默认模式，通过将 wkv_b 矩阵"吸收"到注意力计算中，大幅减少 KV 缓存大小。</p>
+
+<div class="frame-diagram">MLA Absorb Mode: KV Cache Memory Analysis:
+
+Standard MHA KV cache (128 heads, 128K context):
+  Per layer:  128 * (192 + 128) * 2 bytes = 81,920 bytes/token
+  61 layers:  81,920 * 61 = 4,997,120 bytes/token = ~5MB/token
+  128K context: 5MB * 131072 = ~655 GB per request!
+  => INFEASIBLE for large batch sizes
+
+MLA Absorb cache (compressed):
+  Per layer:  (512 + 64) * 2 bytes = 1,152 bytes/token
+  61 layers:  1,152 * 61 = 70,272 bytes/token = ~70KB/token
+  128K context: 70KB * 131072 = ~9.2 GB per request
+  => FEASIBLE! Supports many concurrent requests
+
+Memory Reduction: 655GB --> 9.2GB = 71x reduction!
+Per-token KV cache: 5MB --> 70KB (as reported in DeepSeek paper)
+
+Absorb Mode Computation (decode step):
+  1. q_nope_c = q_nope @ wkv_b_K    # project Q to latent space
+  2. scores = q_nope_c @ kv_cache^T # attention in latent space
+           + q_pe @ pe_cache^T      # positional attention
+  3. x = scores @ kv_cache          # weighted sum in latent space
+  4. output = x @ wkv_b_V           # project back to head space
+
+  Extra computation: 2 small matmuls (wkv_b absorption)
+  Saved memory: 71x reduction in KV cache
+  Trade-off: slightly more compute per decode step (worth it!)</div>
+
+<h3>推理框架优化</h3>
+<p>主流推理框架（SGLang、vLLM 等）针对 DeepSeek-V3 的 MLA 做了大量优化：</p>
+<table>
+<tr><th>优化技术</th><th>说明</th><th>效果</th></tr>
+<tr><td>权重吸收</td><td>重排 wkv_b 矩阵乘法顺序</td><td>平衡计算与内存访问</td></tr>
+<tr><td>多 MLA 后端</td><td>FlashAttention3、FlashInfer、FlashMLA</td><td>针对不同硬件优化</td></tr>
+<tr><td>FP8 KV Cache</td><td>KV 缓存也使用 FP8 存储</td><td>再减半 KV 内存</td></tr>
+<tr><td>CUDA Graph</td><td>MLA 和 MoE 均兼容 CUDA Graph</td><td>减少小批量解码延迟</td></tr>
+<tr><td>Torch.compile</td><td>图编译优化</td><td>减少 Python 开销</td></tr>
+<tr><td>分块前缀缓存</td><td>将前缀缓存分块处理</td><td>长序列预填充吞吐提升</td></tr>
+<tr><td>数据并行注意力</td><td>DP 维度切分 KV 缓存</td><td>支持更大批量</td></tr>
+</table>
+
+<h2 id="infer-dist">05-推理场景执行流程 / 分布式推理</h2>
+
+<div class="frame-diagram">Distributed Inference Architecture:
+
++=====================================================================+
+|           Multi-GPU Inference (Model Parallel)                      |
++=====================================================================+
+|                                                                       |
+|  Deployment: 8 GPUs per node (H800/H100)                             |
+|                                                                       |
+|  GPU 0 (rank 0)          GPU 1 (rank 1)        ... GPU 7 (rank 7)  |
+|  +-----------------+     +-----------------+        +-----------------+|
+|  | Embedding       |     | Embedding       |   ...  | Embedding       ||
+|  | (vocab/N)       |     | (vocab/N)       |        | (vocab/N)       ||
+|  +-----------------+     +-----------------+        +-----------------+|
+|  | MLA heads 0-15  |     | MLA heads 16-31 |   ...  | MLA heads 112-127||
+|  | (n_local=16)    |     |                 |        |                 ||
+|  +-----------------+     +-----------------+        +-----------------+|
+|  | Experts 0-31    |     | Experts 32-63   |   ...  | Experts 224-255 ||
+|  | (n_local=32)    |     |                 |        |                 ||
+|  +-----------------+     +-----------------+        +-----------------+|
+|  | KV cache (absorb|     | KV cache (absorb|   ...  | KV cache (absorb||
+|  |  512+64 per tok)|     |  512+64 per tok)|        |  512+64 per tok)||
+|  +-----------------+     +-----------------+        +-----------------+|
+|                                                                       |
+|  Communication Points:                                               |
+|  1. Embedding all_reduce (after ParallelEmbedding)                   |
+|  2. MLA wo all_reduce (after RowParallelLinear)                      |
+|  3. MoE all_reduce (after expert computation)                        |
+|  4. Head all_gather (final logits)                                   |
+|                                                                       |
+|  Multi-Node Extension:                                               |
+|  - Use torchrun for multi-node (e.g., 2 x 8 GPU = 16 GPU)          |
+|  - EP extends across nodes (experts distributed)                    |
+|  - Larger models or more concurrent requests                        |
+|                                                                       |
++=====================================================================+</div>
+
+<h3>generate.py 分布式执行</h3>
+<pre><code><span class="cm"># 启动命令 (单节点 8 GPU)</span>
+torchrun --nproc_per_node=8 generate.py \
+    --ckpt-path /path/to/checkpoints \
+    --config configs/config_671B.json \
+    --interactive
+
+<span class="cm"># 启动命令 (多节点, 2x8 GPU)</span>
+<span class="cm"># Node 0:</span>
+torchrun --nnodes=2 --node_rank=0 --nproc_per_node=8 \
+    --master_addr=NODE0_IP --master_port=29500 \
+    generate.py --ckpt-path /path/to/ckpt --config config.json --interactive
+
+<span class="cm"># rank 0 负责用户交互和 prompt 广播</span>
+<span class="kw">if</span> rank == <span class="num">0</span>:
+    prompt = <span class="fn">input</span>(<span class="str">">>> "</span>)
+    tokens = <span class="fn">tokenizer</span>(prompt)
+    dist.<span class="fn">broadcast</span>(tokens, src=<span class="num">0</span>)
+<span class="kw">else</span>:
+    tokens = torch.<span class="fn">empty_like</span>(dummy)
+    dist.<span class="fn">broadcast</span>(tokens, src=<span class="num">0</span>)
+
+<span class="cm"># 所有 rank 参与前向传播</span>
+logits = model.<span class="fn">forward</span>(tokens, start_pos)
+next_token = <span class="fn">sample</span>(logits[:, <span class="op">-</span><span class="num">1</span>], temperature)</code></pre>
+
+<h2 id="infer-opt">05-推理场景执行流程 / 推理优化技术</h2>
+
+<h3>MTP 投机解码</h3>
+<p>MTP 模块在推理时可用于投机解码（Speculative Decoding），加速 token 生成：</p>
+<div class="frame-diagram">Speculative Decoding with MTP:
+
+  Traditional Decoding:
+  Token: [1] -> [2] -> [3] -> [4] -> [5]   (sequential, 5 steps)
+
+  Speculative Decoding with MTP (D=1):
+  Step 1: Main model generates token [2] from [1]
+          MTP module predicts candidate [3] from [1]'s hidden state
+  Step 2: Main model verifies [2, 3] in ONE forward pass
+          -> [2] confirmed, [3] confirmed
+          Main model also generates [4] from [1,2,3]
+          MTP predicts candidate [5]
+  Step 3: Verify [4, 5]
+
+  Speedup: ~2x (if acceptance rate is high)
+  Cost: extra MTP module forward (small, ~14B vs 671B)
+
+  Flow:
+  +-------+     +-------+     +-------+
+  | Main  |---->| MTP 1 |---->| Verify|
+  | Model |     | (cand)|     |       |
+  +-------+     +-------+     +-------+
+       ^              |
+       |   candidate   |
+       +--------------+</div>
+
+<h3>预填充/解码分离优化</h3>
+<table>
+<tr><th>阶段</th><th>特征</th><th>瓶颈</th><th>优化策略</th></tr>
+<tr><td>预填充</td><td>计算密集，大批量矩阵乘</td><td>GEMM 吞吐</td><td>大 batch、FP8 GEMM、分块处理</td></tr>
+<tr><td>解码</td><td>内存密集，小批量逐 token</td><td>KV 缓存读取</td><td>Absorb 压缩、CUDA Graph、连续批处理</td></tr>
+</table>
+
+<h3>性能指标</h3>
+<table>
+<tr><th>指标</th><th>数值</th><th>说明</th></tr>
+<tr><td>每 token KV 缓存</td><td>~70 KB</td><td>61 层 x 576 维 x 2 bytes</td></tr>
+<tr><td>激活参数</td><td>37B/token</td><td>8 路由专家 + 2 共享专家</td></tr>
+<tr><td>总参数</td><td>671B (685B with MTP)</td><td>FP8 存储约 ~340 GB</td></tr>
+<tr><td>训练 GPU 小时</td><td>2.788M H800-hours</td><td>约 $5.576M</td></tr>
+<tr><td>训练稳定性</td><td>零回滚、零不可恢复 spike</td><td>全程无干预</td></tr>
+<tr><td>FP8 损失误差</td><td>小于 0.25%</td><td>vs BF16 基线</td></tr>
+</table>
+
+<div class="note"><strong>总结</strong>：DeepSeek-V3 的推理架构通过 MLA absorb 模式将 KV 缓存压缩 98.6%，通过 FP8 存储将权重大小减半，通过分布式推理支持多 GPU 部署。SGLang/vLLM 等框架的优化进一步实现了 7 倍吞吐提升。MTP 模块可选用于投机解码实现约 2 倍推理加速。</div>
+
+<div class="divider"></div>
+<p style="text-align:center; color:var(--text-dim);">
+  DeepSeek V3 深度分析文档 — 基于技术论文 (arXiv:2412.19437) 和开源代码 (github.com/deepseek-ai/DeepSeek-V3)<br>
+  生成时间：2026-08-13
+</p>
+
+</div>
+</div>
+</body>
+</html>

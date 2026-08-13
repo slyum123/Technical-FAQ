@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFC / CBFC / LLR 链路层流控与重试机制深度解析</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f7f6f3;
+    --bg-code: #1e1e1e;
+    --text: #1a1a1a;
+    --text-muted: #666;
+    --border: #e0ddd5;
+    --accent: #534AB7;
+    --accent-light: #EEEDFE;
+    --accent-teal: #0F6E56;
+    --accent-teal-light: #E1F5EE;
+    --accent-amber: #B45309;
+    --accent-amber-light: #FEF3C7;
+    --accent-red: #DC2626;
+    --accent-red-light: #FEE2E2;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg-soft);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  .container {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+  h1 {
+    font-size: 28px; font-weight: 700; margin-bottom: 8px; color: var(--text);
+  }
+  .subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+  h2 {
+    font-size: 22px; font-weight: 700; margin-top: 48px; margin-bottom: 16px;
+    padding-bottom: 8px; border-bottom: 3px solid var(--accent); color: var(--text);
+  }
+  h3 {
+    font-size: 18px; font-weight: 600; margin-top: 36px; margin-bottom: 12px; color: var(--accent);
+  }
+  h4 {
+    font-size: 15px; font-weight: 600; margin-top: 20px; margin-bottom: 8px; color: var(--text);
+  }
+  p { margin-bottom: 12px; }
+  .toc {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 28px; margin-bottom: 40px;
+  }
+  .toc h3 { margin-top: 0; color: var(--text); border-bottom: none; font-size: 16px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub { padding-left: 24px; list-style: circle; }
+  .toc .sub li { font-size: 13px; color: var(--text-muted); }
+  .section {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 28px 32px; margin-bottom: 24px;
+  }
+  .section-tag {
+    display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 10px;
+    border-radius: 4px; margin-bottom: 8px;
+  }
+  .tag-pfc { background: var(--accent-light); color: var(--accent); }
+  .tag-cbfc { background: var(--accent-teal-light); color: var(--accent-teal); }
+  .tag-llr { background: var(--accent-amber-light); color: var(--accent-amber); }
+  .tag-compare { background: var(--accent-red-light); color: var(--accent-red); }
+  pre[class*="language-"] {
+    border-radius: 8px; font-size: 13px; margin: 16px 0; max-height: 600px; overflow-y: auto;
+  }
+  code[class*="language-"] {
+    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace; font-size: 13px;
+  }
+  .semantic {
+    background: var(--bg-soft); border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 16px 0;
+  }
+  .semantic.teal { border-left-color: var(--accent-teal); }
+  .semantic.amber { border-left-color: var(--accent-amber); }
+  .semantic.red { border-left-color: var(--accent-red); }
+  .semantic h4 { margin-top: 0; color: var(--accent); }
+  .semantic.teal h4 { color: var(--accent-teal); }
+  .semantic.amber h4 { color: var(--accent-amber); }
+  .semantic.red h4 { color: var(--accent-red); }
+  .semantic p { margin-bottom: 8px; font-size: 14px; }
+  .semantic ul, .semantic ol { padding-left: 20px; margin-bottom: 8px; }
+  .semantic li { font-size: 14px; margin-bottom: 4px; }
+  .key-points {
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px;
+    padding: 12px 16px; margin: 12px 0; font-size: 13px;
+  }
+  .key-points strong { color: #92400E; }
+  .danger-box {
+    background: var(--accent-red-light); border: 1px solid #FCA5A5; border-radius: 8px;
+    padding: 12px 16px; margin: 12px 0; font-size: 13px;
+  }
+  .danger-box strong { color: var(--accent-red); }
+  .success-box {
+    background: var(--accent-teal-light); border: 1px solid #6EE7B7; border-radius: 8px;
+    padding: 12px 16px; margin: 12px 0; font-size: 13px;
+  }
+  .success-box strong { color: var(--accent-teal); }
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;
+  }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+  th { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  tr:nth-child(even) { background: var(--bg-soft); }
+  .frame-diagram {
+    background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 20px;
+    font-family: "JetBrains Mono", "Consolas", monospace; font-size: 12px;
+    overflow-x: auto; margin: 16px 0; line-height: 1.5; white-space: pre;
+  }
+  .frame-diagram .label { color: #569CD6; }
+  .frame-diagram .value { color: #CE9178; }
+  .frame-diagram .comment { color: #6A9955; }
+  .frame-diagram .header { color: #4EC9B0; font-weight: bold; }
+  .ascii-art {
+    background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 16px;
+    font-family: "JetBrains Mono", "Consolas", monospace; font-size: 12px;
+    overflow-x: auto; margin: 16px 0; white-space: pre; line-height: 1.4;
+  }
+  .badge {
+    display: inline-block; font-size: 11px; padding: 1px 8px;
+    border-radius: 10px; margin-left: 6px; vertical-align: middle;
+  }
+  .badge-pfc { background: #CECBF6; color: #3C3489; }
+  .badge-cbfc { background: #9FE1CB; color: #04342C; }
+  .badge-llr { background: #FDE68A; color: #78350F; }
+  .badge-std { background: #E0E0E0; color: #424242; }
+  .summary-box {
+    background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-teal-light) 100%);
+    border: 1px solid var(--border); border-radius: 12px; padding: 28px 32px; margin-top: 32px;
+  }
+  .summary-box h2 { border-bottom: none; margin-top: 0; }
+  .ref-list { font-size: 12px; color: var(--text-muted); }
+  .ref-list li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PFC / CBFC / LLR 链路层流控与重试机制深度解析</h1>
+<p class="subtitle">基于 IEEE 802.1Qbb / IEEE 802.1Qaz / Ultra Ethernet Consortium (UEC) v1.0 规范</p>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#overview">概述：无损以太网的三层防线</a></li>
+    <li><a href="#pfc">PFC — 基于优先级的流量控制</a>
+      <ol class="sub">
+        <li><a href="#pfc-principle">功能原理</a></li>
+        <li><a href="#pfc-frame">报文格式</a></li>
+        <li><a href="#pfc-dcbx">DCBx 协商机制</a></li>
+        <li><a href="#pfc-params">参数配置机制</a></li>
+        <li><a href="#pfc-normal">正常场景流程</a></li>
+        <li><a href="#pfc-abnormal">异常场景与响应</a></li>
+        <li><a href="#pfc-watchdog">PFC Watchdog 死锁防护</a></li>
+      </ol>
+    </li>
+    <li><a href="#cbfc">CBFC — 基于信用的流量控制</a>
+      <ol class="sub">
+        <li><a href="#cbfc-principle">功能原理</a></li>
+        <li><a href="#cbfc-credit">信用机制与计数器设计</a></li>
+        <li><a href="#cbfc-msg">报文格式</a></li>
+        <li><a href="#cbfc-vc">虚拟通道架构</a></li>
+        <li><a href="#cbfc-negotiation">LLDP 协商</a></li>
+        <li><a href="#cbfc-normal">正常场景流程</a></li>
+        <li><a href="#cbfc-abnormal">异常场景与响应</a></li>
+        <li><a href="#cbfc-vs-pfc">CBFC vs PFC 对比</a></li>
+      </ol>
+    </li>
+    <li><a href="#llr">LLR — 链路层重试</a>
+      <ol class="sub">
+        <li><a href="#llr-principle">功能原理</a></li>
+        <li><a href="#llr-seqnum">序列号与前导码扩展</a></li>
+        <li><a href="#llr-ack-nack">ACK/NACK 机制</a></li>
+        <li><a href="#llr-replay">重放缓冲区与 Go-back-N</a></li>
+        <li><a href="#llr-control">控制有序集</a></li>
+        <li><a href="#llr-timer">定时器重传机制</a></li>
+        <li><a href="#llr-poison">CRC 毒化机制</a></li>
+        <li><a href="#llr-negotiation">LLDP 协商</a></li>
+        <li><a href="#llr-normal">正常场景流程</a></li>
+        <li><a href="#llr-abnormal">异常场景与响应</a></li>
+      </ol>
+    </li>
+    <li><a href="#integration">三者协同与综合对比</a></li>
+    <li><a href="#references">标准参考</a></li>
+  </ol>
+</div>
+
+<!-- ==================== Overview ==================== -->
+<div class="section" id="overview">
+  <span class="section-tag tag-compare">Overview</span>
+  <h3>概述：无损以太网的三层防线</h3>
+
+  <div class="semantic red">
+    <h4>问题背景</h4>
+    <p>在 AI/HPC 大规模集群中，RDMA/RoCE 等内存语义操作要求<strong>微秒级延迟</strong>和<strong>零丢包</strong>。传统以太网在缓冲区溢出时直接丢包，依靠 TCP 端到端重传，延迟高达毫秒级，无法满足 AI 训练中 All-Reduce 等同步操作的严苛要求。为此，业界定义了三类链路层机制来构建无损以太网：</p>
+  </div>
+
+  <table>
+    <tr>
+      <th>机制</th>
+      <th>全称</th>
+      <th>标准</th>
+      <th>核心作用</th>
+      <th>解决的问题</th>
+    </tr>
+    <tr>
+      <td><span class="badge badge-pfc">PFC</span></td>
+      <td>Priority-based Flow Control</td>
+      <td>IEEE 802.1Qbb</td>
+      <td>按优先级暂停上游发送</td>
+      <td>缓冲区溢出丢包</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-cbfc">CBFC</span></td>
+      <td>Credit-Based Flow Control</td>
+      <td>UEC v1.0</td>
+      <td>基于信用额度控制发送</td>
+      <td>缓冲区溢出丢包（PFC 的进化版）</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-llr">LLR</span></td>
+      <td>Link Layer Retry</td>
+      <td>UEC v1.0</td>
+      <td>链路层本地重传</td>
+      <td>物理层误码/FCS 错误丢包</td>
+    </tr>
+  </table>
+
+  <div class="semantic">
+    <h4>三者的关系</h4>
+    <ul>
+      <li><strong>PFC / CBFC</strong> 解决的是<strong>拥塞丢包</strong>——通过流控防止接收端缓冲区溢出。CBFC 是 PFC 的进化替代方案，两者可互换使用。</li>
+      <li><strong>LLR</strong> 解决的是<strong>误码丢包</strong>——通过链路层重传恢复物理层错误导致的丢包。LLR 与 PFC/CBFC 正交，可组合使用。</li>
+      <li>三者共同构成：<strong>流控防溢出 + 重传防误码 = 完整无损链路</strong>。</li>
+    </ul>
+  </div>
+
+  <div class="ascii-art">┌──────────────────────────────────────────────────────────────────┐
+│             Lossless Ethernet Link Layer Architecture            │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Packet In  ──→ ┌─────────┐    ┌─────────┐    ┌──────────┐     │
+│                  │  PFC /  │───→│ Buffer  │───→│ Forward  │     │
+│   Flow Ctrl ←─── │  CBFC   │    │(no drop)│    │  Engine  │     │
+│                  └─────────┘    └────┬────┘    └──────────┘     │
+│                                       │                           │
+│                              ┌────────┴────────┐                 │
+│                              │                 │                 │
+│                         FCS OK?           Seq Num OK?            │
+│                              │                 │                 │
+│                         Yes -> Pass        Yes -> Send ACK       │
+│                         No  -> Send NACK   No  -> Send NACK      │
+│                              │                 │                 │
+│                              └────────┬────────┘                 │
+│                                       │                           │
+│                                ┌──────┴──────┐                   │
+│                                │     LLR     │                   │
+│                                │  (Retrans)  │                   │
+│                                └─────────────┘                   │
+│                                                                  │
+│   PFC/CBFC: Prevent buffer overflow (congestion control)         │
+│   LLR:      Recover physical errors (error recovery)             │
+└──────────────────────────────────────────────────────────────────┘</div>
+</div>
+
+<!-- ==================== PFC ==================== -->
+<div class="section" id="pfc">
+  <span class="section-tag tag-pfc">Part 1</span>
+  <h3>PFC — 基于优先级的流量控制 <span class="badge badge-pfc">IEEE 802.1Qbb</span></h3>
+
+  <!-- ===== PFC Principle ===== -->
+  <h4 id="pfc-principle">1.1 功能原理</h4>
+
+  <div class="semantic">
+    <h4>核心机制</h4>
+    <p>PFC 是对传统 IEEE 802.3x PAUSE 帧的增强。传统 PAUSE 帧会暂停链路上<strong>所有</strong>流量，而 PFC 将流量按 802.1Q VLAN 标签中的 PCP 字段分为 <strong>8 个优先级（Priority 0~7）</strong>，每个优先级独立控制暂停与恢复，互不干扰。</p>
+    <p><strong>工作逻辑</strong>：</p>
+    <ol>
+      <li>接收端监控每个优先级队列的缓冲区占用率</li>
+      <li>当某优先级队列达到 <strong>XOFF 阈值</strong>时，向发送端发送 PFC PAUSE 帧</li>
+      <li>PAUSE 帧携带 8 位优先级使能向量和各优先级的暂停时间</li>
+      <li>发送端收到后，停止对应优先级的发送，其他优先级不受影响</li>
+      <li>缓冲区占用降至 <strong>XON 阈值</strong>以下时，发送 PFC RESUME 帧（Time=0），恢复发送</li>
+    </ol>
+    <p><strong>关键特征</strong>：</p>
+    <ul>
+      <li>纯链路层（L2）机制，MAC 控制帧，不涉及上层协议</li>
+      <li>单跳（one-hop）帧，不会被转发到其他链路</li>
+      <li>硬件实现，响应延迟 &lt; 1μs</li>
+      <li>目的 MAC 为专用组播地址 <code>01-80-C2-00-00-01</code>，链路层终止</li>
+    </ul>
+  </div>
+
+  <!-- ===== PFC Frame Format ===== -->
+  <h4 id="pfc-frame">1.2 报文格式</h4>
+
+  <div class="frame-diagram">
+<span class="header">PFC 帧格式 (IEEE 802.1Qbb)</span>
+
+<span class="comment">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="comment">│                     PFC MAC Control Frame                       │</span>
+<span class="comment">├──────────┬──────────┬─────────┬──────────┬───────────┬──────────┤</span>
+<span class="comment">│   DMAC   │   SMAC   │EtherType│ Opcode   │  Class    │  Time    │</span>
+<span class="comment">│  6 Bytes │  6 Bytes │ 2 Bytes │ 2 Bytes  │  Enable   │ [0..7]   │</span>
+<span class="comment">│          │          │         │          │  Vector   │ 16 Bytes │</span>
+<span class="comment">│          │          │         │          │  2 Bytes  │          │</span>
+<span class="comment">├──────────┼──────────┼─────────┼──────────┼───────────┼──────────┤</span>
+<span class="comment">│01-80-C2- │ Src Port │  0x8808 │  0x0101  │  16-bit   │ 8 x 2B   │</span>
+<span class="comment">│00-00-01  │   MAC    │ (MAC    │ (PFC     │  bitmap   │ pause    │</span>
+<span class="comment">│(mcast)   │          │ Control)│ opcode)  │           │ quanta   │</span>
+<span class="comment">└──────────┴──────────┴─────────┴──────────┴───────────┴──────────┘</span>
+
+<span class="comment">DMAC = 01-80-C2-00-00-01 (IEEE slow-protocol multicast, not forwarded)
+SMAC = sender port MAC address
+帧总长度 = 6 + 6 + 2 + 2 + 2 + 16 + 4(FCS) = 38 Bytes
+最小以太网帧要求 64B，不足部分用 Padding 填充</span>
+
+<span class="header">Class Enable Vector (2 Bytes = 16 bits):</span>
+
+  Bit 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+      ┌──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┬──┐
+      │ R│ R│ R│ R│ R│ R│ R│ R│P7│P6│P5│P4│P3│P2│P1│P0│
+      └──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┴──┘
+                      Reserved (all 0)    │  Bits 0-7: P0~P7  │
+
+  Pn = 1: Time[n] valid,  priority n needs to pause
+  Pn = 0: Time[n] ignored, priority n not affected
+
+<span class="header">Time[n] 暂停时间 (每个 2 Bytes = 16 bits):</span>
+
+  Value = 0:      Resume (XON, immediately resume sending)
+  Value = 65535:  Max pause  (XOFF, continuous pause)
+  Value = N:      Pause for N pause_quanta
+
+  1 pause_quanta = 512 bit-time
+
+  Link Speed    1 bit-time    1 quanta       65535 quanta
+  ------------------------------------------------------
+  10 Gbps       0.1 ns        51.2 ns        3.355 ms
+  25 Gbps       0.04 ns       20.48 ns       1.342 ms
+  100 Gbps      0.01 ns       5.12 ns        0.336 ms
+  400 Gbps      0.0025 ns     1.28 ns        0.084 ms</div>
+
+  <div class="key-points">
+    <strong>关键字段说明：</strong>
+    <ul>
+      <li><strong>DMAC</strong>：<code>01-80-C2-00-00-01</code>，IEEE 保留的慢速协议组播地址，交换机不转发</li>
+      <li><strong>EtherType</strong>：<code>0x8808</code>，标识 MAC Control 帧</li>
+      <li><strong>Opcode</strong>：<code>0x0101</code>，PFC 专用，区别于传统 PAUSE 的 <code>0x0001</code></li>
+      <li><strong>Class Enable Vector</strong>：低 8 位 bit0~bit7 对应 P0~P7，为 1 表示该优先级的 Time 字段有效</li>
+      <li><strong>Time[n]</strong>：16 位无符号整数，单位 pause_quanta（512 bit-time）。0 = 恢复发送，65535 = 最大暂停</li>
+    </ul>
+  </div>
+
+  <!-- ===== PFC DCBx ===== -->
+  <h4 id="pfc-dcbx">1.3 DCBx 协商机制</h4>
+
+  <div class="semantic">
+    <h4>DCBx 协议概述</h4>
+    <p>PFC 的自动协商通过 <strong>DCBx（Data Center Bridging eXchange）</strong> 完成，定义于 <strong>IEEE 802.1Qaz</strong>。DCBx 基于 <strong>LLDP（Link Layer Discovery Protocol）</strong> 扩展，通过 TLV（Type-Length-Value）在直连邻居间交换 DCB 配置信息。</p>
+    <h4>DCBx 状态机（5 个状态）</h4>
+    <table>
+      <tr><th>状态</th><th>处理逻辑</th><th>转移条件</th></tr>
+      <tr>
+        <td>Init</td>
+        <td>初始化本地配置、能力与一致性</td>
+        <td>邻居存在 → Advertisement</td>
+      </tr>
+      <tr>
+        <td>Advertisement</td>
+        <td>向邻居通告本地 DCB 配置</td>
+        <td>邻居存在且本地 willing → Collection</td>
+      </tr>
+      <tr>
+        <td>Collection</td>
+        <td>收集邻居配置信息</td>
+        <td>无条件 → Update</td>
+      </tr>
+      <tr>
+        <td>Update</td>
+        <td>根据协商规则将邻居配置与本地配置比对，更新本地配置</td>
+        <td>无条件 → Monitoring</td>
+      </tr>
+      <tr>
+        <td>Monitoring</td>
+        <td>监控本地和邻居配置变化</td>
+        <td>检测到变化 → Init</td>
+      </tr>
+    </table>
+    <h4>PFC Configuration TLV (SubType = 0x0B)</h4>
+    <table>
+      <tr><th>字段</th><th>长度</th><th>说明</th></tr>
+      <tr><td>TLV Header (Type=127)</td><td>2B</td><td>固定 127，标识组织特定 TLV</td></tr>
+      <tr><td>OUI</td><td>3B</td><td><code>0x0080C2</code>（IEEE）</td></tr>
+      <tr><td>SubType</td><td>1B</td><td><code>0x0B</code>（PFC Configuration）</td></tr>
+      <tr><td>SubType Length</td><td>1B</td><td>6 字节</td></tr>
+      <tr><td>PFC Enable</td><td>1B</td><td>8-bit bitmap，每 bit 对应一个优先级是否启用 PFC</td></tr>
+      <tr><td>PFC Capable</td><td>1B</td><td>本端支持的 PFC 优先级数量（0~8）</td></tr>
+      <tr><td>Willing</td><td>1bit</td><td>1 = 愿意接受远端配置；0 = 仅本地配置生效</td></tr>
+      <tr><td>Error</td><td>1bit</td><td>1 = 检测到配置不一致</td></tr>
+      <tr><td>Reserved</td><td>多bit</td><td>保留字段</td></tr>
+    </table>
+  </div>
+
+  <div class="key-points">
+    <strong>协商规则：</strong>
+    <ul>
+      <li>双方必须配置相同的 DCBx 版本（IEEE 802.1Qaz 或 CEE）</li>
+      <li>PFC 使用<strong>对称属性传递</strong>（symmetric），双方配置必须一致</li>
+      <li>如果一方 willing=1，则接受另一方推荐的配置</li>
+      <li>如果双方都 willing=0（unwilling），则各自使用本地配置，仅检测不一致</li>
+      <li>协商结果不一致时，DCBx 设置 Error 标志位，触发告警</li>
+    </ul>
+  </div>
+
+  <!-- ===== PFC Parameters ===== -->
+  <h4 id="pfc-params">1.4 参数配置机制</h4>
+
+  <div class="semantic">
+    <h4>核心参数</h4>
+    <table>
+      <tr>
+        <th>参数</th>
+        <th>含义</th>
+        <th>典型值</th>
+        <th>配置原则</th>
+      </tr>
+      <tr>
+        <td><strong>XOFF 阈值</strong></td>
+        <td>触发 PFC 暂停的缓冲区占用上限</td>
+        <td>缓冲区容量的 80%~90%</td>
+        <td>需预留足够余量吸收 PAUSE 生效前到达的数据</td>
+      </tr>
+      <tr>
+        <td><strong>XON 阈值</strong></td>
+        <td>触发 PFC 恢复的缓冲区占用下限</td>
+        <td>比 XOFF 低 10%~20%</td>
+        <td>迟滞设计，避免频繁触发 ON/OFF 振荡</td>
+      </tr>
+      <tr>
+        <td><strong>Headroom 缓冲区</strong></td>
+        <td>发送端收到 PAUSE 后到实际停止发送期间，已发出但未到达的数据量</td>
+        <td>≥ RTT × 链路带宽 + MTU</td>
+        <td>不足会导致缓冲区溢出丢包；过大浪费缓冲区资源</td>
+      </tr>
+      <tr>
+        <td><strong>Pause Time</strong></td>
+        <td>PAUSE 帧中指定的暂停时长</td>
+        <td>65535 quanta（持续暂停）</td>
+        <td>设为最大值表示持续暂停，由 RESUME 帧（Time=0）解除</td>
+      </tr>
+      <tr>
+        <td><strong>PFC 优先级映射</strong></td>
+        <td>哪些优先级启用 PFC</td>
+        <td>P3 (RoCEv2)、P4 (FCoE) 等</td>
+        <td>仅对需要无损传输的流量启用</td>
+      </tr>
+    </table>
+
+    <h4>Headroom 计算公式</h4>
+    <p>Headroom 必须满足以下条件才能保证零丢包：</p>
+  </div>
+
+  <div class="ascii-art">Headroom = B_dp + B_d + B_r + B_p
+
+  B_dp = Downstream Pause Delay     下游发送 PAUSE 帧的处理延迟
+  B_d  = PAUSE Frame Transit Delay   PAUSE 帧在链路上的传输延迟 (= RTT/2)
+  B_r  = Upstream Reaction Delay     上游收到 PAUSE 后停止发送的响应延迟
+  B_p  = Packets In Flight           PAUSE 生效前已在链路上飞行中的数据包
+
+  简化估算:
+  Headroom ≥ (RTT × Link_Bandwidth) + MTU
+
+  示例 (100Gbps 链路, RTT = 2μs, MTU = 9000B):
+  Headroom ≥ (2×10⁻⁶ × 100×10⁹ / 8) + 9000
+           ≥ 25000 + 9000
+           ≥ 34000 Bytes ≈ 34 KB</div>
+
+  <!-- ===== PFC Normal Scenario ===== -->
+  <h4 id="pfc-normal">1.5 正常场景流程</h4>
+
+  <div class="success-box">
+    <strong>场景：拥塞触发 PFC 到恢复的完整周期</strong>
+  </div>
+
+  <div class="ascii-art">Timeline: Rx Buffer Occupancy Change
+
+Buffer
+  100% ┤                                        < Overflow (drop)
+       │
+  XOFF ┤──────────────────────╮     ╭────────── < PFC trigger
+       │                      │     │
+       │                      │     │
+       │      < PFC active    │     │
+       │        data stops    │     │
+       │                      │     │
+   XON ┤──────────────────────╰─────╯────────── < PFC resume
+       │
+    0% ┤──────────────────────────────────────────
+       T1    T2    T3    T4    T5    T6    T7  Time
+
+T1: Buffer occupancy rising, approaching XOFF threshold
+T2: Reaches XOFF -> Rx sends PFC PAUSE (Time=65535)
+    -> PAUSE frame traverses link to Tx
+T3: Tx receives PAUSE, stops sending for that priority
+    -> Buffer occupancy starts dropping (data consumed)
+T4: Occupancy drops to XON threshold
+    -> Rx sends PFC RESUME (Time=0)
+T5: Tx receives RESUME, resumes sending
+    -> Buffer occupancy rises again
+T6~T7: System in steady state between XON/XOFF
+
+Key: Headroom must absorb data arriving during T2->T3</div>
+
+  <!-- ===== PFC Abnormal Scenario ===== -->
+  <h4 id="pfc-abnormal">1.6 异常场景与响应机制</h4>
+
+  <div class="danger-box">
+    <strong>异常场景 1：PFC 死锁（Deadlock）</strong>
+  </div>
+
+  <div class="semantic red">
+    <h4>死锁成因</h4>
+    <p>PFC 暂停形成循环依赖：设备 A 暂停 B，B 暂停 C，C 暂停 A。所有方向的流量都被暂停，无人能释放缓冲区，网络永久阻塞。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>PFC Watchdog</strong>：监控每个优先级的 PFC 暂停持续时间，超过阈值则强制丢弃该优先级报文，释放缓冲区</li>
+      <li><strong>拓扑设计</strong>：规划无环拓扑或使用 DCBx 检测环路</li>
+      <li><strong>多路径路由</strong>：ECMP/包喷射避免所有流量走同一路径</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 2：PFC 风暴（PFC Storm）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>风暴成因</h4>
+    <p>多跳 PFC 级联触发：下游拥塞 → 暂停上游 → 上游缓冲区满 → 暂停更上游 → 全网流量停滞。微秒级延迟突增。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>PFC Watchdog 速率限制</strong>：限制 PFC 帧发送速率</li>
+      <li><strong>ECN + DCQCN</strong>：在 PFC 触发前通过 ECN 降速，减少 PFC 触发频率</li>
+      <li><strong>缓冲区 watermark 监控</strong>：设置 PFC 触发告警阈值</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 3：Head-of-Line Blocking（队头阻塞）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>队头阻塞成因</h4>
+    <p>PFC 暂停的是整个优先级队列。即使队列中只有一条流导致拥塞，该优先级的所有流都被暂停，包括无关流。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>多优先级隔离</strong>：将不同业务映射到不同 PFC 优先级</li>
+      <li><strong>包喷射（Packet Spraying）</strong>：将同一流分散到多路径，降低单点拥塞概率</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 4：Headroom 不足导致丢包</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>Headroom 缓冲区不足以吸收 PAUSE 生效前到达的数据，导致缓冲区溢出丢包。常见于长距离链路（RTT 大）或高带宽链路。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>动态 Headroom 调整</strong>：根据链路速率和距离计算所需 Headroom</li>
+      <li><strong>buffer-extended 模式</strong>：Cisco 8000 等设备支持长距离 PFC 的扩展缓冲模式</li>
+      <li><strong>降低 XOFF 阈值</strong>：提前触发 PFC，留更多余量</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 5：DCBx 协商失败</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>两端 DCBx 版本不一致、LLDP 未启用、PFC 配置不匹配（一端启用 P3，另一端未启用）。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li>DCBx 设置 Error 标志位并触发 Syslog 告警</li>
+      <li>如果本地 willing=0，保持本地配置不变，仅告警</li>
+      <li>如果本地 willing=1，回退到默认配置（通常 PFC 全部关闭）</li>
+    </ul>
+  </div>
+
+  <!-- ===== PFC Watchdog ===== -->
+  <h4 id="pfc-watchdog">1.7 PFC Watchdog 死锁防护</h4>
+
+  <div class="semantic">
+    <h4>PFC Watchdog 机制</h4>
+    <p>PFC Watchdog 是 PFC 的安全网，监控每个优先级的 PFC 暂停持续时间。当某个优先级被持续暂停超过预设阈值时，Watchdog 会强制丢弃该优先级的报文，打破死锁。</p>
+    <table>
+      <tr><th>参数</th><th>含义</th><th>典型值</th></tr>
+      <tr><td>Detection Interval</td><td>检测周期</td><td>100ms~500ms</td></tr>
+      <tr><td>Recovery Interval</td><td>恢复周期（丢弃持续时间）</td><td>100ms~500ms</td></tr>
+      <tr><td>Restore Interval</td><td>恢复后观察周期</td><td>100ms~500ms</td></tr>
+    </table>
+    <h4>Watchdog 状态机</h4>
+    <div class="ascii-art">  ┌─────────┐   PFC exceeds threshold   ┌──────────┐
+  │ NORMAL  │ ────────────────────────→ │DETECTION │
+  │ (ok)    │                           │ (detect) │
+  └────┬────┘                           └────┬─────┘
+       ↑                                     │
+       │ Recovery done                       │ Exceeds recovery limit
+       │ & no PFC pause                      ↓
+  ┌────┴────┐                           ┌──────────┐
+  │ RESTORE │ ←─────────────────────── │ RECOVERY │
+  │(restore)│  Drop duration elapsed   │ (drop)   │
+  └─────────┘                           └──────────┘</div>
+  </div>
+</div>
+
+<!-- ==================== CBFC ==================== -->
+<div class="section" id="cbfc">
+  <span class="section-tag tag-cbfc">Part 2</span>
+  <h3>CBFC — 基于信用的流量控制 <span class="badge badge-cbfc">UEC v1.0</span></h3>
+
+  <!-- ===== CBFC Principle ===== -->
+  <h4 id="cbfc-principle">2.1 功能原理</h4>
+
+  <div class="semantic teal">
+    <h4>核心机制</h4>
+    <p>CBFC（Credit-Based Flow Control）是 Ultra Ethernet Consortium (UEC) v1.0 规范定义的新型链路层流控机制，旨在替代或与 PFC 配合使用。</p>
+    <p><strong>与 PFC 的本质区别</strong>：</p>
+    <ul>
+      <li>PFC 是<strong>反应式</strong>（reactive）：缓冲区满了才发 PAUSE，上游必须预留 Headroom 吸收飞行中的数据</li>
+      <li>CBFC 是<strong>预防式</strong>（proactive）：发送端先检查信用额度，有额度才发，保证接收端不会溢出</li>
+    </ul>
+    <p><strong>工作逻辑</strong>：</p>
+    <ol>
+      <li>接收端为每个虚拟通道（VC）分配缓冲区，并初始发放信用额度给发送端</li>
+      <li>发送端发送数据前，检查本地可用信用是否 ≥ 包大小</li>
+      <li>满足则发送，并从本地信用中扣除包大小</li>
+      <li>接收端消费数据包（从缓冲区移出）后，通过更新消息将信用返还给发送端</li>
+      <li>发送端定期向接收端发送信用计数器同步消息，防止信用泄漏</li>
+    </ol>
+    <p><strong>核心保证</strong>：只有在接收端有足够缓冲区空间时才发送数据包，从根本上消除缓冲区溢出丢包。</p>
+  </div>
+
+  <!-- ===== CBFC Credit Mechanism ===== -->
+  <h4 id="cbfc-credit">2.2 信用机制与计数器设计</h4>
+
+  <div class="semantic teal">
+    <h4>双计数器架构</h4>
+    <p>CBFC 在发送端和接收端各维护<strong>两个 20 位循环计数器</strong>，按虚拟通道（VC）独立维护：</p>
+    <table>
+      <tr><th>计数器</th><th>位置</th><th>含义</th><th>位数</th></tr>
+      <tr>
+        <td><strong>Credits Consumed (CC)</strong></td>
+        <td>发送端</td>
+        <td>已消耗的信用总量（已发送的数据量）</td>
+        <td>20-bit</td>
+      </tr>
+      <tr>
+        <td><strong>Credits Available (CA)</strong></td>
+        <td>发送端</td>
+        <td>可用信用 = 初始信用分配 + 接收端累计释放信用 - 本地累计消耗信用</td>
+        <td>20-bit</td>
+      </tr>
+      <tr>
+        <td><strong>Credits Freed (CF)</strong></td>
+        <td>接收端</td>
+        <td>已释放的信用总量（已消费的数据量）</td>
+        <td>20-bit</td>
+      </tr>
+      <tr>
+        <td><strong>Credits Granted (CG)</strong></td>
+        <td>接收端</td>
+        <td>已授予的信用总量（初始分配 + 后续返还）</td>
+        <td>20-bit</td>
+      </tr>
+    </table>
+    <h4>信用计算公式</h4>
+  </div>
+
+  <div class="ascii-art">发送端可用信用计算 (核心公式):
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  Credits_Granted = Initial_Credit_Grant + Credits_Freed     │
+  │                    (初始分配)         (接收端累计释放)        │
+  │                                                              │
+  │  Available_Credit = Credits_Granted - Credits_Consumed      │
+  │                    = Initial_Credit_Grant                    │
+  │                    + Credits_Freed (remote)                  │
+  │                    - Credits_Consumed (local)                │
+  └──────────────────────────────────────────────────────────────┘
+
+  ⚠️ 关键理解：Credits_Granted 和 Credits_Consumed 都是【累计计数器】
+     - Credits_Granted 不是"接收端本次返回的信用增量"
+       而是初始分配 + 所有历史释放信用的累加总和
+     - Credits_Consumed 不是"当前已用信用"
+       而是从链路建立以来发送的所有数据量的累加总和
+     - 两者相减得到的差值才是"当前可用信用"
+
+  发送决策:
+  ┌─────────────────────────────────────────────┐
+  │  if (Available_Credit >= Packet_Size)       │
+  │      -> send packet                         │
+  │      -> Credits_Consumed += Packet_Size     │
+  │  else                                       │
+  │      -> pause this VC, wait for credit upd  │
+  └─────────────────────────────────────────────┘
+
+  接收端信用返还:
+  ┌─────────────────────────────────────────────────────────┐
+  │  When packet leaves Rx buffer (consumed):               │
+  │      -> Credits_Freed += Packet_Size  (cumulative)      │
+  │      -> send update msg(Credits_Freed) to sender        │
+  │      -> sender: Credits_Granted = Initial_Grant + CF    │
+  │         (NOT overwrite; recompute CG from cumulative CF) │
+  └─────────────────────────────────────────────────────────┘
+
+  数值推演示例 (初始信用 = 100 字节):
+
+  Time  Event                     CF   CC   CG=Init+CF   Avail=CG-CC
+  ----  ------------------------- --   --   -----------  ------------
+  T0    Init, grant=100            0    0    100+0=100    100-0  = 100
+  T1    Send 10 bytes              0    10   100          100-10 = 90
+  T2    Rx 10B (buffered)          0    10   100          90 (no chg)
+  T3    Rx consume, free 10        10   10   100+10=110   110-10 = 100
+        -> send CF=10 to Tx
+  T4    Send 20 bytes              10   30   110          110-30 = 80
+  T5    Rx consume, free 20        30   30   100+30=130   130-30 = 100
+        -> send CF=30 to Tx
+
+  → 可见: 只要接收端消费速度 ≥ 发送速度, 可用信用会持续恢复
+  → 如果接收端消费慢, CF 增长慢, Available 下降, 发送端自动减速
+
+  20-bit 循环计数器:
+  ┌─────────────────────────────────────────────┐
+  │  计数范围: 0 ~ 1,048,575 (2²⁰ - 1)         │
+  │  回绕处理: 模 2²⁰ 运算                      │
+  │  最大可追踪: 1MB 信用 (以字节为单位)          │
+  │  足以覆盖 MTU=9000B 的多包场景               │
+  └─────────────────────────────────────────────┘</div>
+
+  <div class="semantic teal">
+    <h4>为什么用累计计数器而不是增量？</h4>
+    <ul>
+      <li><strong>幂等性</strong>：接收端发送的 CF 是累计值，即使同一消息重复到达，发送端覆盖 CG 也不会出错</li>
+      <li><strong>抗丢包</strong>：如果某次 CF 更新丢失，下一次 CF（更大的累计值）到达后直接覆盖，丢失的信用自动补回</li>
+      <li><strong>回绕安全</strong>：20-bit 模运算天然支持回绕，只要 Available ≥ 0（模运算意义上）即可发送</li>
+      <li><strong>同步机制</strong>：发送端定期发送本地 CC 给接收端，接收端可验证 CG - CC 是否等于实际缓冲区占用，发现不一致即补偿</li>
+    </ul>
+  </div>
+
+  <div class="key-points">
+    <strong>信用泄漏防护：</strong>
+    <ul>
+      <li>由于 CF 是<strong>累计值</strong>，单次信用更新消息丢失不会造成永久泄漏——下一次 CF（更大的累计值）到达后自动补回</li>
+      <li>但如果<strong>连续多次</strong>信用更新消息都丢失，发送端的 Available 会持续下降（虽然实际缓冲区已空），导致发送端误以为信用不足而停发——这就是"信用泄漏"</li>
+      <li>防护机制：发送端定期（低频）向接收端发送 <strong>Credits_Consumed 计数器同步消息</strong>（64B Sync Packet）</li>
+      <li>接收端比对：CG(local) - CC(reported) 应等于当前缓冲区实际占用；若不一致，说明有更新消息丢失，接收端主动发送修正后的 CG 值补偿</li>
+      <li>这与 InfiniBand 的信用机制类似，确保长期运行下信用不丢失</li>
+    </ul>
+  </div>
+
+  <!-- ===== CBFC Message Format ===== -->
+  <h4 id="cbfc-msg">2.3 报文格式</h4>
+
+  <div class="semantic teal">
+    <h4>两种消息类型</h4>
+    <p>UEC CBFC 定义了两种消息类型，分别用于不同频率的信用更新：</p>
+  </div>
+
+  <div class="frame-diagram">
+<span class="header">消息类型 1: 高频信用更新消息 (Receiver → Sender)</span>
+<span class="comment">编码为 8B Control Ordered Set，在 IPG 或帧间隙中传输</span>
+
+<span class="comment">┌────────────────────────────────────────────────────────┐</span>
+<span class="comment">│              8B Control Ordered Set                    │</span>
+<span class="comment">├──────────┬──────────┬──────────┬──────────────────────┤</span>
+<span class="comment">│  O Code  │ VC Index │Credits   │  Credits Freed       │</span>
+<span class="comment">│  (4-bit) │ (6-bit)  │Freed     │  (20-bit)             │</span>
+<span class="comment">│          │          │Valid     │                       │</span>
+<span class="comment">├──────────┼──────────┼──────────┼──────────────────────┤</span>
+<span class="comment">│ CBFC ID  │ 0~31     │ 1 bit    │  Circular counter    │</span>
+<span class="comment">│ unique   │ select   │ 1=valid  │  Cumulative credits  │</span>
+<span class="comment">│ O code   │   VC     │ 0=invalid│  freed (bytes)       │</span>
+<span class="comment">└──────────┴──────────┴──────────┴──────────────────────┘</span>
+
+<span class="comment">Features:
+  - High frequency: sent immediately after each packet is consumed
+  - Embedded in physical layer PCS subsystem, no data bandwidth consumed
+  - Transmitted in IPG (inter-packet gap) or by preempting data frame</span>
+
+<span class="header">消息类型 2: 低频信用同步消息 (Sender → Receiver)</span>
+<span class="comment">编码为 64B 数据包，由发送端定期发送</span>
+
+<span class="comment">┌────────────────────────────────────────────────────────┐</span>
+<span class="comment">│              64B CBFC Sync Packet                      │</span>
+<span class="comment">├──────────┬──────────┬──────────┬──────────────────────┤</span>
+<span class="comment">│  Header  │ VC Count │ VC[0]    │  VC[1]               │</span>
+<span class="comment">│  (8B)    │  (8B)    │ CC(4B)   │  CC(4B)  ...         │</span>
+<span class="comment">├──────────┼──────────┼──────────┼──────────────────────┤</span>
+<span class="comment">│ CBFC Sync│ # of VCs │ Credits  │  Each VC's Credits   │</span>
+<span class="comment">│ packet   │ included │ Consumed │  Consumed value      │</span>
+<span class="comment">│          │          │ (20-bit) │  (circular counter)  │</span>
+<span class="comment">└──────────┴──────────┴──────────┴──────────────────────┘</span>
+
+<span class="comment">Features:
+  - Low frequency: sent periodically (e.g. every 100us)
+  - Carries CC counter values for all VCs
+  - Prevents credit leak (compensates lost credit update messages)
+  - Sent as standard Ethernet frame</span></div>
+
+  <!-- ===== CBFC VC Architecture ===== -->
+  <h4 id="cbfc-vc">2.4 虚拟通道（VC）架构</h4>
+
+  <div class="semantic teal">
+    <h4>VC 设计</h4>
+    <p>CBFC 支持多达 <strong>32 个虚拟通道（VC0~VC31）</strong>，每个 VC 独立维护信用计数器，独立控制流量。这比 PFC 的 8 个优先级更精细。</p>
+    <table>
+      <tr><th>特性</th><th>PFC</th><th>CBFC</th></tr>
+      <tr><td>流量分类粒度</td><td>8 个优先级（802.1p PCP）</td><td>32 个虚拟通道（VC）</td></tr>
+      <tr><td>控制方式</td><td>时间窗口暂停</td><td>信用额度管理</td></tr>
+      <tr><td>缓冲区需求</td><td>每端口需 RTT+MTU Headroom</td><td>按 VC 按需分配，更高效</td></tr>
+      <tr><td>调度支持</td><td>不支持</td><td>发送端可利用信用信息做本地调度</td></tr>
+      <tr><td>VC 优先级</td><td>固定 8 级</td><td>每个 VC 可独立配置优先级</td></tr>
+    </table>
+    <p>每个 VC 可以独立配置：</p>
+    <ul>
+      <li><strong>缓冲区大小</strong>：低吞吐 VC 分配更少缓冲区</li>
+      <li><strong>初始信用额度</strong>：决定该 VC 的突发吸收能力</li>
+      <li><strong>优先级</strong>：调度器中的调度优先级</li>
+      <li><strong>无损/有损模式</strong>：可以选择是否启用 CBFC（有损 VC 不需要信用控制）</li>
+    </ul>
+  </div>
+
+  <!-- ===== CBFC Negotiation ===== -->
+  <h4 id="cbfc-negotiation">2.5 LLDP 协商</h4>
+
+  <div class="semantic teal">
+    <h4>CBFC 协商机制</h4>
+    <p>CBFC 通过 LLDP 扩展进行链路级协商，与 LLR 共享同一协商框架：</p>
+    <ol>
+      <li>链路建立后，两端通过 LLDP 交换能力信息</li>
+      <li>LLDP TLV 携带 CBFC 能力描述：支持的 VC 数量、每个 VC 的缓冲区大小、初始信用额度</li>
+      <li>双方比对能力，选择共同支持的配置</li>
+      <li>协商成功后，初始化各 VC 的信用计数器，开始正常数据传输</li>
+      <li>如果协商失败，CBFC 不启用，回退到 PFC 或无流控模式</li>
+    </ol>
+    <p><strong>协商参数</strong>：</p>
+    <ul>
+      <li>支持的 VC 数量（1~32）</li>
+      <li>每个 VC 的缓冲区大小（字节数）</li>
+      <li>初始信用额度</li>
+      <li>信用更新消息频率（高频消息间隔、低频同步消息间隔）</li>
+      <li>是否与 PFC 共存（可配置为 CBFC-only 或 CBFC+PFC）</li>
+    </ul>
+  </div>
+
+  <!-- ===== CBFC Normal Scenario ===== -->
+  <h4 id="cbfc-normal">2.6 正常场景流程</h4>
+
+  <div class="success-box">
+    <strong>场景：CBFC 信用流转完整周期</strong>
+  </div>
+
+  <div class="ascii-art">初始状态:
+  接收端 VC[0] 缓冲区大小 = 64KB, 初始信用分配 = 64KB
+  发送端: Initial_Grant=64KB, Credits_Freed=0, Credits_Consumed=0
+  Credits_Granted = 64KB + 0 = 64KB
+  Available_Credit = 64KB - 0 = 64KB
+
+Step 1: 发送端要发 9KB 包
+  Available_Credit(64KB) ≥ 9KB → 允许发送
+  Credits_Consumed = 9KB
+  Available_Credit = 64KB - 9KB = 55KB
+
+Step 2: 接收端收到 9KB 包，放入缓冲区
+  缓冲区占用 = 9KB, 剩余 = 55KB
+  (信用已在发送端扣除，接收端不需额外操作)
+
+Step 3: 接收端消费(转发)该包，缓冲区释放 9KB
+  Credits_Freed += 9KB → CF = 9KB (累计)
+  → 发送高频信用更新消息 (8B Ordered Set):
+    VC=0, Credits_Freed = 9KB (累计值)
+
+Step 4: 发送端收到更新
+  Credits_Granted = Initial_Grant + CF = 64KB + 9KB = 73KB
+  Available_Credit = 73KB - 9KB = 64KB (恢复)
+
+Step 5: 发送端再发 9KB 包
+  Credits_Consumed = 18KB
+  Available_Credit = 73KB - 18KB = 55KB
+
+Step 6: 接收端消费第二个包, 释放 9KB
+  Credits_Freed = 18KB (累计)
+  Credits_Granted = 64KB + 18KB = 82KB
+  Available_Credit = 82KB - 18KB = 64KB (再次恢复)
+
+Step 7: 定期同步 (低频, 如每100μs)
+  发送端 → 接收端: 发送 64B Sync Packet
+    携带 VC[0] Credits_Consumed = 18KB
+  接收端比对: CG(local) - CC(reported) = 82KB - 18KB = 64KB
+  vs 实际缓冲区占用 (应为0, 因都已消费)
+  → 64KB ≠ 0KB → 不一致! 说明有信用更新消息丢失
+  → 接收端补偿: 直接发送 CG = 64KB (重置为正确值)
+
+稳态运行: 信用在发送端和接收端之间循环流转
+  发送 → 消费 → 返还信用 → 再发送
+  缓冲区永远不会溢出 (因为有信用才发)</div>
+
+  <!-- ===== CBFC Abnormal Scenario ===== -->
+  <h4 id="cbfc-abnormal">2.7 异常场景与响应机制</h4>
+
+  <div class="danger-box">
+    <strong>异常场景 1：信用更新消息丢失</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>高频信用更新消息（8B Ordered Set）因物理层错误丢失，发送端可用信用逐渐减少（信用泄漏）。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>低频同步消息</strong>：发送端定期发送 CC 计数器值给接收端，接收端比对后补偿丢失的信用</li>
+      <li><strong>计数器回绕保护</strong>：20-bit 循环计数器设计确保即使多条更新消息丢失，同步后仍能正确恢复</li>
+      <li><strong>降级而非丢包</strong>：信用不足时发送端只是暂停发送，不会丢包。缓冲区不会溢出</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 2：接收端缓冲区异常（如故障）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>接收端缓冲区硬件故障导致无法消费数据，信用不再返还。发送端可用信用耗尽后永久暂停。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>信用超时检测</strong>：发送端监控信用长时间不增长的情况，触发告警</li>
+      <li><strong>链路重置</strong>：通过 LLDP 重新协商，重新初始化信用计数器</li>
+      <li><strong>故障隔离</strong>：将该链路标记为不可用，流量切换到备用路径</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 3：VC 配置不匹配</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>LLDP 协商中两端 VC 数量、缓冲区大小或信用额度配置不一致。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li>LLDP 协商失败，CBFC 不启用</li>
+      <li>回退到 PFC（如果 PFC 也已配置）或无流控模式</li>
+      <li>触发 Syslog 告警，提示管理员检查配置</li>
+    </ul>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 4：与 LLR 交互时的信用处理</strong>
+  </div>
+  <div class="semantic red">
+    <h4>成因</h4>
+    <p>当 LLR 重传一个数据包时，该包的信用已在第一次发送时扣除。重传时不应再次扣除信用，否则会导致可用信用虚减。</p>
+    <h4>响应机制</h4>
+    <ul>
+      <li><strong>重传不扣信用</strong>：LLR 重传是同一包的重发，信用已在首次发送时扣除</li>
+      <li><strong>接收端去重</strong>：接收端收到重传包后，不重复计入缓冲区占用</li>
+      <li><strong>CBFC + LLR 协同设计</strong>：UEC 规范明确规定了两者交互时的信用处理规则</li>
+    </ul>
+  </div>
+
+  <!-- ===== CBFC vs PFC ===== -->
+  <h4 id="cbfc-vs-pfc">2.8 CBFC vs PFC 对比</h4>
+
+  <table>
+    <tr>
+      <th>对比维度</th>
+      <th>PFC <span class="badge badge-pfc">IEEE 802.1Qbb</span></th>
+      <th>CBFC <span class="badge badge-cbfc">UEC v1.0</span></th>
+    </tr>
+    <tr>
+      <td>控制范式</td>
+      <td>反应式：满了才暂停</td>
+      <td>预防式：有信用才发</td>
+    </tr>
+    <tr>
+      <td>控制信号</td>
+      <td>PAUSE 帧（MAC 控制帧）</td>
+      <td>信用更新消息（Ordered Set + Sync Packet）</td>
+    </tr>
+    <tr>
+      <td>流量粒度</td>
+      <td>8 个优先级（802.1p PCP）</td>
+      <td>32 个虚拟通道（VC）</td>
+    </tr>
+    <tr>
+      <td>缓冲区效率</td>
+      <td>每端口需 RTT+MTU Headroom</td>
+      <td>按 VC 按需分配，更高效</td>
+    </tr>
+    <tr>
+      <td>调度支持</td>
+      <td>不支持（发送端只知道停/发）</td>
+      <td>支持（发送端知道各 VC 可用信用）</td>
+    </tr>
+    <tr>
+      <td>死锁风险</td>
+      <td>高（需要 Watchdog 防护）</td>
+      <td>低（信用机制天然无死锁环路）</td>
+    </tr>
+    <tr>
+      <td>队头阻塞</td>
+      <td>有（整优先级暂停）</td>
+      <td>低（VC 粒度更细，按包控制）</td>
+    </tr>
+    <tr>
+      <td>配置复杂度</td>
+      <td>高（需精确计算 XOFF/XON/Headroom）</td>
+      <td>低（只需配置缓冲区大小和初始信用）</td>
+    </tr>
+    <tr>
+      <td>协商方式</td>
+      <td>DCBx (LLDP TLV)</td>
+      <td>LLDP 扩展</td>
+    </tr>
+    <tr>
+      <td>带宽开销</td>
+      <td>PAUSE 帧占用数据带宽</td>
+      <td>8B Ordered Set 在 IPG 中传输，不占数据带宽</td>
+    </tr>
+    <tr>
+      <td>适用场景</td>
+      <td>RoCEv2 / FCoE 传统无损以太网</td>
+      <td>AI/HPC 大规模集群（UEC）</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ==================== LLR ==================== -->
+<div class="section" id="llr">
+  <span class="section-tag tag-llr">Part 3</span>
+  <h3>LLR — 链路层重试 <span class="badge badge-llr">UEC v1.0</span></h3>
+
+  <!-- ===== LLR Principle ===== -->
+  <h4 id="llr-principle">3.1 功能原理</h4>
+
+  <div class="semantic amber">
+    <h4>核心机制</h4>
+    <p>LLR（Link Layer Retry）是 UEC v1.0 定义的链路层重传机制，用于在<strong>点到点链路</strong>上本地恢复物理层错误导致的丢包。</p>
+    <p><strong>与 PFC/CBFC 的区别</strong>：PFC/CBFC 解决拥塞丢包，LLR 解决误码丢包。两者正交，可组合使用。</p>
+    <p><strong>与 TCP 重传的区别</strong>：</p>
+    <ul>
+      <li>TCP 重传是端到端的，涉及整个协议栈，延迟可达毫秒级</li>
+      <li>LLR 是逐跳的，仅涉及链路层，重传超时可绑定到链路 RTT（≈1μs），远快于 TCP</li>
+      <li>LLR 不处理拥塞丢包，只处理物理层错误（FCS 错误、不可纠正的 FEC 错误）</li>
+    </ul>
+    <p><strong>工作逻辑</strong>：</p>
+    <ol>
+      <li>发送端为每个 LLR 合格帧分配<strong>序列号（Sequence Number）</strong>，编码在以太网帧前导码中</li>
+      <li>发送端将帧存入<strong>重放缓冲区（Replay Buffer）</strong></li>
+      <li>接收端检查 FCS 和序列号连续性，正确则发送 ACK，错误则发送 NACK</li>
+      <li>发送端收到 ACK 后释放重放缓冲区中的对应帧</li>
+      <li>收到 NACK 或超时未收到 ACK，从重放缓冲区重传</li>
+    </ol>
+    <p><strong>重传策略：Go-back-N</strong></p>
+    <ul>
+      <li>接收端检测到错误后，丢弃该帧及之后所有帧（即使后续帧 FCS 正确）</li>
+      <li>发送 NACK 指示缺失的序列号</li>
+      <li>发送端从缺失序列号开始重传所有后续帧</li>
+      <li>选择 Go-back-N 而非选择性重传的原因：链路层无需理解上层排序需求，实现更简单</li>
+    </ul>
+  </div>
+
+  <!-- ===== LLR Sequence Number ===== -->
+  <h4 id="llr-seqnum">3.2 序列号与前导码扩展</h4>
+
+  <div class="frame-diagram">
+<span class="header">标准以太网前导码 (8 Bytes)</span>
+
+<span class="comment">┌───┬───┬───┬───┬───┬───┬───┬───────┐</span>
+<span class="comment">│SFD│ P │ P │ P │ P │ P │ P │  P    │</span>
+<span class="comment">│   │ r │ r │ r │ r │ r │ r │  r    │</span>
+<span class="comment">│   │ e │ e │ e │ e │ e │ e │  e    │</span>
+<span class="comment">│   │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │  6    │</span>
+<span class="comment">└───┴───┴───┴───┴───┴───┴───┴───────┘</span>
+  SFD = Start of Frame Delimiter (0xD5)
+  Pre = Preamble pattern (0x55)
+
+<span class="header">LLR 扩展前导码 — 嵌入序列号</span>
+
+<span class="comment">┌───┬───┬───┬───┬───┬───┬───────────┬───────┐</span>
+<span class="comment">│SFD│ P │ P │ P │ P │ P │  Seq Num  │  P    │</span>
+<span class="comment">│   │ r │ r │ r │ r │ r │  (encoded │  r    │</span>
+<span class="comment">│   │ 0 │ 1 │ 2 │ 3 │ 4 │  in pream)│  6    │</span>
+<span class="comment">└───┴───┴───┴───┴───┴───┴───────────┴───────┘</span>
+                        ↑
+                   Seq Num embedded here
+
+  Features:
+  - Seq Num invisible to upper layers (L3+ unaware)
+  - No change to Ethernet frame format (compatible with standard Ethernet)
+  - Seq Num space: implementation-specific (typically 8~16 bit)
+  - Seq Num synchronized via INIT message at link initialization</div>
+
+  <div class="key-points">
+    <strong>LLR 合格性（Eligibility）：</strong>
+    <ul>
+      <li>并非所有帧都启用 LLR——MAC 客户端可以标记帧是否需要 LLR</li>
+      <li>非 LLR 帧作为标准以太网帧发送，不分配序列号，不存入重放缓冲区</li>
+      <li>LLR 帧分配序列号并存入重放缓冲区，直到收到 ACK</li>
+      <li>这种设计允许 LLR 与非 LLR 流量在同一链路上共存</li>
+    </ul>
+  </div>
+
+  <!-- ===== LLR ACK/NACK ===== -->
+  <h4 id="llr-ack-nack">3.3 ACK/NACK 机制</h4>
+
+  <div class="semantic amber">
+    <h4>ACK（确认）</h4>
+    <ul>
+      <li><strong>累积式</strong>（cumulative）：ACK 携带最近成功接收的序列号，表示该序列号及之前的所有帧都已正确接收</li>
+      <li><strong>不需要每帧一个 ACK</strong>：ACK 是定频发送的（paced），减少控制消息开销</li>
+      <li><strong>重发机制</strong>：ACK 在指定间隔内重复发送，以应对 ACK 本身丢失的情况</li>
+      <li>发送端收到 ACK 后，释放重放缓冲区中对应序列号及之前的所有帧</li>
+    </ul>
+    <h4>NACK（否定确认）</h4>
+    <ul>
+      <li><strong>立即发送</strong>：接收端检测到错误后尽快发送 NACK，不等待下一个 ACK 周期</li>
+      <li><strong>触发条件 1</strong>：FCS 校验失败——帧在传输中被损坏</li>
+      <li><strong>触发条件 2</strong>：序列号不连续（跳号）——检测到丢帧</li>
+      <li><strong>只发一次</strong>：NACK 只发送一次，避免发送端误解多个 NACK 为需要多次重传</li>
+      <li>NACK 携带期望的序列号（即缺失的第一个序列号）</li>
+    </ul>
+  </div>
+
+  <div class="ascii-art">ACK/NACK Interaction Timeline:
+
+Sender                           Receiver
+  │                              │
+  │── Frame(SN=1) ──────────────→│  ✓ FCS OK, SN contiguous
+  │                              │
+  │── Frame(SN=2) ──────────────→│  ✗ FCS error!
+  │                              │
+  │                              │  → send NACK(SN=2) now
+  │←──── NACK(SN=2) ─────────────│  (sent once)
+  │                              │
+  │  retransmit all from SN=2    │
+  │                              │
+  │── Frame(SN=2) ──────────────→│  ✓ FCS OK, SN contiguous
+  │── Frame(SN=3) ──────────────→│  ✓ FCS OK, SN contiguous
+  │                              │
+  │←──── ACK(SN=3) ──────────────│  (paced, cumulative ack)
+  │                              │
+  │  release replay buf SN<=3    │
+  │                              │
+  │── Frame(SN=4) ──────────────→│  ✓
+  │── Frame(SN=5) ──────────────→│  ✓
+  │                              │
+  │←──── ACK(SN=5) ──────────────│  (next paced ACK)
+  │                              │</div>
+
+  <!-- ===== LLR Replay Buffer ===== -->
+  <h4 id="llr-replay">3.4 重放缓冲区与 Go-back-N</h4>
+
+  <div class="semantic amber">
+    <h4>重放缓冲区（Replay Buffer）</h4>
+    <p>发送端维护一个重放缓冲区，存储所有已发送但未收到 ACK 的 LLR 帧。缓冲区大小决定了 LLR 的<strong>可达距离（Reach）</strong>：</p>
+  </div>
+
+  <div class="ascii-art">Replay Buffer Structure:
+
+  ┌─────────────────────────────────────────────┐
+  │            Replay Buffer (FIFO)              │
+  ├──────────┬──────────┬──────────┬───────────┤
+  │ Frame    │ Frame    │ Frame    │  Frame    │
+  │ SN=3     │ SN=4     │ SN=5     │  SN=6     │
+  │ (pending)│ (pending)│ (pending)│ (pending) │
+  └──────────┴──────────┴──────────┴───────────┘
+       ↑                              ↑
+  Oldest unacked                  Latest sent
+
+  On ACK(SN=5):
+  → Release SN=3, 4, 5
+  → Buffer keeps SN=6 only
+
+  On NACK(SN=4):
+  → Retransmit from SN=4
+  → Resend SN=4, 5, 6...
+
+  Reach (buffer size for full bandwidth):
+  ┌─────────────────────────────────────────────┐
+  │  Replay_Buffer_Size >= RTT * Bandwidth      │
+  │                + ACK_Interval * Bandwidth   │
+  │                + MTU                        │
+  │                                             │
+  │  Example (400G, RTT=2us, ACK=1us, MTU=9KB)  │
+  │  Buffer >= (2+1)us * 400G/8 + 9KB           │
+  │         >= 150KB + 9KB ~ 159KB              │
+  └─────────────────────────────────────────────┘</div>
+
+  <div class="key-points">
+    <strong>Go-back-N 的选择理由：</strong>
+    <ul>
+      <li>链路层重传超时可绑定到链路 RTT（≈1μs），远小于端到端 RTT</li>
+      <li>链路层丢包只由物理层错误引起，不涉及拥塞，丢包率极低（&lt;10⁻¹²）</li>
+      <li>Go-back-N 实现简单，不需要接收端缓存乱序帧</li>
+      <li>偶发的多余重传（已正确接收的帧被重传）在低误码率下开销可忽略</li>
+    </ul>
+  </div>
+
+  <!-- ===== LLR Control Ordered Sets ===== -->
+  <h4 id="llr-control">3.5 控制有序集</h4>
+
+  <div class="semantic amber">
+    <h4>控制消息类型</h4>
+    <p>LLR 使用物理层 PCS 子系统的 <strong>Control Ordered Sets</strong> 传输控制消息，格式与 Sequence Ordered Set（LF/RF）相同，为 8 字节消息，通过唯一的 4-bit O 码区分：</p>
+    <table>
+      <tr><th>消息类型</th><th>功能</th><th>触发时机</th></tr>
+      <tr>
+        <td><strong>INIT</strong></td>
+        <td>初始化序列号，建立 LLR 会话</td>
+        <td>链路建立后，LLDP 协商成功时</td>
+      </tr>
+      <tr>
+        <td><strong>INIT_ECHO</strong></td>
+        <td>确认 INIT，完成握手</td>
+        <td>收到 INIT 后</td>
+      </tr>
+      <tr>
+        <td><strong>ACK</strong></td>
+        <td>累积确认已接收的序列号</td>
+        <td>定频发送（paced）</td>
+      </tr>
+      <tr>
+        <td><strong>NACK</strong></td>
+        <td>否定确认，请求重传</td>
+        <td>检测到 FCS 错误或序列号跳变时立即发送</td>
+      </tr>
+    </table>
+    <p><strong>发送时机</strong>：控制有序集几乎可以在任意时刻发送——可在 IPG（帧间间隙）中发送，也允许抢占数据帧传输。</p>
+  </div>
+
+  <div class="frame-diagram">
+<span class="header">LLR Control Ordered Set 格式 (8 Bytes)</span>
+
+<span class="comment">┌──────────┬──────────┬──────────────────────────┐</span>
+<span class="comment">│  O Code  │ Message  │  Payload                  │</span>
+<span class="comment">│  (4-bit) │  Type    │  (Sequence Number etc.)   │</span>
+<span class="comment">│          │  (4-bit) │                           │</span>
+<span class="comment">├──────────┼──────────┼──────────────────────────┤</span>
+<span class="comment">│ LLR ID   │ INIT/    │  Depends on msg type:    │</span>
+<span class="comment">│ (unique  │ INIT_ECHO│  - INIT: initial SN      │</span>
+<span class="comment">│  O code, │ /ACK/    │  - INIT_ECHO: echo SN    │</span>
+<span class="comment">│  !=LF/RF)│ NACK     │  - ACK: last good SN     │</span>
+<span class="comment">│          │          │  - NACK: expected SN     │</span>
+<span class="comment">└──────────┴──────────┴──────────────────────────┘</span>
+
+<span class="comment">Distinguished from standard Sequence Ordered Set:
+  - Standard LF/RF Ordered Set uses different O Code
+  - LLR uses unique 4-bit O Code identifier
+  - Receiver distinguishes LLR msgs from standard ctrl msgs via O Code</span></div>
+
+  <!-- ===== LLR Timer ===== -->
+  <h4 id="llr-timer">3.6 定时器重传机制</h4>
+
+  <div class="semantic amber">
+    <h4>定时器的作用</h4>
+    <p>定时器重传提供协议鲁棒性，应对以下场景：</p>
+    <ul>
+      <li><strong>NACK 丢失</strong>：接收端发送的 NACK 本身因链路错误丢失</li>
+      <li><strong>帧完全丢失</strong>：发送的帧从未到达接收端，接收端无感知（无法发 NACK）</li>
+      <li><strong>ACK 重复丢失</strong>：多条 ACK 都丢失，发送端无法确认</li>
+      <li><strong>Tail Loss（尾部丢包）</strong>：最后几个帧丢失，接收端没有后续帧触发序列号跳变检测</li>
+    </ul>
+    <h4>定时器参数</h4>
+    <table>
+      <tr><th>参数</th><th>含义</th><th>典型值</th></tr>
+      <tr><td>Retransmission Timeout (RTO)</td><td>未收到 ACK 的超时时间</td><td>≥ 2×RTT（约 2~5μs）</td></tr>
+      <tr><td>ACK Interval</td><td>定频 ACK 发送间隔</td><td>≈ RTT（约 1μs）</td></tr>
+    </table>
+    <p><strong>RTO 设置原则</strong>：RTO 必须 &gt; 2×RTT，确保至少一个 ACK 周期内有重传机会。由于链路层 RTT 可精确测量（约 1μs），RTO 可设置得很紧凑。</p>
+  </div>
+
+  <!-- ===== LLR CRC Poisoning ===== -->
+  <h4 id="llr-poison">3.7 CRC 毒化机制</h4>
+
+  <div class="danger-box">
+    <strong>CRC 毒化（CRC Poisoning）— 防止 Livelock</strong>
+  </div>
+
+  <div class="semantic red">
+    <h4>问题场景</h4>
+    <p>如果一个数据包在发送端内部就已经损坏（例如 MAC 层以上的数据在写入发送缓冲区时发生位翻转），那么：</p>
+    <ol>
+      <li>发送端发送损坏的帧，接收端 FCS 校验失败，发送 NACK</li>
+      <li>发送端从重放缓冲区重传同一帧（缓冲区中的副本也是损坏的）</li>
+      <li>接收端再次 FCS 失败，再发 NACK</li>
+      <li>无限循环 → <strong>Livelock（活锁）</strong></li>
+    </ol>
+    <h4>CRC 毒化解决方案</h4>
+    <ul>
+      <li>发送端对 LLR 合格帧设置<strong>重传次数计数器</strong></li>
+      <li>当重传次数超过阈值（如 3 次），发送端认为该帧在重放缓冲区中的副本已损坏</li>
+      <li>发送端对该帧<strong>施加毒化 CRC</strong>（故意将 CRC 设为错误值）</li>
+      <li>接收端收到毒化帧后 FCS 失败，但识别出这是被毒化的帧</li>
+      <li>接收端将毒化帧作为不可恢复错误上报上层，而不是继续请求重传</li>
+      <li>上层协议（如 UET Transport）通过端到端重传处理该丢包</li>
+    </ul>
+  </div>
+
+  <!-- ===== LLR Negotiation ===== -->
+  <h4 id="llr-negotiation">3.8 LLDP 协商</h4>
+
+  <div class="semantic amber">
+    <h4>LLR 协商流程</h4>
+    <p>LLR 通过 LLDP 扩展进行链路级协商，是逐跳（hop-by-hop）技术：</p>
+    <ol>
+      <li>链路建立后，两端通过 LLDP 交换 LLR 能力信息</li>
+      <li>LLDP TLV 携带：是否支持 LLR、序列号空间大小、重放缓冲区大小、ACK 间隔、RTO 等</li>
+      <li>如果双方都支持且参数匹配，协商成功</li>
+      <li>执行 LLR 初始化握手：INIT → INIT_ECHO，同步序列号</li>
+      <li>进入正常 LLR 操作模式</li>
+    </ol>
+    <p><strong>LLR 协商参数</strong>：</p>
+    <table>
+      <tr><th>参数</th><th>含义</th><th>协商规则</th></tr>
+      <tr><td>LLR Capable</td><td>是否支持 LLR</td><td>双方都必须支持才启用</td></tr>
+      <tr><td>Seq Num Space</td><td>序列号空间大小</td><td>取较小值</td></tr>
+      <tr><td>Replay Buffer Size</td><td>重放缓冲区大小</td><td>决定最大可达距离</td></tr>
+      <tr><td>ACK Interval</td><td>ACK 发送频率</td><td>取较大值（保守）</td></tr>
+      <tr><td>RTO</td><td>重传超时</td><td>基于实际 RTT 计算</td></tr>
+      <tr><td>LLR Eligibility</td><td>哪些流量启用 LLR</td><td>由本地策略决定</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== LLR Normal Scenario ===== -->
+  <h4 id="llr-normal">3.9 正常场景流程</h4>
+
+  <div class="success-box">
+    <strong>场景：LLR 初始化 → 正常传输 → ACK 释放</strong>
+  </div>
+
+  <div class="ascii-art">Phase 1: LLR Initialization (after LLDP negotiation)
+
+Sender                              Receiver
+  │                                  │
+  │── LLDP (LLR Capability TLV) ──→  │  Negotiate params
+  │←─ LLDP (LLR Capability TLV) ──── │
+  │                                  │
+  │── INIT (SN=1) ──────────────────→│  Init sequence num
+  │←─ INIT_ECHO (SN=1) ──────────────│  Confirm init
+  │                                  │
+  │  next_seq = 1                    │  next_expected = 1
+  │  replay_buffer = empty           │
+
+Phase 2: Normal Transmission
+
+  │── Frame(SN=1) ──────────────────→│  ✓ FCS OK, SN=1==expected
+  │  [store in replay_buffer]        │  next_expected = 2
+  │                                  │
+  │── Frame(SN=2) ──────────────────→│  ✓ FCS OK, SN=2==expected
+  │  [store in replay_buffer]        │  next_expected = 3
+  │                                  │
+  │── Frame(SN=3) ──────────────────→│  ✓ FCS OK, SN=3==expected
+  │  [store in replay_buffer]        │  next_expected = 4
+  │                                  │
+  │←──── ACK(SN=3) ──────────────────│  Paced ACK (cumulative SN<=3)
+  │                                  │
+  │  Release replay_buffer SN<=3     │
+  │  replay_buffer = empty           │
+
+Phase 3: Steady State
+
+  │── Frame(SN=4) ──→  Frame(SN=5) ──→  ... continuous
+  │←── ACK(SN=5) ────  (paced ack)
+  │  Release SN<=5, continue sending</div>
+
+  <!-- ===== LLR Abnormal Scenario ===== -->
+  <h4 id="llr-abnormal">3.10 异常场景与响应机制</h4>
+
+  <div class="danger-box">
+    <strong>异常场景 1：帧损坏（FCS 错误）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>接收端 FCS 校验失败</li>
+      <li>立即发送 NACK（期望 SN = 当前缺失的 SN）</li>
+      <li>丢弃该帧及之后所有帧（Go-back-N）</li>
+      <li>发送端收到 NACK，从重放缓冲区重传</li>
+      <li>重传帧 FCS 正确 → 恢复正常</li>
+    </ol>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 2：帧完全丢失（未到达接收端）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>接收端未收到帧，但下一个帧的 SN 跳变（如期望 SN=3，收到 SN=4）</li>
+      <li>检测到序列号不连续 → 发送 NACK(SN=3)</li>
+      <li>丢弃 SN=4 及之后所有帧</li>
+      <li>发送端从 SN=3 开始重传</li>
+    </ol>
+    <p><strong>如果丢失的是最后一个帧（tail loss）</strong>：接收端没有后续帧触发跳变检测 → 依靠发送端定时器超时重传。</p>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 3：NACK 丢失</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>接收端发送 NACK，但 NACK 本身因链路错误丢失</li>
+      <li>发送端未收到 NACK，继续发送新帧</li>
+      <li>接收端收到新帧但 SN 不连续，再次发送 NACK（但 NACK 只发一次！）</li>
+      <li>如果第二个 NACK 也丢失 → 依靠发送端 RTO 定时器超时</li>
+      <li>RTO 超时后，发送端从最早未确认的 SN 开始重传</li>
+    </ol>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 4：ACK 丢失</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>ACK 是定频重发的，丢失一条 ACK 不影响</li>
+      <li>下一条 ACK 会累积确认更多帧</li>
+      <li>如果所有 ACK 都丢失 → RTO 超时触发重传</li>
+      <li>重传后接收端回复 ACK，恢复正常</li>
+    </ol>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 5：CRC 毒化（Livelock）</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>同一帧重传超过阈值（如 3 次）仍 FCS 失败</li>
+      <li>发送端判定重放缓冲区中的副本已损坏</li>
+      <li>对该帧施加毒化 CRC 后发送</li>
+      <li>接收端识别毒化帧，上报不可恢复错误</li>
+      <li>上层协议处理丢包（端到端重传）</li>
+      <li>LLR 从下一个 SN 继续，不影响后续帧</li>
+    </ol>
+  </div>
+
+  <div class="danger-box">
+    <strong>异常场景 6：链路断开与恢复</strong>
+  </div>
+  <div class="semantic red">
+    <h4>响应流程</h4>
+    <ol>
+      <li>物理层检测到链路断开（Loss of Signal）</li>
+      <li>LLR 会话终止，重放缓冲区中的帧全部丢失</li>
+      <li>上层协议负责端到端重传这些帧</li>
+      <li>链路恢复后，重新通过 LLDP 协商 LLR 参数</li>
+      <li>执行 INIT → INIT_ECHO 握手，重新初始化序列号</li>
+      <li>从 SN=1 重新开始正常传输</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ==================== Integration ==================== -->
+<div class="summary-box" id="integration">
+  <h2>三者协同与综合对比</h2>
+
+  <h3>一、协同架构</h3>
+
+  <div class="ascii-art">┌─────────────────────────────────────────────────────────────────┐
+│          Lossless Ethernet Link Layer Architecture (UEC)        │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Application (AI/HPC)                    │   │
+│  │                 UET Transport (E2E reliable)              │   │
+│  └──────────────────────────┬───────────────────────────────┘   │
+│                             │                                   │
+│  ┌──────────────────────────┴───────────────────────────────┐   │
+│  │           UEC Link Layer (Ethernet Enhancement)           │   │
+│  │                                                          │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │   │
+│  │  │    CBFC     │  │     LLR     │  │ Standard Eth    │   │   │
+│  │  │ (flow ctrl) │  │ (retransmit)│  │  MAC + PHY      │   │   │
+│  │  │             │  │             │  │                 │   │   │
+│  │  │ Credit-based│  │ Seq Num+ACK │  │ Frame Tx/Rx     │   │   │
+│  │  │ 32 VC indep │  │ Go-back-N   │  │ + FCS check     │   │   │
+│  │  │             │  │ Replay Buf  │  │                 │   │   │
+│  │  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘   │   │
+│  │         │                │                   │           │   │
+│  │         └────────┬───────┴───────────────────┘           │   │
+│  │                  │                                       │   │
+│  │          LLDP Negotiation (capability + param sync)      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Legacy: PFC (replaces CBFC) + ECN/DCQCN (E2E congestion ctrl) │
+│  UEC:    CBFC + LLR + UET Transport (end-to-end)               │
+└─────────────────────────────────────────────────────────────────┘</div>
+
+  <h3>二、综合对比表</h3>
+
+  <table>
+    <tr>
+      <th>维度</th>
+      <th>PFC <span class="badge badge-pfc">802.1Qbb</span></th>
+      <th>CBFC <span class="badge badge-cbfc">UEC</span></th>
+      <th>LLR <span class="badge badge-llr">UEC</span></th>
+    </tr>
+    <tr>
+      <td>解决的问题</td>
+      <td>拥塞丢包</td>
+      <td>拥塞丢包</td>
+      <td>误码丢包</td>
+    </tr>
+    <tr>
+      <td>控制方式</td>
+      <td>反应式 PAUSE</td>
+      <td>预防式信用</td>
+      <td>重传恢复</td>
+    </tr>
+    <tr>
+      <td>标准</td>
+      <td>IEEE 802.1Qbb</td>
+      <td>UEC v1.0</td>
+      <td>UEC v1.0</td>
+    </tr>
+    <tr>
+      <td>协商协议</td>
+      <td>DCBx (LLDP TLV)</td>
+      <td>LLDP 扩展</td>
+      <td>LLDP 扩展</td>
+    </tr>
+    <tr>
+      <td>控制消息</td>
+      <td>PAUSE 帧 (64B MAC帧)</td>
+      <td>8B Ordered Set + 64B Sync</td>
+      <td>8B Control Ordered Set</td>
+    </tr>
+    <tr>
+      <td>带宽开销</td>
+      <td>占用数据带宽</td>
+      <td>Ordered Set 在 IPG 传输</td>
+      <td>Ordered Set 在 IPG 传输</td>
+    </tr>
+    <tr>
+      <td>流量粒度</td>
+      <td>8 优先级</td>
+      <td>32 VC</td>
+      <td>按帧 (LLR 合格/不合格)</td>
+    </tr>
+    <tr>
+      <td>缓冲区需求</td>
+      <td>XOFF/XON/Headroom</td>
+      <td>按 VC 按需分配</td>
+      <td>Replay Buffer (≥RTT×BW)</td>
+    </tr>
+    <tr>
+      <td>死锁风险</td>
+      <td>高（需 Watchdog）</td>
+      <td>低</td>
+      <td>无（Livelock 需 CRC 毒化）</td>
+    </tr>
+    <tr>
+      <td>响应延迟</td>
+      <td>&lt;1μs (硬件)</td>
+      <td>≈0 (预防式)</td>
+      <td>≈RTT (≈1μs)</td>
+    </tr>
+    <tr>
+      <td>可与对方共存?</td>
+      <td>可与 LLR 共存</td>
+      <td>可与 LLR 共存</td>
+      <td>可与 PFC/CBFC 共存</td>
+    </tr>
+    <tr>
+      <td>适用场景</td>
+      <td>RoCEv2/FCoE</td>
+      <td>AI/HPC (UEC)</td>
+      <td>AI/HPC (UEC)</td>
+    </tr>
+  </table>
+
+  <h3>三、正常与异常场景对照</h3>
+
+  <table>
+    <tr>
+      <th>场景</th>
+      <th>PFC 响应</th>
+      <th>CBFC 响应</th>
+      <th>LLR 响应</th>
+    </tr>
+    <tr>
+      <td><strong>缓冲区即将溢出</strong></td>
+      <td>XOFF→发PAUSE→上游停止</td>
+      <td>信用不足→自动停止发送</td>
+      <td>N/A（不处理拥塞）</td>
+    </tr>
+    <tr>
+      <td><strong>缓冲区恢复正常</strong></td>
+      <td>XON→发RESUME→上游恢复</td>
+      <td>信用返还→自动恢复发送</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td><strong>帧损坏 (FCS错)</strong></td>
+      <td>N/A（不处理误码）</td>
+      <td>N/A（不处理误码）</td>
+      <td>发NACK→Go-back-N重传</td>
+    </tr>
+    <tr>
+      <td><strong>帧完全丢失</strong></td>
+      <td>N/A</td>
+      <td>扣除信用但无数据到达</td>
+      <td>SN跳变→NACK / RTO超时重传</td>
+    </tr>
+    <tr>
+      <td><strong>死锁</strong></td>
+      <td>Watchdog强制丢包</td>
+      <td>信用机制天然无死锁</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td><strong>控制消息丢失</strong></td>
+      <td>PAUSE超时后自动恢复</td>
+      <td>低频同步消息补偿</td>
+      <td>ACK重发 / RTO超时</td>
+    </tr>
+    <tr>
+      <td><strong>持续误码 (Livelock)</strong></td>
+      <td>N/A</td>
+      <td>N/A</td>
+      <td>CRC毒化→上报上层</td>
+    </tr>
+    <tr>
+      <td><strong>链路断开</strong></td>
+      <td>PFC会话终止</td>
+      <td>信用状态丢失</td>
+      <td>重放缓冲区丢失→上层重传</td>
+    </tr>
+    <tr>
+      <td><strong>链路恢复</strong></td>
+      <td>DCBx重新协商</td>
+      <td>LLDP重新协商→信用初始化</td>
+      <td>LLDP重新协商→INIT握手</td>
+    </tr>
+    <tr>
+      <td><strong>配置不匹配</strong></td>
+      <td>DCBx Error告警</td>
+      <td>LLDP协商失败→回退</td>
+      <td>LLDP协商失败→LLR不启用</td>
+    </tr>
+  </table>
+
+  <h3>四、参数配置速查</h3>
+
+  <table>
+    <tr>
+      <th>机制</th>
+      <th>参数</th>
+      <th>含义</th>
+      <th>典型值/计算</th>
+    </tr>
+    <tr>
+      <td rowspan="5">PFC</td>
+      <td>XOFF Threshold</td>
+      <td>触发暂停的缓冲区上限</td>
+      <td>缓冲区容量 80%~90%</td>
+    </tr>
+    <tr>
+      <td>XON Threshold</td>
+      <td>触发恢复的缓冲区下限</td>
+      <td>XOFF - 10%~20%</td>
+    </tr>
+    <tr>
+      <td>Headroom</td>
+      <td>吸收PAUSE延迟的缓冲区</td>
+      <td>≥ RTT×BW + MTU</td>
+    </tr>
+    <tr>
+      <td>Pause Time</td>
+      <td>PAUSE帧暂停时长</td>
+      <td>65535 quanta (持续暂停)</td>
+    </tr>
+    <tr>
+      <td>Watchdog Timeout</td>
+      <td>死锁检测超时</td>
+      <td>100~500ms</td>
+    </tr>
+    <tr>
+      <td rowspan="4">CBFC</td>
+      <td>VC Buffer Size</td>
+      <td>每个VC的接收缓冲区</td>
+      <td>按VC吞吐需求分配</td>
+    </tr>
+    <tr>
+      <td>Initial Credit</td>
+      <td>初始信用额度</td>
+      <td>= VC Buffer Size</td>
+    </tr>
+    <tr>
+      <td>High-freq Update</td>
+      <td>高频信用更新频率</td>
+      <td>每包消费后发送</td>
+    </tr>
+    <tr>
+      <td>Low-freq Sync</td>
+      <td>低频同步间隔</td>
+      <td>~100μs</td>
+    </tr>
+    <tr>
+      <td rowspan="5">LLR</td>
+      <td>Replay Buffer</td>
+      <td>重放缓冲区大小</td>
+      <td>≥ (RTT+ACK_Interval)×BW + MTU</td>
+    </tr>
+    <tr>
+      <td>ACK Interval</td>
+      <td>定频ACK发送间隔</td>
+      <td>≈ RTT (~1μs)</td>
+    </tr>
+    <tr>
+      <td>RTO</td>
+      <td>重传超时</td>
+      <td>≥ 2×RTT (~2~5μs)</td>
+    </tr>
+    <tr>
+      <td>Max Retries</td>
+      <td>CRC毒化前最大重传次数</td>
+      <td>~3 次</td>
+    </tr>
+    <tr>
+      <td>Seq Num Space</td>
+      <td>序列号空间</td>
+      <td>8~16 bit</td>
+    </tr>
+  </table>
+
+  <h3>五、一句话总结</h3>
+  <p style="font-size: 16px; font-weight: 500; color: var(--accent); padding: 12px 16px; background: var(--bg); border-radius: 8px; border: 1px solid var(--border);">
+    PFC 用"红灯停"（PAUSE）防止缓冲区溢出，CBFC 用"预算制"（信用额度）更精细地预防溢出，LLR 用"本地重传"（Go-back-N + ACK/NACK）快速恢复误码丢包。三者组合构成 UEC 无损以太网的完整防线：CBFC/PFC 保证不丢、LLR 保证恢复、UET Transport 保证端到端可靠。
+  </p>
+</div>
+
+<!-- ==================== References ==================== -->
+<div class="section" id="references">
+  <span class="section-tag">References</span>
+  <h3>标准参考</h3>
+
+  <ul class="ref-list">
+    <li><strong>IEEE 802.1Qbb</strong> — Priority-based Flow Control (PFC), 定义 PFC 帧格式和 8 优先级暂停机制</li>
+    <li><strong>IEEE 802.1Qaz</strong> — Data Center Bridging Exchange (DCBx), 定义 PFC/ETS 的 LLDP TLV 协商</li>
+    <li><strong>IEEE 802.1Q-2022</strong> — Bridges and Bridged Networks, Section 38 定义 DCBx, Annex D 定义 TLV 格式</li>
+    <li><strong>IEEE 802.3x</strong> — Ethernet PAUSE frame (传统全链路暂停，PFC 的前身)</li>
+    <li><strong>UEC v1.0.2</strong> — Ultra Ethernet Specification, 定义 LLR 和 CBFC 的完整规范 (<a href="https://www.ultraethernet.org">www.ultraethernet.org</a>)</li>
+    <li><strong>RFC 3168</strong> — The Addition of Explicit Congestion Notification (ECN) to IP, 与 PFC 配合的端到端拥塞通知</li>
+    <li><strong>InfiniBand Architecture Specification</strong> — CBFC 信用机制的设计灵感来源</li>
+    <li><strong>Hoefler et al. (2023)</strong> — Ultra Ethernet 论文, 详细分析 CBFC vs PFC 的缓冲区效率优势</li>
+  </ul>
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+</body>
+</html>

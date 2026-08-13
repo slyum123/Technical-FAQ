@@ -1,0 +1,3556 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scale-Up 网络协议全景解析</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-code: #1e1e1e;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #3fb950;
+  --accent3: #f0883e;
+  --accent4: #bc8cff;
+  --accent5: #f778ba;
+  --accent6: #79c0ff;
+  --red: #ff7b72;
+  --green: #56d364;
+  --yellow: #e3b341;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  line-height: 1.8;
+  font-size: 15px;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 20px 40px 80px 40px; }
+
+/* TOC - Fixed Left Sidebar */
+.toc {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px 40px;
+  z-index: 100;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.toc::-webkit-scrollbar { width: 5px; }
+.toc::-webkit-scrollbar-track { background: transparent; }
+.toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.toc h2 { font-size: 16px; margin-bottom: 10px; color: var(--accent); padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.toc-grid { display: flex; flex-direction: column; gap: 2px; }
+.toc a { color: var(--text-dim); text-decoration: none; font-size: 12.5px; line-height: 1.6; display: block; padding: 3px 6px; border-radius: 4px; transition: all 0.2s; }
+.toc a:hover { color: var(--accent); background: rgba(88,166,255,0.08); }
+.toc a.lvl1 { color: var(--text); font-weight: 600; font-size: 13px; margin-top: 10px; padding: 4px 6px; }
+
+/* Main content offset for sidebar */
+.content-wrapper { margin-left: 280px; }
+.content-wrapper .container { max-width: 1100px; padding: 20px 40px 80px; }
+
+/* Backdrop toggle for mobile */
+.toc-toggle { display: none; }
+
+@media (max-width: 1100px) {
+  .toc {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  }
+  .toc.open { transform: translateX(0); }
+  .content-wrapper { margin-left: 0; }
+  .toc-toggle {
+    display: flex;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 200;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+  }
+  .content-wrapper .container { padding-top: 60px; }
+}
+
+/* Headings */
+h1 { font-size: 32px; margin: 40px 0 8px; color: var(--text); border-bottom: 2px solid var(--border); padding-bottom: 16px; }
+h2 { font-size: 26px; margin: 48px 0 16px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+h3 { font-size: 20px; margin: 32px 0 12px; color: var(--accent2); }
+h4 { font-size: 17px; margin: 24px 0 8px; color: var(--accent3); }
+h5 { font-size: 15px; margin: 16px 0 6px; color: var(--accent4); }
+p { margin: 8px 0; color: var(--text); }
+.subtitle { color: var(--text-dim); font-size: 14px; margin-bottom: 30px; }
+
+/* Code & Diagrams */
+pre, .frame-diagram, .ascii-art {
+  background: var(--bg-code);
+  color: #d4d4d4;
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: "JetBrains Mono", "Consolas", "Courier New", monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  margin: 12px 0;
+  line-height: 1.5;
+  white-space: pre;
+  border: 1px solid var(--border);
+}
+code {
+  font-family: "JetBrains Mono", "Consolas", monospace;
+  background: rgba(110,118,129,0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--accent6);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 13px;
+}
+th {
+  background: var(--bg-card);
+  color: var(--accent);
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+td {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+tr:nth-child(even) td { background: rgba(22,27,34,0.5); }
+tr:hover td { background: rgba(88,166,255,0.05); }
+
+/* Callout */
+.callout {
+  background: rgba(56,139,253,0.08);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 20px;
+  margin: 16px 0;
+}
+.callout.warn {
+  background: rgba(240,136,62,0.08);
+  border-left-color: var(--accent3);
+}
+.callout.success {
+  background: rgba(63,185,80,0.08);
+  border-left-color: var(--accent2);
+}
+
+/* Protocol tag */
+.proto-tag {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 8px;
+}
+.tag-nvlink { background: rgba(118,185,0,0.15); color: #76b900; border: 1px solid #76b90044; }
+.tag-ub { background: rgba(255,0,0,0.12); color: #ff4444; border: 1px solid #ff444444; }
+.tag-mtlink { background: rgba(0,168,232,0.15); color: #00a8e8; border: 1px solid #00a8e844; }
+.tag-glink { background: rgba(138,43,226,0.15); color: #bb86fc; border: 1px solid #bb86fc44; }
+.tag-olink { background: rgba(0,153,102,0.15); color: #009966; border: 1px solid #00996644; }
+.tag-alink { background: rgba(255,153,0,0.15); color: #ff9900; border: 1px solid #ff990044; }
+.tag-sue { background: rgba(204,0,0,0.15); color: #cc0000; border: 1px solid #cc000044; }
+.tag-ualink { background: rgba(0,102,204,0.15); color: #0066cc; border: 1px solid #0066cc44; }
+.tag-oisa { background: rgba(0,204,153,0.15); color: #00cc99; border: 1px solid #00cc9944; }
+
+/* Section divider */
+.divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 60px 0;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 0 2px;
+}
+.badge-open { background: rgba(63,185,80,0.15); color: var(--accent2); }
+.badge-prop { background: rgba(255,123,114,0.15); color: var(--red); }
+.badge-std { background: rgba(188,140,255,0.15); color: var(--accent4); }
+
+/* Layer indicator */
+.layer-bar {
+  display: flex;
+  gap: 2px;
+  margin: 12px 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.layer-bar > div {
+  flex: 1;
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lb-phy { background: #1a3a5c; }
+.lb-dl { background: #1a4a3a; }
+.lb-net { background: #4a3a1a; }
+.lb-tp { background: #4a1a3a; }
+.lb-tl { background: #3a1a4a; }
+.lb-app { background: #1a3a3a; }
+</style>
+</head>
+<body>
+
+<div class="toc-toggle" onclick="document.querySelector('.toc').classList.toggle('open')">☰</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+<h2>目录</h2>
+<div class="toc-grid">
+  <a class="lvl1" href="#ch0">第0章 Scale-Up 网络概述与协议对比</a>
+  <a class="lvl1" href="#ch1">第1章 NVIDIA NVLink</a>
+  <a href="#ch1-phy">1.1 物理层</a>
+  <a href="#ch1-dl">1.2 数据链路层</a>
+  <a href="#ch1-tl">1.3 事务层</a>
+  <a href="#ch1-addr">1.4 全局编址方案</a>
+  <a href="#ch1-deploy">1.5 部署架构</a>
+  <a class="lvl1" href="#ch2">第2章 华为 灵衢 UB (UnifiedBus)</a>
+  <a href="#ch2-phy">2.1 物理层</a>
+  <a href="#ch2-dl">2.2 数据链路层</a>
+  <a href="#ch2-net">2.3 网络层</a>
+  <a href="#ch2-tp">2.4 传输层</a>
+  <a href="#ch2-tl">2.5 事务层</a>
+  <a href="#ch2-addr">2.6 全局编址方案</a>
+  <a href="#ch2-deploy">2.7 部署架构</a>
+  <a class="lvl1" href="#ch3">第3章 摩尔线程 MTLink</a>
+  <a href="#ch3-phy">3.1 物理层</a>
+  <a href="#ch3-dl">3.2 数据链路层</a>
+  <a href="#ch3-tl">3.3 事务层</a>
+  <a href="#ch3-addr">3.4 全局编址方案</a>
+  <a href="#ch3-deploy">3.5 部署架构</a>
+  <a class="lvl1" href="#ch4">第4章 紫光 GLink (GT-Link)</a>
+  <a href="#ch4-phy">4.1 物理层</a>
+  <a href="#ch4-dl">4.2 数据链路层</a>
+  <a href="#ch4-tl">4.3 事务层</a>
+  <a href="#ch4-addr">4.4 全局编址方案</a>
+  <a href="#ch4-deploy">4.5 部署架构</a>
+  <a class="lvl1" href="#ch5">第5章 中兴 OLink</a>
+  <a href="#ch5-phy">5.1 物理层</a>
+  <a href="#ch5-dl">5.2 数据链路层</a>
+  <a href="#ch5-tl">5.3 事务层 (Transaction Packing)</a>
+  <a href="#ch5-addr">5.4 全局编址方案</a>
+  <a href="#ch5-deploy">5.5 部署架构</a>
+  <a class="lvl1" href="#ch6">第6章 阿里 Alink</a>
+  <a href="#ch6-phy">6.1 物理层</a>
+  <a href="#ch6-dl">6.2 数据链路层</a>
+  <a href="#ch6-tl">6.3 事务层</a>
+  <a href="#ch6-addr">6.4 全局编址方案</a>
+  <a href="#ch6-deploy">6.5 部署架构</a>
+  <a class="lvl1" href="#ch7">第7章 SUE (Scale-Up Ethernet)</a>
+  <a href="#ch7-phy">7.1 物理层</a>
+  <a href="#ch7-dl">7.2 数据链路层</a>
+  <a href="#ch7-net">7.3 网络层</a>
+  <a href="#ch7-tp">7.4 传输层</a>
+  <a href="#ch7-tl">7.5 事务层</a>
+  <a href="#ch7-addr">7.6 全局编址方案</a>
+  <a class="lvl1" href="#ch8">第8章 UALink</a>
+  <a href="#ch8-phy">8.1 物理层</a>
+  <a href="#ch8-dl">8.2 数据链路层</a>
+  <a href="#ch8-tl">8.3 事务层</a>
+  <a href="#ch8-addr">8.4 全局编址方案</a>
+  <a class="lvl1" href="#ch9">第9章 OISA (全向智感互联)</a>
+  <a class="lvl1" href="#ch10">第10章 全局编址方案对比</a>
+  <a class="lvl1" href="#ch11">第11章 部署架构与组件位置对比</a>
+  <a class="lvl1" href="#ch12">第12章 应用场景与选型建议</a>
+</div>
+</div>
+
+<!-- ==================== Main Content ==================== -->
+<div class="content-wrapper">
+<div class="container">
+
+<h1>Scale-Up 网络协议全景解析</h1>
+<p class="subtitle">
+  覆盖 NVLink · UB · MTLink · GLink · OLink · Alink · SUE · UALink · OISA 九大协议<br>
+  从物理层到应用层全栈深度技术分析 · 2026年8月
+</p>
+
+<!-- ==================== Chapter 0 ==================== -->
+<h2 id="ch0">第0章 Scale-Up 网络概述与协议对比</h2>
+
+<h3>0.1 什么是 Scale-Up 网络</h3>
+<p>
+Scale-Up 网络是 AI 大规模训练/推理中，将同一 Pod（计算域）内的 GPU/NPU 通过专用高速互联协议紧耦合连接的技术。
+与 Scale-Out 网络（跨节点、基于以太网/InfiniBand）不同，Scale-Up 追求的是 <strong>内存语义</strong>、
+<strong>纳秒级延迟</strong>、<strong>TB/s 级带宽</strong>，使得多颗 GPU 像一颗"大 GPU"一样工作。
+</p>
+
+<div class="callout">
+<strong>Scale-Up vs Scale-Out 核心区别：</strong><br>
+Scale-Up：GPU-GPU 间直接内存访问（Load/Store），延迟 < 1μs，带宽 TB/s 级，支持统一编址<br>
+Scale-Out：节点间网络通信（RDMA/Send-Recv），延迟 ~2-5μs，带宽 100s Gbps 级，需网络协议栈
+</div>
+
+<h3>0.2 协议总览对比表</h3>
+<table>
+<tr>
+  <th>协议</th>
+  <th>主导方</th>
+  <th>开放性</th>
+  <th>物理层基础</th>
+  <th>链路层</th>
+  <th>单通道速率</th>
+  <th>最大规模</th>
+  <th>延迟目标</th>
+  <th>内存语义</th>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-nvlink">NVLink 5.0</span></td>
+  <td>NVIDIA</td>
+  <td><span class="badge badge-prop">专有</span></td>
+  <td>自研 NVHS SerDes</td>
+  <td>自研 Flit + CRC + Replay</td>
+  <td>200 Gbps (PAM4)</td>
+  <td>576 GPU (NVL576)</td>
+  <td>&lt; 1μs</td>
+  <td>Load/Store + UVM</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-ub">UB 2.0 (灵衢)</span></td>
+  <td>华为</td>
+  <td><span class="badge badge-open">开放规范</span></td>
+  <td>自研高速 SerDes</td>
+  <td>自研 Flit + CBFC + LLR</td>
+  <td>~200 Gbps</td>
+  <td>8,192 NPU</td>
+  <td>~100ns (同步)</td>
+  <td>Load/Store + URMA</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-mtlink">MTLink 2.0</span></td>
+  <td>摩尔线程</td>
+  <td><span class="badge badge-prop">专有</span></td>
+  <td>自研 SerDes</td>
+  <td>自研 + 可配置 FEC</td>
+  <td>~100+ Gbps</td>
+  <td>256 GPU (MTT C256)</td>
+  <td>亚微秒</td>
+  <td>原生内存语义</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-glink">GLink</span></td>
+  <td>紫光/新华三</td>
+  <td><span class="badge badge-open">联盟开放</span></td>
+  <td>基于 UCIe / 以太 SerDes</td>
+  <td>自研 + 无损网络</td>
+  <td>100-800 GB/s</td>
+  <td>8,192 卡</td>
+  <td>~300ns</td>
+  <td>原生内存语义</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-olink">OLink</span></td>
+  <td>中兴通讯</td>
+  <td><span class="badge badge-open">开放协议</span></td>
+  <td>以太网 SerDes (224G)</td>
+  <td>以太 MAC + Transaction Packing</td>
+  <td>224 Gbps</td>
+  <td>64+ 卡/超节点</td>
+  <td>亚微秒</td>
+  <td>RDMA 兼容</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-alink">Alink</span></td>
+  <td>阿里云</td>
+  <td><span class="badge badge-open">兼容开放</span></td>
+  <td>112G/224G SerDes</td>
+  <td>非以太自研协议</td>
+  <td>224 Gbps</td>
+  <td>128 GPU (AL128)</td>
+  <td>极低 (单级交换)</td>
+  <td>原生 GPU 内存语义</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-sue">SUE</span></td>
+  <td>Broadcom</td>
+  <td><span class="badge badge-open">OCP 框架</span></td>
+  <td>标准以太 SerDes</td>
+  <td>以太 MAC + LLR + CBFC</td>
+  <td>200 Gbps</td>
+  <td>1,024 XPU</td>
+  <td>&lt; 2μs RTT</td>
+  <td>One-sided (put/get/atomic)</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-ualink">UALink 1.0</span></td>
+  <td>UALink 联盟</td>
+  <td><span class="badge badge-std">开放标准</span></td>
+  <td>IEEE 802.3 以太 PHY</td>
+  <td>640B DL Flit + CRC + LLR</td>
+  <td>200 Gbps (212.5 GT/s)</td>
+  <td>1,024 加速器</td>
+  <td>&lt; 1μs RTT</td>
+  <td>Load/Store + Atomic</td>
+</tr>
+<tr>
+  <td><span class="proto-tag tag-oisa">OISA 2.0</span></td>
+  <td>中国移动</td>
+  <td><span class="badge badge-open">开放标准</span></td>
+  <td>以太 SerDes</td>
+  <td>自研 TLP + PFC + DLR</td>
+  <td>~200 Gbps</td>
+  <td>1,024 芯片</td>
+  <td>百纳秒级</td>
+  <td>Load/Store + DMA</td>
+</tr>
+</table>
+
+<h3>0.3 协议栈分层架构对比</h3>
+<p>各协议在分层设计上存在显著差异，下图展示了核心协议的协议栈对比：</p>
+
+<div class="frame-diagram">Protocol Stack Comparison (Layer by Layer):
+
++===========+==========+==========+=======+==========+========+========+
+|  Layer    |  NVLink  |    UB    |  SUE  |  UALink  |  OISA  |  OLink |
++===========+==========+==========+=======+==========+========+========+
+| App/Func  |  UVM/CUDA| URPC/    | XPU   |  UPLI    | CCA/   | App    |
+|           |  NCCL    | Entity   | NoC   |  (Load/  | ISA/   | Layer  |
+|           |          | mgmt     | Cmd   |  Store)  | EPA    |        |
++-----------+----------+----------+-------+----------+--------+--------+
+|Transac(TL)| Header   | MAETAH/  | Cmd   | TL Flit  | TLP    | Trans  |
+|           | flit +   | TVETAH   | iface | (64B)    | Header | Packing|
+|           | AE + BE  | (UBA/    | (AXI4)| compress | (16B)  |        |
+|           |          | TokenID) |       | addr     | + UDF  |        |
++-----------+----------+----------+-------+----------+--------+--------+
+|Transport  | Part of  | RTP/CTP/ | SUE   | Part of  | Part   | Ether  |
+|           | DL layer | TP Bypass| Trans | DL layer | of DL  | + MAC  |
+|           |          | (PSN/    | (RH + |          |        | layer  |
+|           |          | GoBackN) | CRC)  |          |        |        |
++-----------+----------+----------+-------+----------+--------+--------+
+| Network   | NVSwitch | CNA/     | AFH   | 10-bit   | GPU ID | Ether  |
+|           | routing  | IP-based | Gen1/ | Accel ID | routing| L2/L3  |
+|           | (port)   | routing  | Gen2  | (switch) | (10-bit|        |
+|           |          |          | (6-12B)|          | )      |        |
++-----------+----------+----------+-------+----------+--------+--------+
+| Data Link | Flit +   | DLLDB/   | Ether | 640B DL  | DL     | Ether  |
+|           | CRC16 +  | DLLDP/   | MAC + | Flit +   | CRC +  | MAC +  |
+|           | FEC +    | DLLCB +  | LLR + | 32b CRC  | DLR +  | custom |
+|           | Replay   | CBFC +   | CBFC  | + LLR +  | PFC    | FEC    |
+|           | Buffer   | LLR      |       | DL msg   |        |        |
++-----------+----------+----------+-------+----------+--------+--------+
+| Physical  | NVHS     | Custom   | Ether | IEEE     | Ether  | Ether  |
+|           | SerDes   | SerDes   | SerDes| 802.3 PHY| SerDes | SerDes |
+|           | (NRZ/    | (elect/  | (200G | (200G/   | + Lite | (224G) |
+|           | PAM4)    | optical) | /100G)| 400G/    | FEC    |        |
+|           |          |          |       | 800G)    | (RS272)|        |
++===========+==========+==========+=======+==========+========+========+</div>
+
+<div class="callout">
+<strong>关键洞察：</strong>所有协议都在追求 <em>轻量协议头</em>、<em>内存语义</em> 和 <em>链路级可靠性</em>。
+NVLink 和 UB 采用完全自研协议栈（不兼容以太网），而 SUE/UALink/OISA/OLink 则以不同方式利用或改造以太网基础设施。
+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 1: NVLink ==================== -->
+<h2 id="ch1"><span class="proto-tag tag-nvlink">NVIDIA NVLink</span> 第1章 NVLink 协议</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-prop">专有协议</span> &nbsp;
+<strong>当前版本：</strong> NVLink 5.0 (Blackwell) &nbsp;
+<strong>首次发布：</strong> 2014年 (NVLink 1.0, P100)
+</p>
+
+<p>NVLink 是 NVIDIA 开发的高速 GPU 互联技术，从第一代 160 GB/s 发展到第五代 1800 GB/s 双向带宽，
+配合 NVSwitch 实现 GPU 全互联拓扑。NVLink 采用三层协议栈：<strong>事务层 (TL)</strong>、
+<strong>数据链路层 (DL)</strong> 和 <strong>物理层 (PHY)</strong>，使用 P2P 架构和串行传输实现 GPU-GPU 通信。</p>
+
+<h3 id="ch1-phy">1.1 物理层 (PHY)</h3>
+
+<h4>1.1.1 物理层架构</h4>
+<table>
+<tr><th>参数</th><th>NVLink 1.0</th><th>NVLink 2.0</th><th>NVLink 3.0</th><th>NVLink 4.0</th><th>NVLink 5.0</th></tr>
+<tr><td>GPU</td><td>P100</td><td>V100</td><td>A100</td><td>H100</td><td>B200/B300</td></tr>
+<tr><td>单通道速率</td><td>20 Gbps</td><td>25 Gbps</td><td>50 Gbps</td><td>100 Gbps</td><td>200 Gbps</td></tr>
+<tr><td>编码方式</td><td>NRZ</td><td>NRZ</td><td>NRZ</td><td>PAM4</td><td>PAM4</td></tr>
+<tr><td>每子链路差分对</td><td>8 pairs</td><td>8 pairs</td><td>4 pairs</td><td>4 pairs</td><td>4 pairs</td></tr>
+<tr><td>每GPU链路数</td><td>4</td><td>6</td><td>12</td><td>18</td><td>18</td></tr>
+<tr><td>单链路双向带宽</td><td>40 GB/s</td><td>50 GB/s</td><td>50 GB/s</td><td>100 GB/s</td><td>200 GB/s</td></tr>
+<tr><td>GPU总双向带宽</td><td>160 GB/s</td><td>300 GB/s</td><td>600 GB/s</td><td>900 GB/s</td><td>1800 GB/s</td></tr>
+<tr><td>链路距离</td><td>~50cm (PCB)</td><td>~50cm</td><td>~50cm</td><td>~50cm + 光纤</td><td>~50cm + 光纤</td></tr>
+</table>
+
+<h4>1.1.2 物理层功能</h4>
+<ul style="margin-left:20px; color:var(--text);">
+  <li><strong>Deskew</strong>：多通道间时序对齐，消除通道间偏斜</li>
+  <li><strong>Framing</strong>：将数据流组织为物理帧</li>
+  <li><strong>Scrambling/Descrambling</strong>：数据扰码/解扰，降低 EMI</li>
+  <li><strong>Polarity Inversion</strong>：极性反转支持，简化 PCB 布线</li>
+  <li><strong>Lane Reversal</strong>：通道反转支持，增加布线灵活性</li>
+  <li><strong>时钟恢复 (CDR)</strong>：嵌入式时钟恢复，二级锁相环，抖动容限 0.15 UI</li>
+  <li><strong>FEC</strong>：NVLink 5.0 引入轻量级 8b10b-FEC，误码率从 1e-12 压到 1e-15</li>
+</ul>
+
+<h4>1.1.3 物理层报文格式</h4>
+<div class="frame-diagram">NVLink Physical Layer Frame Structure:
+
++================================================================+
+|                    NVLink Link (Full Duplex)                   |
++================================================================+
+|  Sub-link TX (8/4 diff pairs)  |  Sub-link RX (8/4 diff pairs) |
+|  ----------->                  |  <-----------                 |
++================================+================================+
+|  Lane 0 | Lane 1 | ... | Lane N | Lane 0 | Lane 1 | ... | Lane N|
++================================================================+
+
+Each Lane:
++-------+-------+-------+-------+-------+-------+
+|  D0   |  D1   |  D2   |  D3   |  D4   | ...   |  (NRZ: 1 bit/cycle)
++-------+-------+-------+-------+-------+-------+
+|  D0D1 |  D2D3 |  D4D5 |  D6D7 |  ...  |       |  (PAM4: 2 bits/cycle)
++-------+-------+-------+-------+-------+-------+
+
+Physical Frame:
++----------+------------------+----------+----------+
+| Start    |  Payload (Flit   | End      | Idle /   |
+| Delimiter|  stream)         | Delimiter| Skip     |
++----------+------------------+----------+----------+
+|~2B       | Variable         |~2B       | Variable |
++----------+------------------+----------+----------+</div>
+
+<h3 id="ch1-dl">1.2 数据链路层 (DL)</h3>
+
+<h4>1.2.1 数据链路层功能</h4>
+<table>
+<tr><th>功能</th><th>实现机制</th><th>说明</th></tr>
+<tr><td>帧封装</td><td>Start/End Delimiter + CRC</td><td>每个帧包含起始/结束定界符和 CRC 校验</td></tr>
+<tr><td>错误检测</td><td>16-bit CRC + 2-bit FEC</td><td>比 PCIe 4.0 的 32-bit LCRC 更轻量</td></tr>
+<tr><td>流量控制</td><td>Credit-based, 2 VC</td><td>每链路 512B 重传缓存，专用于 GPU 小报文</td></tr>
+<tr><td>重传机制</td><td>Replay Buffer + Go-Back-N</td><td>CRC 校验成功回 positive ACK；失败不回 ACK，超时后从 Replay Buffer 重传</td></tr>
+<tr><td>ACK 机制</td><td>2B 微包，credit piggyback</td><td>比 PCIe 的定长 12B DLLP 大幅简化</td></tr>
+</table>
+
+<h4>1.2.2 链路层协议效率对比</h4>
+<table>
+<tr><th>指标</th><th>PCIe 4.0</th><th>NVLink 3.0+</th><th>提升</th></tr>
+<tr><td>包头大小</td><td>20+ Byte</td><td>6 Byte</td><td>减少 70%</td></tr>
+<tr><td>256B 载荷协议开销</td><td>7.8%</td><td>2.3%</td><td>降低 3.4x</td></tr>
+<tr><td>线速利用率 (256B)</td><td>92.2%</td><td>97.7%</td><td>+5.5%</td></tr>
+<tr><td>重传概率</td><td>~1e-4</td><td>~1e-7</td><td>降低 1000x</td></tr>
+<tr><td>重传缓存</td><td>2KB/端口</td><td>512B/链路</td><td>降低 4x</td></tr>
+</table>
+
+<h3 id="ch1-tl">1.3 事务层 (TL)</h3>
+
+<h4>1.3.1 Flit 结构</h4>
+<p>NVLink 采用 Flit（Flow Control Digit）模式组织数据，每个 Flit 为 128 bit（16 Byte）。
+每个 NVLink 数据包包含 1~18 个 Flit，支持 0~16 个数据 Flit，最多传输 256B 数据。</p>
+
+<div class="frame-diagram">NVLink 1.0 Packet Structure (Flit-based):
+
++==================================================================+
+|                     NVLink Packet (1-18 Flits)                    |
++==================================================================+
+| Flit 0 (Header)  | Flit 1 (AE, opt) | Flit 2 (BE, opt) | Data   |
++==================================================================+
+
+Header Flit (128 bit = 16 Byte):
++-------------------+---------------------------+-------------------+
+|  CRC (25 bit)     |  Transaction Field (83b)  |  DL Header (20b)  |
++-------------------+---------------------------+-------------------+
+|  Packet CRC       |  ReqType | Address |     |  PktLen | AppNum  |
+|  (covers header   |          |         | FC  |          | | AckID  |
+|   + prev payload)  |          |         |redit|          |         |
++-------------------+---------------------------+-------------------+
+
+AE Flit (Address Extension, optional):
++-------------------------------------------------------------------+
+|  Command-specific info / Address extension bits                    |
+|  (transmitted only when value changes from default)                |
++-------------------------------------------------------------------+
+
+BE Flit (Byte Enable, optional):
++-------------------------------------------------------------------+
+|  Byte enable mask for write/atomic operations                      |
+|  (specifies which bytes to write, similar to PCIe BE)              |
++-------------------------------------------------------------------+
+
+Data Flit(s) (0-16, each 128 bit):
++-------------------------------------------------------------------+
+|  Payload Data (up to 256 Bytes = 16 x 16B)                         |
++-------------------------------------------------------------------+</div>
+
+<h4>1.3.2 事务类型</h4>
+<table>
+<tr><th>事务类型</th><th>方向</th><th>说明</th></tr>
+<tr><td>Write (Posted)</td><td>GPU → GPU</td><td>单方向写入，不需要响应</td></tr>
+<tr><td>Write (Non-posted)</td><td>GPU → GPU → GPU</td><td>写入后需要完成响应</td></tr>
+<tr><td>Read</td><td>GPU → GPU → GPU</td><td>读请求 + 读完成响应</td></tr>
+<tr><td>Atomic</td><td>GPU → GPU → GPU</td><td>原子操作（CAS, Fetch-Add等）</td></tr>
+<tr><td>Coherency</td><td>GPU → GPU</td><td>缓存一致性操作（Invalidation, Write-back）</td></tr>
+<tr><td>Control</td><td>双向</td><td>链路控制、同步、流量控制消息</td></tr>
+</table>
+
+<h4>1.3.3 NVLink 与其他模块的接口</h4>
+<div class="frame-diagram">NVLink System Integration:
+
++===================================================================+
+|                         GPU Die                                    |
++===================================================================+
+|                                                                     |
+|  +----------+     +----------+     +-----------+                    |
+|  | SM/Core  |---->| Crossbar |<--->| L2 Cache  |                    |
+|  +----------+     +----------+     +-----------+                    |
+|       |               |               |                             |
+|       |          +----------+    +-----------+                      |
+|       |          | Copy     |    | MMU/UVM   |                      |
+|       |          | Engine   |    | (49-bit   |                      |
+|       |          +----------+    |  VA space)|                      |
+|       |               |          +-----------+                      |
+|       |          +----------+          |                             |
+|       |          | High     |<---------+                             |
+|       |          | Speed    |                                        |
+|       |          | Hub      |                                        |
+|       |          +----------+                                        |
+|       |            |  |  |                                          |
++=======+============+==+==+==========================================+
+|       |            |  |  |        PCB Traces / NVLink Bridge        |
+|  +----+----+ +-----+--+--+---+ +-----------+                        |
+|  | NVLink  | | NVLink    | | PCIe      |                            |
+|  | Port 0  | | Port 1..N | | Interface |                            |
+|  +---------+ +-----------+ +-----------+                            |
++====================================================================+</div>
+
+<h3 id="ch1-addr">1.4 全局编址方案</h3>
+
+<h4>1.4.1 统一虚拟内存 (UVM)</h4>
+<p>NVLink 的全局编址通过 <strong>NVIDIA Unified Virtual Memory (UVM)</strong> 实现：</p>
+<table>
+<tr><th>维度</th><th>规格</th><th>说明</th></tr>
+<tr><td>虚拟地址空间</td><td>49-bit (512 TB)</td><td>覆盖现代 CPU 的 48-bit VA 空间 + GPU 自身内存</td></tr>
+<tr><td>物理地址空间</td><td>47-bit (128 TB)</td><td>GPU 物理内存寻址范围</td></tr>
+<tr><td>地址共享</td><td>CPU + GPU 共享同一 VA 空间</td><td>单一指针访问 CPU 和 GPU 内存</td></tr>
+<tr><td>页表管理</td><td>GPU MMU 缓存页表</td><td>TLB miss 走 NVLink 远程页表遍历，延迟 &lt; 1μs</td></tr>
+<tr><td>数据迁移</td><td>按需页面迁移 (On-demand Paging)</td><td>页面可自动在 CPU/GPU 间迁移，无需显式拷贝</td></tr>
+<tr><td>一致性</td><td>硬件管理缓存一致性</td><td>GPU 修改数据后，其他 GPU 缓存自动失效/更新</td></tr>
+</table>
+
+<h4>1.4.2 全局编址架构</h4>
+<div class="frame-diagram">NVLink Global Addressing (UVM):
+
++===================================================================+
+|              Unified Virtual Address Space (49-bit)               |
+|                    512 TB shared VA space                          |
++===================================================================+
+|                                                                     |
+|  +-----------+    +-----------+    +-----------+    +-----------+  |
+|  |  GPU 0    |    |  GPU 1    |    |  GPU 2    |    |  GPU N    |  |
+|  |  HBM      |    |  HBM      |    |  HBM      |    |  HBM      |  |
+|  |  + MMU    |    |  + MMU    |    |  + MMU    |    |  + MMU    |  |
+|  +-----+-----+    +-----+-----+    +-----+-----+    +-----+-----+  |
+|        |                |                |                |        |
+|        +-------+--------+-------+--------+-------+--------+        |
+|                |                |                |                 |
+|          +-----+-----+    +-----+-----+    +-----+-----+          |
+|          | NVSwitch  |    | NVSwitch  |    | NVSwitch  |          |
+|          +-----+-----+    +-----+-----+    +-----+-----+          |
+|                |                |                |                 |
+|                +-------+--------+-------+--------+                 |
+|                        |                                         |
+|                  +-----+-----+                                   |
+|                  |   CPU     |                                   |
+|                  |   DDR     |                                   |
+|                  |   + MMU   |                                   |
+|                  +-----------+                                   |
+|                                                                     |
+|  Any SM can issue:  load [remote_GPU_VA]  -->  fetches from        |
+|                                          remote GPU HBM via        |
+|                                          NVLink/NVSwitch           |
++===================================================================+
+
+Address Translation Flow:
+  SM issues load [0x7F00_0000_0000]
+    --> GPU MMU TLB lookup
+      --> Hit:  return data from local HBM
+      --> Miss: walk page table
+        --> If remote page: route via NVLink to remote GPU
+          --> Remote GPU MMU translates VA -> PA
+          --> Remote GPU HBM returns data
+        --> If CPU page: route via NVLink-C2C to CPU
+          --> CPU MMU translates
+          --> CPU DDR returns data</div>
+
+<h3 id="ch1-deploy">1.5 部署架构与组件位置</h3>
+
+<h4>1.5.1 NVSwitch 演进</h4>
+<table>
+<tr><th>版本</th><th>GPU</th><th>Switch端口数</th><th>全连接GPU数</th><th>产品</th></tr>
+<tr><td>NVSwitch 1.0</td><td>V100</td><td>36 ports</td><td>16 GPU</td><td>DGX-2</td></tr>
+<tr><td>NVSwitch 2.0</td><td>A100</td><td>36 ports</td><td>16 GPU</td><td>DGX A100</td></tr>
+<tr><td>NVSwitch 3.0</td><td>H100</td><td>64 ports</td><td>256 GPU</td><td>DGX H100 / NVL256</td></tr>
+<tr><td>NVSwitch 4.0</td><td>B200/B300</td><td>72+ ports</td><td>576 GPU</td><td>NVL72 / NVL576</td></tr>
+</table>
+
+<h4>1.5.2 典型部署架构 (NVL72)</h4>
+<div class="frame-diagram">NVIDIA NVL72 Deployment Architecture:
+
++===================================================================+
+|                    NVL72 Rack (72 Blackwell GPUs)                  |
++===================================================================+
+|                                                                     |
+|  +-------+ +-------+ +-------+           +-------+ +-------+      |
+|  | DGX 0 | | DGX 1 | | DGX 2 |  ...  ... | DGX 8 | | DGX 9 |      |
+|  | 9 GPU | | 9 GPU | | 9 GPU |           | 9 GPU | | 9 GPU |      |
+|  +---+---+ +---+---+ +---+---+           +---+---+ +---+---+      |
+|      |         |         |                   |         |           |
+|  +---+---------+---------+---+---+---+-------+---------+---+      |
+|  |   NVSwitch Tier 1 (x N)       |   | NVSwitch Tier 2 (x M) |   |
+|  |   72 ports each               |   | Inter-rack fabric      |   |
+|  +-------------------------------+   +-------------------------+   |
+|      |                                                        |
+|  +---+---------------------------------------------------+    |
+|  |  NVLink Switch System (external rack)                  |    |
+|  |  Scales to 576 GPUs across multiple racks             |    |
+|  +--------------------------------------------------------+    |
+|                                                                     |
+|  Key Specs:                                                        |
+|  - 72 B200 GPUs per rack                                           |
+|  - 1.8 TB/s per GPU (NVLink 5.0)                                   |
+|  - 130 TB/s aggregate bandwidth                                    |
+|  - NVLink SHARP in-network reduction                               |
++===================================================================+
+
+Component Locations:
+  [GPU Die]     : NVLink Port IP (HSHub interface, 18 links)
+  [Baseboard]   : NVSwitch ASICs (Tier 1, intra-tray)
+  [Rack]        : NVSwitch ASICs (Tier 2, intra-rack)
+  [External]    : NVLink Switch System (Tier 3, inter-rack, up to 576)</div>
+
+<div class="callout success">
+<strong>NVLink 核心优势：</strong>从芯片到系统的完整垂直整合，UVM 统一编址 + 硬件缓存一致性 + NVSwitch SHARP 在网计算，
+性能领先但生态封闭。
+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 2: UB ==================== -->
+<h2 id="ch2"><span class="proto-tag tag-ub">华为 灵衢 UB</span> 第2章 华为灵衢 UB (UnifiedBus)</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">开放规范 (2.0)</span> &nbsp;
+<strong>当前版本：</strong> UB 2.0 &nbsp;
+<strong>首次发布：</strong> 2019年研究启动，2025年正式发布
+</p>
+
+<p>华为灵衢（UnifiedBus, UB）是面向超节点的新型互联协议，核心价值主张是"万卡超节点，一台计算机"。
+UB 协议栈分为 <strong>物理层、数据链路层、网络层、传输层、事务层、功能层</strong>，以及
+<strong>UMMU（UB 内存管理单元）</strong> 和 <strong>UBFM（UB Fabric Manager）</strong> 两个管理组件。
+灵衢 2.0 技术规范已对外开放。</p>
+
+<h3 id="ch2-phy">2.1 物理层</h3>
+
+<h4>2.1.1 物理层架构</h4>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>传输介质</td><td>支持电气（铜缆/PCB）和光学互联</td></tr>
+<tr><td>SerDes 速率</td><td>~100-200 Gbps/lane（与业界同步演进）</td></tr>
+<tr><td>封装方式</td><td>正交架构，无背板，电缆级别互联</td></tr>
+<tr><td>跨柜能力</td><td>支持光互联，通过重新设计光器件和互联芯片实现长距离高可靠</td></tr>
+<tr><td>故障检测</td><td>百纳秒级故障检测 + 保护切换</td></tr>
+</table>
+
+<h4>2.1.2 物理层报文格式</h4>
+<div class="frame-diagram">UB Physical Layer Frame Structure:
+
++===================================================================+
+|                    UB Link (Full Duplex, Electrical/Optical)       |
++===================================================================+
+|  TX Direction (--->)              |  RX Direction (<---)           |
++===================================+================================+
+|  Lane 0  | Lane 1 | ... | Lane N  |  Lane 0 | Lane 1 | ... | Lane N|
++===================================================================+
+
+Physical Layer Processing:
++----------+--------+----------+---------+----------+----------+
+|  FEC     | Deskew | Framing  | De/     | Polarity | Lane     |
+|  Encode  | Align  |          | Scramble| Invert   | Reversal |
++----------+--------+----------+---------+----------+----------+
+
+UB supports both:
+  - Electrical interconnect (short distance, <2m, copper/PCB)
+  - Optical interconnect (long distance, cross-rack, high reliability)
+  - UBoE (UB over Ethernet): UB protocol carried over Ethernet frames
+    (UDP dest port 4792, standard Ethernet infrastructure)</div>
+
+<h3 id="ch2-dl">2.2 数据链路层</h3>
+
+<h4>2.2.1 数据链路层报文格式</h4>
+<p>UB 数据链路层以 <strong>Flit</strong> 为基本单位，1 Flit = 20 Byte = 160 bit。</p>
+
+<div class="frame-diagram">UB Data Link Layer Packet Format:
+
+DLLDB (Data Link Layer Data Block):
++==================================================================+
+|  DLLDB: max 32 Flits (32 x 20B = 640 Bytes max)                  |
++==================================================================+
+|  LCH    |  Flit 0  |  Flit 1  |  ...  |  Flit N  |  Padding     |
+|  (4B)   |  (20B)   |  (20B)   |       |  (20B)   |              |
++---------+----------+----------+-------+----------+--------------+
+|  Link   |  Data    |  Data    |       |  Data    |  Pad to      |
+|  Ctl Hdr|  Flit    |  Flit    |       |  Flit    |  32 Flit     |
++---------+----------+----------+-------+----------+--------------+
+
+DLLDP (Data Link Layer Data Packet):
++==================================================================+
+|  DLLDP: max 16 DLLDBs (16 x 640B = 10,240 Bytes max)             |
++==================================================================+
+|  DLLDB 0 | DLLDB 1 | ... | DLLDB 15                              |
++==================================================================+
+
+DLLCB (Data Link Layer Control Block):
++==================================================================+
+|  DLLCB: 1-32 Flits (control packets)                             |
++==================================================================+
+|  LPH/LBH |  Control Payload   |  BCRC                             |
+|  (4B/2B) |  (variable)        |  (Block CRC)                      |
++==================================================================+
+
+Key Fields:
+  LCH  = Link Control Header (4B), cfg=0 for data blocks
+  LPH  = Link Packet Header (4B), cfg!=0 for control packets
+  LBH  = Link Block Header (2B), cfg!=0
+  BCRC = Block CRC (per control block type)
+
+Flow Control: CBFC (Credit-Based Flow Control)
+  - Exclusive credit and shared credit modes
+  - Max 16 Virtual Lanes (VL) per point-to-point link
+  - SP/DWRR scheduling between VLs
+
+Reliability:
+  - LLR (Link-Level Retry): CRC error -> retransmit from retry buffer
+  - FEC at physical layer for error correction
+  - Null blocks and 3 types of retry blocks for control</div>
+
+<h4>2.2.2 数据链路层功能</h4>
+<table>
+<tr><th>功能</th><th>机制</th><th>说明</th></tr>
+<tr><td>数据打包</td><td>DLLDB → DLLDP 分层封装</td><td>网络层数据切割为 DLLDB（≤32 Flit），再封装为 DLLDP（≤16 DLLDB）</td></tr>
+<tr><td>传输流控</td><td>CBFC（信用流控）</td><td>支持独占信用/共享信用模式，16 VL</td></tr>
+<tr><td>错误重传</td><td>CRC 校验 + LLR</td><td>CRC 错误或 FEC 纠错失败 → 请求重传</td></tr>
+<tr><td>控制包</td><td>DLLCB（多种类型）</td><td>包括 Null Block、Retry Block 等，BCRC 校验</td></tr>
+</table>
+
+<h3 id="ch2-net">2.3 网络层</h3>
+
+<h4>2.3.1 网络层报文格式</h4>
+<p>UB 网络层支持两种包头格式：</p>
+
+<div class="frame-diagram">UB Network Layer Packet Format:
+
+Option 1: CNA-based Addressing (16-bit)
++==================================================================+
+|  NTH    |  Payload                                |
++---------+-----------------------------------------+
+|  CNA    |  Network   |  RT  |  CC  |  VL  |  ...  |  Data      |
+|  (16b)  |  Info      |      |      |      |       |            |
++---------+-----------------------------------------+
+
+Option 2: IPv4-based Addressing
++==================================================================+
+|  IPv4   |  UB Network   |  Payload              |
+|  Hdr    |  Extension    |                       |
+|  (20B)  |  Hdr          |                       |
++---------+---------------+-----------------------+
+
+NTH Fields:
+  CNA  = Component Network Address (16-bit, flat address space)
+  RT   = Route Type (basis for routing decision)
+  CC   = Congestion Control field
+  VL   = Virtual Lane identifier
+
+Routing Modes:
+  1. Destination + RT field based routing
+  2. Path Cost based routing
+  3. Hash-based ECMP
+  4. Load-balancing factor based per-flow/per-packet Hash
+  5. Port-load adaptive routing
+
+QoS:
+  - SL-VL mapping (Service Level to Virtual Lane)
+  - SP/DWRR scheduling between VLs
+
+Congestion Marking:
+  - C-AQM marking (based on CC field)
+  - DCQCN FECN marking
+  - FECN_RTT marking mode</div>
+
+<h3 id="ch2-tp">2.4 传输层</h3>
+
+<p>UB 传输层提供三种传输服务模式：</p>
+
+<table>
+<tr><th>模式</th><th>全称</th><th>可靠性</th><th>用途</th></tr>
+<tr><td>RTP</td><td>Reliable Transport Protocol</td><td>PSN + 超时重传 + Go-Back-N + 选择性重传 + 快速选择性重传</td><td>需要可靠传输的内存访问事务</td></tr>
+<tr><td>CTP</td><td>Concise Transport Protocol</td><td>轻量级，无重传</td><td>延迟敏感、允许丢失的场景</td></tr>
+<tr><td>TP Bypass</td><td>Transport Layer Bypass</td><td>直通，无传输层处理</td><td>极低延迟需求</td></tr>
+</table>
+
+<h4>2.4.1 传输层可靠性机制</h4>
+<div class="frame-diagram">UB Transport Layer Reliability (RTP):
+
++===================================================================+
+|  RTP (Reliable Transport Protocol)                                 |
++===================================================================+
+|                                                                     |
+|  Sender                          Receiver                           |
+|  +-----------+                    +-----------+                     |
+|  | Send      |--- Packet(PSN) -->| Receive   |                     |
+|  | Buffer    |                    | Buffer    |                     |
+|  +-----+-----+                    +-----+-----+                     |
+|        |                                |                           |
+|  +-----+-----+                    +-----+-----+                     |
+|  | Retry     |<-- ACK/NACK -------| PSN Check |                     |
+|  | Timer     |    (PSN-based)     | + Reorder |                     |
+|  +-----+-----+                    +-----------+                     |
+|        |                                                             |
+|  +-----+-----+                                                      |
+|  | Go-Back-N |  OR  Selective Retry  OR  Fast Selective Retry       |
+|  | Retransmit|                                                      |
+|  +-----------+                                                      |
+|                                                                     |
+|  Congestion Control (RTP):                                         |
+|  +-------------------+  +-------------------+                      |
+|  | C-AQM (UB native) |  | DCQCN (compatible)|                      |
+|  +-------------------+  +-------------------+                      |
+|                                                                     |
+|  Load Balancing (RTP):                                             |
+|  +-------------------+  +-------------------+                      |
+|  | TPG mechanism     |  | Per-TP / Per-pkt  |                      |
+|  +-------------------+  +-------------------+                      |
+|  Supports out-of-order receive                                     |
++===================================================================+</div>
+
+<h3 id="ch2-tl">2.5 事务层</h3>
+
+<h4>2.5.1 事务类型与扩展头</h4>
+<p>UB 事务层通过扩展事务头（Extended Transaction Header）承载内存访问信息：</p>
+
+<div class="frame-diagram">UB Transaction Layer Packet Format:
+
++===================================================================+
+|  UB Transaction Packet (TLP)                                      |
++===================================================================+
+|                                                                     |
+|  +-----------+----------+--------------+----------+-----------+    |
+|  | Base TAH  | MAETAH   | TVETAH       | Data     | Checksum  |    |
+|  | (BTAH)    | (Memory  | (Token Value | Payload  |           |    |
+|  |           | Access   | Extended     |          |           |    |
+|  |           | Extended | Transaction  |          |           |    |
+|  |           | Trans.   | Header)      |          |           |    |
+|  |           | Header)  |              |          |           |    |
+|  +-----------+----------+--------------+----------+-----------+    |
+|                                                                     |
+|  BTAH Fields:                                                      |
+|    TAOpcode  = Transaction Opcode (Read/Write/Atomic/Send/etc.)   |
+|    TASSN     = Transaction Sequence Number (for reorder)          |
+|    TV_EN     = Token Value Enable (controls TVETAH presence)      |
+|                                                                     |
+|  MAETAH Fields:                                                    |
+|    UBA       = UB Address (64-bit virtual address)                 |
+|    TokenID   = 32-bit, for UMMU permission check                   |
+|                                                                     |
+|  TVETAH Fields:                                                    |
+|    TokenValue = 32-bit credential for access verification          |
+|                                                                     |
+|  Transaction Types:                                                |
+|    - Write (Posted/Non-posted)                                     |
+|    - Read (with completion)                                        |
+|    - Atomic (CAS, Fetch-Add, etc.)                                 |
+|    - Write_with_notify                                             |
+|    - Send (M2N message passing)                                    |
+|    - Maintenance operations                                        |
+|    - Management messages                                           |
+|                                                                     |
+|  Transaction Ordering:                                             |
+|    NO = No Ordering                                                |
+|    RO = Relaxed Ordering                                           |
+|    SO = Strict Ordering                                            |
++===================================================================+</div>
+
+<h4>2.5.2 功能层与编程模型</h4>
+<table>
+<tr><th>编程接口</th><th>说明</th></tr>
+<tr><td>Load/Store（同步访问）</td><td>百纳秒级同步内存语义访问，像访问本地内存一样直接读写远端</td></tr>
+<tr><td>URMA（异步访问）</td><td>统一远程内存访问，2-5μs 异步内存语义访问</td></tr>
+<tr><td>URPC</td><td>UB 远程过程调用</td></tr>
+<tr><td>Entity 管理</td><td>Entity 为全局通信基本单元，支持多 Entity 协同</td></tr>
+<tr><td>Jetty 模型</td><td>接收端资源管理单元，支持多对多通信</td></tr>
+</table>
+
+<h3 id="ch2-addr">2.6 全局编址方案</h3>
+
+<h4>2.6.1 UB 编址体系</h4>
+<div class="frame-diagram">UB Global Addressing Architecture:
+
++===================================================================+
+|                   UB Memory Pool Architecture                     |
++===================================================================+
+|                                                                     |
+|  Identifier Hierarchy (coarse -> fine):                           |
+|                                                                     |
+|  UBMD (UB Memory Domain)                                           |
+|    |                                                               |
+|    +-- CNA (Component Network Address, 16-bit)                    |
+|          |                                                         |
+|          +-- EID (Entity ID)                                      |
+|                |                                                   |
+|                +-- Jetty ID                                       |
+|                      |                                             |
+|                      +-- UBA (UB Address, 64-bit VA)              |
+|                            |                                       |
+|                            +-- TokenID (32-bit, permission)       |
+|                                  |                                 |
+|                                  +-- TokenValue (32-bit cred)     |
+|                                                                     |
+|  Address Translation:                                              |
+|                                                                     |
+|  Home (memory provider)              User (memory accessor)       |
+|  +------------------+                +------------------+          |
+|  | HBM/DDR Memory   |                | Load/Store Instr |          |
+|  | + UMMU           |                | + UB Decoder     |          |
+|  | | (VA -> PA)     |<--- UB Link ---| | (PA -> UBMD)   |          |
+|  | | + Permission   |                | | + UBA lookup   |          |
+|  | + Token Check    |                +------------------+          |
+|  +------------------+                                              |
+|                                                                     |
+|  UMMU (UB Memory Management Unit):                                 |
+|    - Address translation: UBA (64-bit VA) -> Physical Address     |
+|    - Permission verification: TokenID + TokenValue                |
+|    - Receives MAETAH + TVETAH from incoming packets               |
+|                                                                     |
+|  UBFM (UB Fabric Manager):                                         |
+|    - Topology enumeration                                          |
+|    - CNA/EID allocation                                            |
+|    - Route table distribution                                      |
+|    - Runs as firmware on one UBPU                                  |
+|    - Manages compute/comm/interconnect resources                  |
++===================================================================+</div>
+
+<h4>2.6.2 Home-User 访问模型</h4>
+<p>UB 规范建立了 <strong>Home-User</strong> 访问模型：</p>
+<ul style="margin-left:20px;">
+  <li><strong>Home</strong>：注册并提供内存资源的一方（内存提供者）</li>
+  <li><strong>User</strong>：访问远端内存的一方（内存访问者）</li>
+  <li>通过 Jetty 在 User 侧建立接收通道，Home 侧注册内存段</li>
+  <li>UB Decoder 在发起方将本地物理地址反向翻译为 UBMD，使 CPU 的 mov 指令直达远端 HBM</li>
+</ul>
+
+<h3 id="ch2-deploy">2.7 部署架构与组件位置</h3>
+
+<h4>2.7.1 UB Domain 硬件组成</h4>
+<div class="frame-diagram">UB Domain Hardware Architecture:
+
++===================================================================+
+|                      UB Domain                                     |
++===================================================================+
+|                                                                     |
+|  +-----------+  +-----------+  +-----------+  +-----------+        |
+|  | UBPU 0    |  | UBPU 1    |  | UBPU 2    |  | UBPU N    |        |
+|  | (NPU+UB)  |  | (NPU+UB)  |  | (CPU+UB)  |  | (Storage) |        |
+|  +-----+-----+  +-----+-----+  +-----+-----+  +-----+-----+        |
+|        |              |              |              |              |
+|  +-----+--------------+--------------+--------------+-----+        |
+|  |              UB Switch Fabric                        |        |
+|  |  +----------+  +----------+  +----------+           |        |
+|  |  | UB SW 0  |  | UB SW 1  |  | UB SW N  |           |        |
+|  |  +----------+  +----------+  +----------+           |        |
+|  +-----------------------------------------------------+        |
+|        |              |              |              |              |
+|  +-----+-----+  +-----+-----+  +-----+-----+                      |
+|  | UBoE     |  | UBoE     |  | OCS      |                      |
+|  | Bridge   |  | Bridge   |  | (Optical |                      |
+|  | to Ether |  | to Ether |  |  Circuit |                      |
+|  +----------+  +----------+  |  Switch) |                      |
+|                              +----------+                       |
+|                                                                     |
+|  UBPU Internal:                                                    |
+|  +-----------------------------------+                             |
+|  |  Compute Core (NPU/CPU/Storage)   |                             |
+|  |  +-----------------------------+  |                             |
+|  |  | UB Controller (protocol hw) |  |                             |
+|  |  | + UMMU (addr translation)  |  |                             |
+|  |  | + UB Decoder (PA->UBMD)    |  |                             |
+|  |  +-----------------------------+  |                             |
+|  |  +-----------------------------+  |                             |
+|  |  | UB Switch (embedded, multi  |  |                             |
+|  |  |  port, ECMP routing)        |  |                             |
+|  |  +-----------------------------+  |                             |
+|  +-----------------------------------+                             |
++===================================================================+</div>
+
+<h4>2.7.2 UB-Mesh 拓扑与规模</h4>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>机柜内</td><td>2D-FullMesh 组网</td></tr>
+<tr><td>机柜间</td><td>一层 UB Switch 互连</td></tr>
+<tr><td>扩展方式</td><td>从 64 卡线性扩展到 8,192 卡</td></tr>
+<tr><td>对外互联</td><td>UBoE（UB over Ethernet）与以太 Switch 对接；OCS 可变拓扑</td></tr>
+<tr><td>Atlas 950 SuperCluster</td><td>64 个超节点 → 52 万+ 昇腾950DT → 524 EFLOPS (FP8)</td></tr>
+<tr><td>Atlas 960 (规划)</td><td>百万卡级，2 ZFLOPS (FP8)，2027Q4</td></tr>
+</table>
+
+<div class="callout success">
+<strong>UB 核心优势：</strong>六层完整协议栈 + UMMU 全局编址 + UBFM 统一管理 + UBoE 兼容以太网生态。
+"协议归一、平等协同、全量池化"是 UB 的三大核心理念。
+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 3: MTLink ==================== -->
+<h2 id="ch3"><span class="proto-tag tag-mtlink">摩尔线程 MTLink</span> 第3章 摩尔线程 MTLink</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-prop">专有协议</span> &nbsp;
+<strong>当前版本：</strong> MTLink 2.0 (平湖架构) / MTLink 4.0 (花港架构, 规划中) &nbsp;
+<strong>路线图：</strong> 支持十万卡以上规模
+</p>
+
+<p>MTLink 是摩尔线程自研的 GPU Scale-Up 互联协议，搭载于 MUSA 架构 GPU。
+第二代 MTLink 采用专有 Scale-Up 协议，实现相比上一代 7 倍带宽提升，
+支持节点内 8 卡全连接灵活拓扑，通信延迟达到亚微秒级。</p>
+
+<h3 id="ch3-phy">3.1 物理层 (PHY)</h3>
+<table>
+<tr><th>维度</th><th>MTLink 2.0 (平湖)</th><th>MTLink 4.0 (花港)</th></tr>
+<tr><td>SerDes 速率</td><td>112 Gb/s/lane (推断)</td><td>224 Gb/s/lane</td></tr>
+<tr><td>PAM 编码</td><td>PAM4</td><td>PAM4 / PAM6</td></tr>
+<tr><td>带宽提升</td><td>较上一代 7x</td><td>片间互联 1314 GB/s</td></tr>
+<tr><td>直连带宽</td><td>-</td><td>134.5 Gb/s</td></tr>
+<tr><td>FEC</td><td>可配置 (重量级 RS-FEC / 轻量级)</td><td>增强型 GF-FEC</td></tr>
+<tr><td>拓扑支持</td><td>8 卡全连接灵活拓扑</td><td>1024 GPU 单一拓扑</td></tr>
+<tr><td>超节点</td><td>MTT C256 (128卡)</td><td>MTT C256+ (256卡)</td></tr>
+<tr><td>RAS</td><td>SRAM parity + link ECC</td><td>RAS 2.0: 全链路 ECC + SRAM parity</td></tr>
+</table>
+
+<h4>3.1.1 物理层帧格式</h4>
+<p>MTLink 物理层采用类似 NVLink 的 Flit-level 物理编码，将上层逻辑帧适配到 SerDes 通道。
+物理层不使用以太网 MAC，而是自研轻量级成帧机制：</p>
+<div class="frame-diagram">MTLink Physical Layer Framing (per SerDes lane):
+
++---+----------+----------+----------+----------+----------+---+
+|PL |  Flit 0  |  Flit 1  |  Flit 2  |   ...    |  Flit N  |PL |
+|P  | (256B)   | (256B)   | (256B)   |          | (256B)   |P  |
++---+----------+----------+----------+----------+----------+---+
+
+  PLP = Physical Layer Preamble (2B, sync pattern + lane ID)
+  Flit = 256B fixed-length flow control unit
+  PLT = Physical Layer Trailer (2B, lane-level CRC5)
+
+  Multi-Lane Distribution (e.g., 8-lane link):
+  Lane 0: [PLP][Flit0 byte0,8,16...][PLT]
+  Lane 1: [PLP][Flit0 byte1,9,17...][PLT]
+  ...
+  Lane 7: [PLP][Flit0 byte7,15,23...][PLT]
+
+  FEC Options:
+  +-------------------+------------------+------------------+
+  | FEC Mode          | Latency          | Use Case         |
+  +-------------------+------------------+------------------+
+  | Heavyweight RS    | ~100ns (544,514) | Long-reach copper|
+  | Lightweight FEC   | ~30ns            | Short-reach PCB  |
+  | No FEC (raw)      | <10ns            | Chiplet distance |
+  +-------------------+------------------+------------------+</div>
+
+<h4>3.1.2 物理层功能</h4>
+<ul style="margin-left:20px;">
+  <li><strong>链路训练</strong>：上电后自动完成 lane polarity inversion、lane reversal correction、TX/RX equalization（类似 PCIe LTSSM）</li>
+  <li><strong>Lane Repair</strong>：检测坏道后利用备用 lane 重映射（参考 UCIe 机制）</li>
+  <li><strong>动态带宽调节</strong>：支持运行时 lane 数和速率动态调整，适配功耗策略</li>
+  <li><strong>信号完整性</strong>：PAM4 编码 + 可配置 FEC，在信号衰减与编码开销之间取得平衡</li>
+  <li><strong>RAS 2.0</strong>：全链路端到端 ECC，SRAM parity 保护，支持链路降级运行</li>
+</ul>
+
+<h3 id="ch3-dl">3.2 数据链路层 (DL)</h3>
+<p>MTLink 数据链路层负责 Flit 成帧、错误检测、链路级重传和流控。
+基于摩尔线程公开的"无损网络"和"链路级流控与重传"描述，其 DL 层设计遵循 Scale-Up 协议通用模式。</p>
+
+<h4>3.2.1 DL Flit 结构</h4>
+<div class="frame-diagram">MTLink Data Link Layer Flit (256 Bytes):
+
+Byte:  0        1        2        3
+  +----------+----------+----------+----------+
+0 | Flit Type| Seq Num (15b)        | Reserved|
+  +----------+----------+----------+----------+
+4 | Src GPU ID (8b)  | Dst GPU ID (8b)       |
+  +----------+----------+----------+----------+
+8 | VC ID(5b)| TC(3b)  | Credit Return Info  |
+  +----------+----------+----------+----------+
+12| DL Control (ACK/NACK/Credit)             |
+  +----------+----------+----------+----------+
+16|                                          |
+  |          TL Payload (236 Bytes)          |
+  |                                          |
+  |  (carries one or more TL Flits)          |
+  |                                          |
+252|                                          |
+  +----------+----------+----------+----------+
+252| CRC-32 (4 Bytes)                         |
+  +----------+----------+----------+----------+
+
+  Flit Types:
+  +--------+------------------+----------------------------------+
+  | Type   | Name             | Description                      |
+  +--------+------------------+----------------------------------+
+  | 0x0    | Data Flit        | Carries TL payload               |
+  | 0x1    | ACK Flit         | Acknowledge seq <= N             |
+  | 0x2    | NACK Flit        | Negative ack, request retransmit |
+  | 0x3    | Credit Flit      | Return credits to sender         |
+  | 0x4    | Link Init        | Link initialization handshake    |
+  | 0x5    | Idle             | Keepalive / link maintenance     |
+  +--------+------------------+----------------------------------+</div>
+
+<h4>3.2.2 链路层功能</h4>
+<table>
+<tr><th>功能</th><th>实现机制</th><th>说明</th></tr>
+<tr><td>错误检测</td><td>CRC-32 (每 Flit)</td><td>检测 Flit 传输中的 bit 翻转</td></tr>
+<tr><td>链路级重传</td><td>Go-Back-N (推断)</td><td>NACK 触发从错误 Flit 开始重传，Replay Buffer 缓存未确认 Flit</td></tr>
+<tr><td>流控机制</td><td>Credit-based (CBFC-style)</td><td>接收端按 VC 粒度授予信用，发送端有信用才可发送</td></tr>
+<tr><td>多虚拟通道</td><td>多 VC (Virtual Channel)</td><td>支持 TP/EP/DP 等不同通信模式隔离，避免 head-of-line blocking</td></tr>
+<tr><td>链路初始化</td><td>Link Init Flit 握手</td><td>协商 Flit 格式、VC 数量、Credit 初始值、Replay Buffer 大小</td></tr>
+<tr><td>保序</td><td>Seq Num 严格递增</td><td>同一 VC 内 Flit 严格保序，跨 VC 不保证顺序</td></tr>
+</table>
+
+<h4>3.2.3 流控与重传时序</h4>
+<div class="frame-diagram">MTLink Credit Flow Control & Retransmission:
+
+Sender                                    Receiver
+  |                                          |
+  | Check: Available_Credit(VC0) > 0?       |
+  |   YES -> Send Data Flit (VC0, SN=1)     |
+  |----------------------------------------->|  Rx Buffer: accept, store
+  |                                          |  Available_Credit -= 1
+  |                                          |
+  | Send Data Flit (VC0, SN=2)              |
+  |----------------------------------------->|  CRC ERROR detected!
+  |                                          |  -> Send NACK(SN=2)
+  |<-----------------------------------------|  (request retransmit from SN=2)
+  |                                          |
+  | Replay Buffer: retransmit SN=2, SN=3... |
+  |----------------------------------------->|  CRC OK, accept
+  |                                          |
+  |                                          |  Packet leaves Rx buffer
+  |<------- Credit Return (VC0, +2) --------|  (free 2 credits)
+  |                                          |
+  | Available_Credit += 2                   |
+  | Continue sending...                      |</div>
+
+<h3 id="ch3-tl">3.3 事务层 (TL)</h3>
+<p>MTLink 事务层将 GPU 计算核心的内存访问请求转换为固定格式的事务包，
+通过 ACE (Async Communication Engine) 实现通信与计算的完全解耦。</p>
+
+<h4>3.3.1 事务类型</h4>
+<table>
+<tr><th>事务类型</th><th>Opcode</th><th>语义</th><th>典型用途</th></tr>
+<tr><td>Read Request</td><td>0x01</td><td>Load: 读取远端 GPU 内存</td><td>TP 权重同步、EP Token 获取</td></tr>
+<tr><td>Write Request</td><td>0x02</td><td>Store: 写入远端 GPU 内存</td><td>梯度更新、参数推送</td></tr>
+<tr><td>Atomic</td><td>0x03</td><td>原子读-改-写</td><td>计数器更新、锁操作</td></tr>
+<tr><td>DMA Copy</td><td>0x04</td><td>批量内存拷贝 (ACE 引擎)</td><td>大块数据传输、模型加载</td></tr>
+<tr><td>Reduce</td><td>0x05</td><td>在网计算: 原子归约</td><td>AllReduce 加速 (MTLink 4.0)</td></tr>
+<tr><td>Broadcast</td><td>0x06</td><td>一对多广播</td><td>参数广播、控制消息</td></tr>
+<tr><td>Read Completion</td><td>0x81</td><td>Read 响应数据返回</td><td>Read 请求的完成包</td></tr>
+<tr><td>Write Completion</td><td>0x82</td><td>Write 确认</td><td>可选，用于可靠写入确认</td></tr>
+</table>
+
+<h4>3.3.2 TL 事务包格式</h4>
+<div class="frame-diagram">MTLink Transaction Layer Packet Format:
+
+  Read/Write Request Packet (fits in 1-2 TL Flits):
+
+  Byte:  0    1    2    3    4    5    6    7
+  +----+----+----+----+----+----+----+----+
+  | Opcode  | Attr  |Len |  Address (40-bit, 5 bytes)    |
+  +----+----+----+----+----+----+----+----+
+  | ...Addr | Src ID   | Dst ID   | VC |TC |
+  +----+----+----+----+----+----+----+----+
+  | Tag (8b)| ACE Job ID (8b)  | Reserved  |
+  +----+----+----+----+----+----+----+----+
+  |                                         |
+  |  Data Payload (0-224 Bytes, Write only) |
+  |                                         |
+  +----+----+----+----+----+----+----+----+
+
+  Fields:
+  +-----------+--------+------------------------------------------+
+  | Field     | Bits   | Description                              |
+  +-----------+--------+------------------------------------------+
+  | Opcode    | 8      | Transaction type (see table above)       |
+  | Attr      | 8      | Size(3b), Ordering(2b), Snoop(1b), Rsvd  |
+  | Len       | 8      | Payload length in bytes (0=non-data)     |
+  | Address   | 40     | MUSA 40-bit virtual address              |
+  | Src ID    | 8      | Source GPU ID (0-255)                    |
+  | Dst ID    | 8      | Destination GPU ID (0-255)               |
+  | VC        | 5      | Virtual Channel ID                       |
+  | TC        | 3      | Traffic Class                            |
+  | Tag       | 8      | Transaction tag for matching req->resp   |
+  | ACE Job ID| 8      | ACE engine job tracking ID               |
+  +-----------+--------+------------------------------------------+
+
+  Read Completion Packet:
+
+  +----+----+----+----+----+----+----+----+
+  | Opcode=0x81 | Status | Len|  Tag (8b)  |
+  +----+----+----+----+----+----+----+----+
+  | Src ID   | Dst ID   | VC |TC | Reserved|
+  +----+----+----+----+----+----+----+----+
+  |                                         |
+  |  Data Payload (up to 224 Bytes)         |
+  |                                         |
+  +----+----+----+----+----+----+----+----+</div>
+
+<h4>3.3.3 ACE 异步通信引擎</h4>
+<p>ACE (Async Communication Engine) 是 MTLink 的核心创新，将通信任务完全从 GPU 计算核心卸载到独立的硬件引擎：</p>
+<div class="frame-diagram">ACE Architecture (Async Communication Engine):
+
+  +---------------------------------------------------+
+  |                    GPU Die                         |
+  |                                                    |
+  |  +----------+    +----------+    +----------+     |
+  |  | SM Cluster|   | SM Cluster|   | SM Cluster|     |
+  |  | (Compute) |   | (Compute) |   | (Compute) |     |
+  |  +----+-----+   +----+-----+   +----+-----+      |
+  |       |              |              |              |
+  |  +----+--------------+--------------+-----+       |
+  |  |           L2 Cache / Shared Mem          |     |
+  |  +----+-----------------------------------+--+    |
+  |       |                                    |    |
+  |  +----+----+                          +----+--+  |
+  |  | ACE Eng |                          | MTLink |  |
+  |  | (Comm)  |<-- DMA -->               | Port   |  |
+  |  +---------+    via L2/NoC            +--------+  |
+  |       |                                            |
+  |  +----+----+                                      |
+  |  | Job Queue|  (hardware work queue)             |
+  |  |  - DMA copy jobs                             |
+  |  |  - Reduce operations                         |
+  |  |  - Broadcast tasks                           |
+  |  +---------+                                      |
+  +---------------------------------------------------+
+
+  Benefits:
+  1. Compute-Comm Parallelism: SM executes kernels while
+     ACE handles data movement independently
+  2. -15% compute resource saved (no SM cycles on comm)
+  3. +5% MFU improvement (DeepSeek MoE workload)
+  4. Multi-path async memory copy:
+     - PCIe device <-> host
+     - MTLink cross-GPU DMA
+     - Simultaneous multi-VC transfers</div>
+
+<h3 id="ch3-addr">3.4 全局编址方案</h3>
+<p>MTLink 基于 MUSA (Meta-computing Unified System Architecture) 统一架构实现全局编址。
+MUSA 编程模型定义了 40 位虚拟地址空间，所有 GPU 在 Scale-Up 域内共享统一地址空间。</p>
+
+<h4>3.4.1 MUSA 统一内存编址</h4>
+<div class="frame-diagram">MTLink Global Addressing (MUSA Unified Memory):
+
+  Address Space Layout (40-bit VA = 1TB per GPU):
+
+  GPU 0 VA: 0x000_0000_0000 ~ 0x0FF_FFFF_FFFF  (1TB)
+  GPU 1 VA: 0x100_0000_0000 ~ 0x1FF_FFFF_FFFF  (1TB)
+  GPU 2 VA: 0x200_0000_0000 ~ 0x2FF_FFFF_FFFF  (1TB)
+  ...
+  GPU N VA: (N * 1TB) ~ ((N+1) * 1TB - 1)
+
+  Address Translation:
+
+  +----------+     +-------------+     +----------+
+  | GPU Core |---->| TLB Lookup  |---->| Page     |
+  | (SM/ACE) |     | (VA -> PA)  |     | Table    |
+  +----------+     +------+------+     +----------+
+                          |
+                    Local hit? ----YES---> Local HBM access
+                          |
+                         NO
+                          |
+                    Remote addr? ---YES--> MTLink Port
+                          |                    |
+                         NO                +----+----+
+                          |                | MTLink  |
+                    PCIe/Other             | TL Flit |
+                                          | (40-bit |
+                                          |  VA)    |
+                                          +----+----+
+                                               |
+                                          +----+----+
+                                          | Remote  |
+                                          | GPU TLB |
+                                          | -> HBM  |
+                                          +---------+
+
+  MUSA Memory Model:
+  - Linear Memory: 40-bit VA (malloc/musaMalloc)
+  - MUSA Arrays: texture-optimized memory
+  - Unified Memory: auto-migrated pages (UVM-like)
+  - Constant Memory: read-only, broadcast-cached
+  - Global variables: __device__ qualifier, VA-mapped
+
+  Key Properties:
+  - All GPUs share same ISA (MUSA instruction set)
+  - All engines share same memory model
+  - Pointer dereference auto-routes to remote GPU
+  - No explicit memcpy needed for remote access
+  (but ACE DMA recommended for large transfers)</div>
+
+<h4>3.4.2 编址组件部署位置</h4>
+<table>
+<tr><th>组件</th><th>部署位置</th><th>功能</th></tr>
+<tr><td>MMU/TLB</td><td>GPU Die (每 SM cluster)</td><td>VA→PA 地址翻译，缓存页表项</td></tr>
+<tr><td>Page Table</td><td>GPU HBM (驱动管理)</td><td>40-bit VA 到物理地址映射</td></tr>
+<tr><td>MTLink TL</td><td>GPU Die (I/O subsystem)</td><td>事务包封装/解析，地址路由判断</td></tr>
+<tr><td>MTLink DL</td><td>GPU Die (SerDes interface)</td><td>Flit 成帧/CRC/重传/流控</td></tr>
+<tr><td>MTLink PHY</td><td>GPU Package (SerDes lanes)</td><td>物理信号传输/FEC</td></tr>
+<tr><td>ACE Engine</td><td>GPU Die (独立硬件单元)</td><td>异步通信任务执行</td></tr>
+<tr><td>MTLink Switch</td><td>机柜内 (独立芯片)</td><td>多端口 Flit 级交换 (MTT C256)</td></tr>
+</table>
+
+<h3 id="ch3-deploy">3.5 部署架构</h3>
+<div class="frame-diagram">MTLink Deployment Architecture (MTT C256):
+
++===================================================================+
+|              MTT C256 SuperNode (128-256 GPUs)                    |
++===================================================================+
+|                                                                     |
+|  Rack 1                    Rack 2                                  |
+|  +-----------+             +-----------+                           |
+|  | 128 GPU   |<-- MTLink ->| 128 GPU   |  (cabinet expansion)    |
+|  | 16 nodes  |   cross     | 16 nodes  |                          |
+|  | x 8 GPU   |   cabinet   | x 8 GPU   |                          |
+|  +-----------+             +-----------+                           |
+|      |                                                         |
+|  +---+---+                                                     |
+|  |Single |  Layer Scale-Up network                             |
+|  |Layer  |  (standard single-width rack, 128-card full mesh)    |
+|  |Scale  |                                                      |
+|  |Up     |                                                      |
+|  +-------+                                                      |
+|                                                                     |
+|  Key Features:                                                    |
+|  - Sub-microsecond inter-GPU latency                              |
+|  - ACE async communication engine (offloaded)                     |
+|  - Compute-communication parallel resource isolation              |
+|  - RAS 2.0: SRAM parity + full-link ECC                          |
+|  - Inter-chip bandwidth: 1314 GB/s (MTLink 4.0)                  |
+|  - Supports 100k+ GPU scale (cluster level)                      |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 4: GLink ==================== -->
+<h2 id="ch4"><span class="proto-tag tag-glink">紫光 GLink</span> 第4章 紫光 GLink (GT-Link/GT-Fabric)</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">联盟开放</span> &nbsp;
+<strong>主导方：</strong> 新紫光集团 (LT公司 + GT公司) &nbsp;
+<strong>首次公开：</strong> 2026年5月 (新紫光集团创新峰会)
+</p>
+
+<p>G-Link 是紫光集团推出的 Scale-Up 南向互联技术方案，由 LT 公司研发 GT-Link（端侧）和 GT-Fabric（交换侧）芯片解决方案，
+全面支持 G-Link 协议。基于 UCIe 标准，支持原生内存语义与无损网络。</p>
+
+<h3 id="ch4-phy">4.1 物理层 (PHY)</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>基础标准</td><td>基于 UCIe 1.0/2.0 (Universal Chiplet Interconnect Express)</td></tr>
+<tr><td>带宽范围</td><td>100 GB/s ~ 800 GB/s（灵活配置）</td></tr>
+<tr><td>延迟</td><td>&lt; 300 ns (端到端)</td></tr>
+<tr><td>封装类型</td><td>SP (标准封装) / AP (先进封装) / UCIe-3D</td></tr>
+<tr><td>SerDes 速率</td><td>4/8/12/16/24/32 GT/s (UCIe 可配置)</td></tr>
+<tr><td>Lane 配置</td><td>x16 / x32 / x64 per Module, 1-4 Modules per Link</td></tr>
+<tr><td>光互联</td><td>原生兼容 CPO (共封装光学) 和 NPO (近封装光学)</td></tr>
+<tr><td>异构支持</td><td>支持昇腾、沐曦、壁仞、英伟达等多品牌芯片混插</td></tr>
+</table>
+
+<h4>4.1.1 物理层架构 — UCIe 双通道设计</h4>
+<p>GLink 物理层基于 UCIe 标准，采用 Mainband (主带) + Sideband (旁带) 双通道设计：</p>
+<div class="frame-diagram">GLink Physical Layer (UCIe-based) Architecture:
+
+  +-----------------------------------------------------------+
+  |                    Package (SiP)                           |
+  |                                                            |
+  |  +----------+          +----------+                        |
+  |  | GPU Die  |          | Switch   |                        |
+  |  | (GT-Link |  UCIe    | Die      |                        |
+  |  |  Endpoint|<========>| (GT-     |                        |
+  |  |  IP)     |  Link    |  Fabric) |                        |
+  |  +----------+          +----------+                        |
+  |       |                     |                              |
+  |  +----+---------------------+----+                         |
+  |  |        UCIe PHY           |                         |
+  |  |  +-----------------------+|                         |
+  |  |  | Mainband (data)       ||                         |
+  |  |  |  - High-speed diff    ||                         |
+  |  |  |  - N lanes per module ||                         |
+  |  |  +-----------------------+|                         |
+  |  |  +-----------------------+|                         |
+  |  |  | Sideband (control)    ||                         |
+  |  |  |  - 800 MT/s           ||                         |
+  |  |  |  - Link training      ||                         |
+  |  |  |  - Register access    ||                         |
+  |  |  |  - Power management   ||                         |
+  |  |  +-----------------------+|                         |
+  |  +---------------------------+                         |
+  +-----------------------------------------------------------+
+
+  UCIe Link Training State Machine:
+  RESET -> SBINIT -> MBINIT -> MBTRAIN -> LINKINIT -> ACTIVE
+              |                                        |
+              +---------- TRAINERROR <-----------------+
+                 (timeout: 8ms per state)
+
+  Module Configurations:
+  +-------------+--------+-----------+------------------+
+  | Package     | Lanes  | Max Speed | Bandwidth (1-way)|
+  +-------------+--------+-----------+------------------+
+  | Standard    | x64    | 16 GT/s   | 128 GB/s         |
+  | Advanced    | x64    | 32 GT/s   | 256 GB/s         |
+  | UCIe-3D     | x128+  | >32 GT/s  | >512 GB/s        |
+  +-------------+--------+-----------+------------------+</div>
+
+<h4>4.1.2 物理层功能</h4>
+<ul style="margin-left:20px;">
+  <li><strong>Lane Repair</strong>：先进封装模式下检测坏道并利用备用 lane 重映射</li>
+  <li><strong>链路训练</strong>：SBINIT→MBINIT→MBTRAIN→LINKINIT→ACTIVE 五阶段自动训练</li>
+  <li><strong>数据分发与重组</strong>：将 Flit 按 byte 拆分到各 lane，接收端重组</li>
+  <li><strong>扰码与训练序列</strong>：LFSR 扰码（Seed = lane_number % 8），消除 DC 偏移</li>
+  <li><strong>通道反转与 ID 映射</strong>：解决封装布线限制，支持 Mirror Flip / Lane Reversed</li>
+  <li><strong>动态调整</strong>：运行时动态调整传输宽度和速率（类似 PCIe Recovery）</li>
+</ul>
+
+<h3 id="ch4-dl">4.2 数据链路层 (D2D Adapter)</h3>
+<p>GLink 链路层基于 UCIe D2D Adapter，负责 Flit 成帧、CRC 校验、选择性重传和信用流控。
+UCIe D2D Adapter 是 GLink 链路层的核心逻辑实体。</p>
+
+<h4>4.2.1 Flit 结构 (256-bit / 32 字节)</h4>
+<div class="frame-diagram">GLink D2D Adapter Flit Format (UCIe 256-bit Flit):
+
+  Bit:  0         16        32       255    288   319
+  +---------+---------+---------+---------+---------+
+  | Header  | Routing | Data    | Padding | CRC-32  |
+  | (16 bit)| Header  | Payload | (if any)| (32 bit)|
+  |         | (24 bit)| (224bit)|         |         |
+  +---------+---------+---------+---------+---------+
+  |<-- 2B -->|<-- 3B ->|<-- 28B ----->|<-- 0-1B->|<-- 4B -->|
+
+  Total: 32 Bytes (256 bits) per Flit
+
+  Header (16 bits):
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+  | Flit Type (2b) | EOP | SOP | Seq (4b) | Credit (4b)  |
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+  Flit Types:
+  00 = Data Flit (carries protocol payload)
+  01 = DLLP (Data Link Layer Packet - control)
+  10 = ACK (acknowledge, Seq field = acked seq)
+  11 = NAK (negative acknowledge, Seq field = error seq)
+
+  Routing Header (24 bits):
+  +-----------+-----------+-----------+
+  | Src ID(8b)| Dst ID(8b)| QoS (8b)  |
+  +-----------+-----------+-----------+
+
+  CRC-32: Polynomial 0x04C11DB7, covers Header + Routing + Payload
+
+  Large Transaction Splitting:
+  +---+---+---+---+---+---+---+---+---+---+---+---+
+  |SOP|D  |D  |D  |D  |D  |D  |D  |D  |D  |D  |EOP|
+  |   |   |   |   |   |   |   |   |   |   |   |   |
+  | Flit 0  | Flit 1  | Flit 2  | ... | Flit N  |
+  +---+---+---+---+---+---+---+---+---+---+---+---+
+  SOP = Start of Packet marker
+  EOP = End of Packet marker
+  (single Flit transactions have both SOP and EOP set)</div>
+
+<h4>4.2.2 链路层功能</h4>
+<table>
+<tr><th>功能</th><th>实现机制</th><th>说明</th></tr>
+<tr><td>Flit 打包/解包</td><td>D2D Adapter</td><td>将协议层数据封装为固定 256-bit Flit</td></tr>
+<tr><td>错误检测</td><td>CRC-32 (每 Flit)</td><td>检测 Flit 传输错误，覆盖率 100%</td></tr>
+<tr><td>选择性重传</td><td>ACK/NACK + Replay Buffer</td><td>仅重传出错 Flit，不影响其他事务（优于 PCIe 端到端重传）</td></tr>
+<tr><td>流控机制</td><td>Credit-based</td><td>基于信用的流控防止接收缓冲溢出</td></tr>
+<tr><td>链路状态管理</td><td>FDI/RDI 接口信号</td><td>控制链路初始化、退出低功耗、重训练</td></tr>
+<tr><td>DLLP 处理</td><td>D2D Adapter 生成/解析</td><td>数据链路层控制包，用于链路管理消息</td></tr>
+<tr><td>协议协商</td><td>Sideband 通道</td><td>协商链路速率、宽度、Flit 格式、协议模式</td></tr>
+</table>
+
+<h4>4.2.3 UCIe 协议模式支持</h4>
+<table>
+<tr><th>模式</th><th>上层协议</th><th>说明</th></tr>
+<tr><td>PCIe 模式</td><td>PCIe TLP</td><td>直接承载 PCIe 事务层数据包，兼容 PCIe 协议栈</td></tr>
+<tr><td>CXL 模式</td><td>CXL.io / .cache / .mem</td><td>支持 CXL 三种子协议，含缓存一致性与内存扩展</td></tr>
+<tr><td>Stream 模式</td><td>Raw / 自定义</td><td>不经过标准协议封装，直接传输原始数据流，适合 AI 加速器</td></tr>
+</table>
+
+<h3 id="ch4-tl">4.3 事务层 (TL)</h3>
+<p>GLink 事务层在 Stream 模式下承载原生内存语义事务，支持 GPU 直接 Load/Store 远端内存。</p>
+
+<h4>4.3.1 事务类型</h4>
+<table>
+<tr><th>事务类型</th><th>语义</th><th>典型载荷</th></tr>
+<tr><td>MemRead</td><td>读取远端 GPU 内存</td><td>地址 + 长度 → 返回数据</td></tr>
+<tr><td>MemWrite</td><td>写入远端 GPU 内存</td><td>地址 + 数据</td></tr>
+<tr><td>MemAtomic</td><td>原子操作 (CAS, FetchAdd, Swap)</td><td>地址 + 操作数 + 操作类型</td></tr>
+<tr><td>DMATransfer</td><td>批量内存拷贝</td><td>源地址 + 目标地址 + 长度</td></tr>
+<tr><td>CollectiveOp</td><td>在网计算 (Reduce/AllReduce)</td><td>归约类型 + 数据 (GT-Fabric 支持)</td></tr>
+<tr><td>ConfigRW</td><td>配置寄存器读写</td><td>寄存器地址 + 数据</td></tr>
+</table>
+
+<h4>4.3.2 事务包格式 (Stream 模式)</h4>
+<div class="frame-diagram">GLink Transaction Layer Packet (Stream Mode):
+
+  Request Packet (variable length, split into Flits):
+
+  +----+----+----+----+----+----+----+----+
+  | Opcode  | Attr  |Len |  Address (48-bit, 6 bytes)    |
+  +----+----+----+----+----+----+----+----+
+  | ...Addr | Src ID (8b)  | Dst ID (8b)  |
+  +----+----+----+----+----+----+----+----+
+  | VC(4b)|TC(4b)| Tag(8b)|  Reserved     |
+  +----+----+----+----+----+----+----+----+
+  |                                         |
+  |  Data Payload (0 ~ N*28 Bytes)          |
+  |  (Write/Atomic only; Read has no data)  |
+  |                                         |
+  +----+----+----+----+----+----+----+----+
+
+  Fields:
+  +-----------+--------+------------------------------------------+
+  | Field     | Bits   | Description                              |
+  +-----------+--------+------------------------------------------+
+  | Opcode    | 8      | 0x1=Read, 0x2=Write, 0x3=Atomic, 0x4=DMA|
+  | Attr      | 8      | Size(3b), Order(2b), Cache(2b), Rsvd(1b) |
+  | Len       | 8      | Payload length (bytes, max 224 per Flit) |
+  | Address   | 48     | 48-bit virtual/physical address          |
+  | Src ID    | 8      | Source chiplet/device ID                 |
+  | Dst ID    | 8      | Destination chiplet/device ID            |
+  | VC        | 4      | Virtual channel for QoS isolation        |
+  | TC        | 4      | Traffic class                            |
+  | Tag       | 8      | Transaction tag (req <-> resp matching)  |
+  +-----------+--------+------------------------------------------+
+
+  Completion Packet:
+  +----+----+----+----+----+----+----+----+
+  | Opcode=0x81 | Status(8b)| Len | Tag(8b)|
+  +----+----+----+----+----+----+----+----+
+  | Src ID   | Dst ID   | VC |TC | Rsvd   |
+  +----+----+----+----+----+----+----+----+
+  |  Data Payload (Read completion only)   |
+  +----+----+----+----+----+----+----+----+</div>
+
+<h4>4.3.3 GT-Fabric 交换芯片在网计算</h4>
+<p>GT-Fabric 交换芯片内置计算加速引擎，支持在交换节点执行集合通信操作：</p>
+<div class="frame-diagram">GLink In-Network Computing (GT-Fabric):
+
+  Traditional: GPU0 --send--> GPU1 --send--> GPU2 (serial reduce)
+               (3 hops, 3x latency, GPU cycles wasted)
+
+  GT-Fabric:   GPU0 --+--> [Reduce Engine] --> Result --> All GPUs
+               GPU1 --+
+               GPU2 --+
+
+  Supported Operations:
+  +-----------+---------------------------+------------------+
+  | Operation | Data Types                | Latency          |
+  +-----------+---------------------------+------------------+
+  | AllReduce | INT8/16/32, FP16/BF16/FP32| <500ns (64 GPUs)|
+  | AllGather | Raw bytes                 | <300ns           |
+  | Broadcast | Raw bytes                 | <100ns           |
+  | Reduce    | INT8/16/32, FP16/BF16/FP32| <200ns           |
+  +-----------+---------------------------+------------------+
+
+  Compute Pipeline (inside GT-Fabric switch):
+  [Flit In] -> [Parse Header] -> [Route Lookup]
+           -> [Compute Engine] -> [Aggregate]
+           -> [Flit Out] -> [Broadcast]</div>
+
+<h3 id="ch4-addr">4.4 全局编址方案</h3>
+<p>GLink 采用统一内存编址，支持异构 GPU 品牌混插。编址方案基于 UCIe 的 Chiplet ID 路由 +
+GPU 侧的全局虚拟地址映射。</p>
+
+<h4>4.4.1 编址架构</h4>
+<div class="frame-diagram">GLink Global Addressing Architecture:
+
+  Layer 1: Chiplet ID Routing (UCIe level)
+  +------------------------------------------+
+  | Chiplet ID Space (8-bit, 0-255)          |
+  |                                          |
+  | [GPU 0: ID=0x01] [GPU 1: ID=0x02] ...   |
+  | [GT-Fabric SW: ID=0x00]                  |
+  |                                          |
+  | Routing: Dst ID in Flit Routing Header   |
+  | -> GT-Fabric looks up Chiplet ID         |
+  | -> Forwards Flit to target port          |
+  +------------------------------------------+
+
+  Layer 2: Global Virtual Address (GPU level)
+  +------------------------------------------+
+  | 48-bit Virtual Address Space             |
+  |                                          |
+  | [GPU 0 VA]: 0x0000_0000_0000             |
+  |             ~ 0x00FF_FFFF_FFFF (256GB)   |
+  | [GPU 1 VA]: 0x0100_0000_0000             |
+  |             ~ 0x01FF_FFFF_FFFF (256GB)   |
+  | [GPU N VA]: (N * 256GB) ~ ((N+1)*256GB) |
+  |                                          |
+  | Address Translation:                     |
+  | VA[47:40] -> GPU ID (Chiplet ID)        |
+  | VA[39:0]  -> Local physical/page offset |
+  +------------------------------------------+
+
+  Heterogeneous GPU Support:
+  +----------+----------+----------+----------+
+  | Ascend   | Muxi     | Biren    | NVIDIA   |
+  | GPU ID=1 | GPU ID=2 | GPU ID=3 | GPU ID=4 |
+  +----------+----------+----------+----------+
+  | Each GPU has GT-Link endpoint IP          |
+  | All share same 48-bit VA space            |
+  | GT-Fabric routes by Chiplet ID            |
+  | No protocol conversion needed             |
+  | (native Load/Store semantics)             |
+  +------------------------------------------+</div>
+
+<h4>4.4.2 编址组件部署位置</h4>
+<table>
+<tr><th>组件</th><th>部署位置</th><th>功能</th></tr>
+<tr><td>GT-Link Endpoint IP</td><td>GPU Die (UCIe 接口)</td><td>TL/DL/PHY 协议处理，VA→Chiplet ID 映射</td></tr>
+<tr><td>GT-Fabric Switch ASIC</td><td>基板 / 机柜</td><td>Flit 级交换，Chiplet ID 路由，在网计算</td></tr>
+<tr><td>D2D Adapter</td><td>GPU Die (UCIe 适配层)</td><td>Flit 成帧/CRC/重传/流控</td></tr>
+<tr><td>UCIe PHY</td><td>封装内 (Mainband+Sideband)</td><td>物理信号传输/训练/lane repair</td></tr>
+<tr><td>MMU/IOMMU</td><td>GPU Die</td><td>VA→PA 翻译，页表管理</td></tr>
+<tr><td>OEX 正交架构</td><td>机柜</td><td>GPU 节点与交换节点正交直连，零线缆</td></tr>
+</table>
+
+<h3 id="ch4-deploy">4.5 部署架构</h3>
+<div class="frame-diagram">G-Link Deployment Architecture:
+
++===================================================================+
+|              G-Link SuperPod (72 ~ 8192 cards)                    |
++===================================================================+
+|                                                                     |
+|  +---------+  +---------+  +---------+        +---------+         |
+|  | GPU     |  | GPU     |  | GPU     |  ...   | GPU     |         |
+|  | Node 0  |  | Node 1  |  | Node 2  |        | Node N  |         |
+|  |(4 GPUs) |  |(4 GPUs) |  |(4 GPUs) |        |(4 GPUs) |         |
+|  +----+----+  +----+----+  +----+----+        +----+----+         |
+|       |            |            |                   |              |
+|  +----+------------+------------+----+----+---------+----+        |
+|  |        GT-Fabric Switch Chips (GLink-compat)      |        |
+|  |  +----------+  +----------+  +----------+        |        |
+|  |  | GT38600  |  | GT38600  |  | GT38600  |        |        |
+|  |  | (prog.)  |  | (prog.)  |  | (prog.)  |        |        |
+|  |  +----------+  +----------+  +----------+        |        |
+|  +---------------------------------------------------+        |
+|                                                                     |
+|  Topology Support:                                                |
+|  - Single rack:  72 cards (full mesh)                             |
+|  - Back-to-back: 144 cards                                        |
+|  - Cross-rack:   1024 cards (SuperPOD)                           |
+|  - Large scale:  8192 cards (xD Mesh)                            |
+|                                                                     |
+|  Key Components:                                                  |
+|  [GPU Die]     : GT-Link endpoint IP (UCIe-based)                 |
+|  [Baseboard]   : GT-Link + GT-Fabric switch ASIC                 |
+|  [Rack]        : OEX orthogonal, cableless                        |
+|  [Cluster]     : Multi-rack xD-Mesh interconnect                  |
+|                                                                     |
+|  Performance:                                                     |
+|  - MFU: 30% -> 80% (with GT-Link + GT-Fabric)                    |
+|  - Token cost: 35% of traditional architecture                   |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 5: OLink ==================== -->
+<h2 id="ch5"><span class="proto-tag tag-olink">中兴 OLink</span> 第5章 中兴 OLink</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">开放协议</span> &nbsp;
+<strong>主导方：</strong> 中兴通讯 &nbsp;
+<strong>技术路线：</strong> "网络总线化"（以太网 → 总线语义）
+</p>
+
+<p>中兴 OLink 采用"以太+总线融合"的技术路线，选择 <strong>网络总线化</strong> 路径
+（与 UALink 的"总线网络化"形成对比）。通过 Transaction Packing、芯片 PPA 优化、低时延 FEC 和定制化报文格式，
+在以太网基础上满足 Scale-Up 的内存语义、低延迟和统一编址需求。</p>
+
+<h3 id="ch5-phy">5.1 物理层 (PHY)</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>SerDes 速率</td><td>224 Gbps/lane（以太网 SerDes）</td></tr>
+<tr><td>物理层基础</td><td>标准以太网物理层组件 (IEEE 802.3)</td></tr>
+<tr><td>PAM 编码</td><td>PAM4</td></tr>
+<tr><td>FEC</td><td>低时延 FEC (轻量级 RS-FEC，优化的 RS(544,514) 变体)</td></tr>
+<tr><td>架构</td><td>OEX 正交电交换架构（计算节点横插，交换节点竖插，垂直正交）</td></tr>
+<tr><td>线缆</td><td>0 线缆、无背板（正交直连）</td></tr>
+<tr><td>信号损耗</td><td>消除 ~6.5dB 插损（缩短 SerDes 链路长度）</td></tr>
+<tr><td>差分传输</td><td>改进信号传输技术，减少干扰和噪声</td></tr>
+<tr><td>时延</td><td>亚微秒级传输时延</td></tr>
+</table>
+
+<h4>5.1.1 物理层帧格式</h4>
+<p>OLink 保留以太网物理层帧结构，但通过修改前导码 (Preamble) 嵌入 Scale-Up 控制信息，
+并使用轻量级 FEC 替代标准以太网 RS-FEC 以降低延迟：</p>
+<div class="frame-diagram">OLink Physical Layer Frame Format (Modified Ethernet):
+
+  Standard Ethernet Frame (modified for OLink):
+
+  +--------+--------+--------+--------+--------+--------+
+  | OLink  | OLink  | Ether  | Ether  |        | Ether  |
+  | Preamb.| Custom | MAC DA | MAC SA |  Payload|  FCS   |
+  | (8B)   | Hdr(4B)| (6B)   | (6B)   | (N B)  | (4B)   |
+  +--------+--------+--------+--------+--------+--------+
+
+  OLink Modified Preamble (8 Bytes):
+  +----+----+----+----+----+----+----+----+
+  | SFD|VC  |Seq | Credit Ret  | OLink ID  |
+  |1B  |1B  |1B  |   2B        | 3B        |
+  +----+----+----+----+----+----+----+----+
+  (replaces standard 7B preamble + 1B SFD)
+  - VC: Virtual Channel for QoS
+  - Seq: Link-level sequence number
+  - Credit Ret: Credit return info (CBFC-style)
+  - OLink ID: Protocol identification marker
+
+  OLink Custom Header (4 Bytes, replaces EtherType):
+  +----+----+----+----+
+  | Opcode  | Attr    |
+  | (2B)    | (2B)    |
+  +----+----+----+----+
+  - Opcode: Memory semantic operation type
+  - Attr: Size, ordering, addressing mode
+
+  FEC Comparison:
+  +------------------+----------+----------+------------------+
+  | FEC Type         | Latency  | Overhead | Use Case         |
+  +------------------+----------+----------+------------------+
+  | Standard RS-FEC  | ~200ns   | ~6%      | Ethernet (heavy) |
+  | OLink Light FEC  | ~50ns    | ~3%      | Scale-Up (tuned) |
+  | No FEC           | 0ns      | 0%       | Chiplet distance |
+  +------------------+----------+----------+------------------+</div>
+
+<h4>5.1.2 物理层功能</h4>
+<ul style="margin-left:20px;">
+  <li><strong>差分传输优化</strong>：改进信号传输技术，减少干扰和噪声，提供信号质量和完整性</li>
+  <li><strong>低时延 FEC</strong>：采用轻量级 FEC 编码，在保证可靠性的同时将 FEC 延迟从 ~200ns 降至 ~50ns</li>
+  <li><strong>OEX 正交架构</strong>：计算节点横插、交换节点竖插，垂直正交直连，消除线缆和背板</li>
+  <li><strong>插损优化</strong>：缩短 SerDes 链路长度，消除 ~6.5dB 插损，降低信号补偿需求</li>
+  <li><strong>复用以太网生态</strong>：使用标准以太网光模块、组网方案和运维能力</li>
+</ul>
+
+<h3 id="ch5-dl">5.2 数据链路层 (DL)</h3>
+<p>OLink 链路层在保留以太网 MAC 的基础上进行增强，增加链路级重传、CRC 校验和信用流控。
+这是 OLink "网络总线化" 路线的核心——在以太网框架内添加总线级可靠性机制。</p>
+
+<h4>5.2.1 链路层帧格式</h4>
+<div class="frame-diagram">OLink Data Link Layer Frame Format:
+
+  OLink Frame (Ethernet MAC + DL extensions):
+
+  +--------+--------+--------+--------+--------+--------+--------+
+  | OLink  |OLink   | MAC DA | MAC SA | OL Hdr | Payload|OL-CRC  |
+  | Preamb |DL Hdr  | (6B)   | (6B)   | (4B)   | (N B)  |(4B)    |
+  | (8B)   | (2B)   |        |        |        |        |        |
+  +--------+--------+--------+--------+--------+--------+--------+
+
+  OLink DL Header (2 Bytes, embedded in frame):
+  +----+----+
+  | Seq| DL |
+  | (8b)|Ctl|
+  |    |(8b)|
+  +----+----+
+  - Seq: Link-level sequence number (modulo 256)
+  - DL Ctl: DL control bits
+    [7:5] = Frame Type (Data/ACK/NACK/Credit)
+    [4]   = Retry flag
+    [3:0] = VC ID
+
+  OLink CRC (4 Bytes, appended after Ether FCS):
+  - OL-CRC: CRC-32 covering OLink Header + Payload
+  - Used for link-level error detection + retransmission trigger
+  - Separate from Ethernet FCS (which is also preserved)
+
+  Frame Types:
+  +--------+------------------+----------------------------------+
+  | Type   | Name             | Description                      |
+  +--------+------------------+----------------------------------+
+  | 0x0    | Data Frame       | Normal data with payload         |
+  | 0x1    | ACK Frame        | Ack seq <= N (cumulative ack)    |
+  | 0x2    | NACK Frame       | Negative ack, retransmit from N  |
+  | 0x3    | Credit Frame     | Credit grant (CBFC-style)        |
+  | 0x4    | Link Init        | Link initialization              |
+  | 0x5    | Keepalive        | Heartbeat / link maintenance     |
+  | 0x6    | In-Network-Calc  | Collective operation frame       |
+  | 0x7    | Error Report     | Error notification               |
+  +--------+------------------+----------------------------------+</div>
+
+<h4>5.2.2 链路层功能</h4>
+<table>
+<tr><th>功能</th><th>实现机制</th><th>说明</th></tr>
+<tr><td>错误检测</td><td>OL-CRC32 + Ether FCS</td><td>双重 CRC：以太网 FCS + OLink 专用 CRC32</td></tr>
+<tr><td>链路级重传</td><td>ARQ + Replay Buffer</td><td>NACK 触发重传，Replay Buffer 缓存未确认帧</td></tr>
+<tr><td>流控机制</td><td>信用授权流控 (CBFC-style)</td><td>接收端按 VC 粒度授予信用，解决多打一场景无损通信</td></tr>
+<tr><td>多虚拟通道</td><td>多 VC 隔离</td><td>支持 TP/EP/DP 通信模式隔离，避免 HoL blocking</td></tr>
+<tr><td>帧保序</td><td>Seq Num 严格递增</td><td>同 VC 内严格保序，跨 VC 不保证</td></tr>
+<tr><td>无损通信</td><td>CBFC + LLR</td><td>链路级流控 + 重传 = 零丢包网络</td></tr>
+</table>
+
+<h4>5.2.3 信用流控时序</h4>
+<div class="frame-diagram">OLink Credit-Based Flow Control:
+
+Sender                                    Receiver
+  |                                          |
+  | Credit(VC0) = 10 (initial)              |
+  |                                          |
+  | Send Frame(VC0, SN=1, 64B)             |
+  | Credit(VC0) -= 1 = 9                    |
+  |----------------------------------------->|  Rx Buffer: accept
+  |                                          |  Buf_Depth(VC0) = 1/10
+  |                                          |
+  | Send Frame(VC0, SN=2, 64B)             |
+  | Credit(VC0) -= 1 = 8                    |
+  |----------------------------------------->|  Rx Buffer: accept
+  |                                          |  Buf_Depth(VC0) = 2/10
+  |                                          |
+  | ... (continue sending until Credit=0)  |
+  |                                          |
+  |                                          |  Application reads frames
+  |                                          |  Buf_Depth(VC0) decreases
+  |                                          |
+  |<------- Credit Grant (VC0, +5) ---------|
+  | Credit(VC0) += 5 = 5                    |
+  |                                          |
+  | Resume sending...                        |
+  |                                          |
+  CRC Error Scenario:
+  | Send Frame(VC0, SN=5)                   |
+  |----------------------------------------->|  OL-CRC ERROR!
+  |                                          |  -> NACK(SN=5)
+  |<------- NACK(SN=5) ---------------------|
+  |                                          |
+  | Replay Buffer: resend SN=5, SN=6...     |
+  |----------------------------------------->|  CRC OK, accept</div>
+
+<h3 id="ch5-tl">5.3 事务层 (TL) — Transaction Packing</h3>
+<p>OLink 事务层的核心创新是 <strong>Transaction Packing</strong>（事务打包）机制：
+将多个小事务合并为一个以太网帧传输，大幅降低头部开销和传输延迟。
+同时通过自定义报文格式扩展内存语义支持。</p>
+
+<h4>5.3.1 Transaction Packing 机制</h4>
+<div class="frame-diagram">OLink Transaction Packing:
+
+  Unpacked (traditional, 1 transaction per frame):
+  +--------+--------+--------+--------+
+  | Header | Tx 1   | Pad    | FCS    |  Frame 1 (64B, 8B data)
+  | (54B)  | (8B)   | (46B)  | (4B)   |  Efficiency: 8/64 = 12.5%
+  +--------+--------+--------+--------+
+  | Header | Tx 2   | Pad    | FCS    |  Frame 2 (64B, 8B data)
+  | (54B)  | (8B)   | (46B)  | (4B)   |  Efficiency: 8/64 = 12.5%
+  +--------+--------+--------+--------+
+  Total: 128B sent for 16B data = 12.5% efficiency
+
+  Packed (OLink, multiple transactions per frame):
+  +--------+--------+--------+--------+--------+--------+--------+
+  | Header | Tx 1   | Tx 2   | Tx 3   | Tx 4   | Tx 5   | FCS    |
+  | (8B)   | (8B)   | (8B)   | (8B)   | (8B)   | (8B)   | (4B)   |
+  +--------+--------+--------+--------+--------+--------+--------+
+  OLink Custom Hdr = 8B (vs 54B Ethernet)
+  Total: 60B sent for 40B data = 66.7% efficiency (5.3x improvement)
+
+  Packing Rules:
+  1. Same Dst ID -> can pack together
+  2. Same VC -> can pack together
+  3. Max packed frame: MTU (1KB-9KB configurable)
+  4. Mixed types allowed (Read + Write in same frame)
+  5. Timer-based flush: if no new tx within 100ns, send partial frame</div>
+
+<h4>5.3.2 事务类型与报文格式</h4>
+<table>
+<tr><th>事务类型</th><th>Opcode</th><th>语义</th><th>典型载荷</th></tr>
+<tr><td>MemRead</td><td>0x01</td><td>Load: 读取远端内存</td><td>地址 + 长度</td></tr>
+<tr><td>MemWrite</td><td>0x02</td><td>Store: 写入远端内存</td><td>地址 + 数据</td></tr>
+<tr><td>MemAtomic</td><td>0x03</td><td>原子操作 (CAS/FetchAdd)</td><td>地址 + 操作数 + 类型</td></tr>
+<tr><td>DMA</td><td>0x04</td><td>RDMA 兼容批量传输</td><td>源/目标地址 + 长度</td></tr>
+<tr><td>Reduce</td><td>0x05</td><td>在网计算归约</td><td>归约类型 + 数据</td></tr>
+<tr><td>Broadcast</td><td>0x06</td><td>广播</td><td>数据</td></tr>
+<tr><td>ReadCpl</td><td>0x81</td><td>读完成响应</td><td>数据</td></tr>
+<tr><td>WriteCpl</td><td>0x82</td><td>写确认</td><td>状态</td></tr>
+</table>
+
+<div class="frame-diagram">OLink Transaction Packet Format (Packed):
+
+  Single Transaction (unpacked, small):
+  +----+----+----+----+----+----+----+----+
+  | Opcode  | Attr    |Len |  Address (48-bit, 6 bytes)    |
+  +----+----+----+----+----+----+----+----+
+  | ...Addr | Src ID(8b)   | Dst ID(8b)   |
+  +----+----+----+----+----+----+----+----+
+  | VC(4b)|TC(4b)| Tag(8b) | Reserved     |
+  +----+----+----+----+----+----+----+----+
+  |  Data Payload (0-N bytes, Write only)  |
+  +----+----+----+----+----+----+----+----+
+  Total header: 12 Bytes (vs 54B standard Ethernet)
+
+  Packed Frame (multiple transactions):
+  +----+----+----+----+----+----+----+----+
+  | OLink Hdr (8B) | Tx Count | Reserved  |
+  +----+----+----+----+----+----+----+----+
+  | Tx 0 (12B hdr + data)                |
+  +----+----+----+----+----+----+----+----+
+  | Tx 1 (12B hdr + data)                |
+  +----+----+----+----+----+----+----+----+
+  | Tx 2 (12B hdr + data)                |
+  +----+----+----+----+----+----+----+----+
+  | ...                                   |
+  +----+----+----+----+----+----+----+----+
+  | Tx N-1 (12B hdr + data)              |
+  +----+----+----+----+----+----+----+----+
+  | OL-CRC (4B)                          |
+  +----+----+----+----+----+----+----+----+
+
+  Fields:
+  +-----------+--------+------------------------------------------+
+  | Field     | Bits   | Description                              |
+  +-----------+--------+------------------------------------------+
+  | Opcode    | 16     | Transaction type (2B for future extend)  |
+  | Attr      | 16     | Size(4b), Order(2b), Cache(2b), Rsvd(8b)|
+  | Len       | 8      | Payload length in bytes                  |
+  | Address   | 48     | Unified virtual address                  |
+  | Src/Dst ID| 8+8    | GPU/Accelerator ID in Scale-Up domain    |
+  | VC/TC     | 4+4    | Virtual channel + Traffic class          |
+  | Tag       | 8      | Transaction tag (req<->resp matching)    |
+  +-----------+--------+------------------------------------------+</div>
+
+<h3 id="ch5-addr">5.4 全局编址方案</h3>
+<p>OLink 统一内存编址允许 Scale-Up 域内 GPU 共享同一虚拟地址空间，
+多个 GPU 直接互访对方内存，简化异构计算编程模型。</p>
+
+<h4>5.4.1 编址架构</h4>
+<div class="frame-diagram">OLink Unified Memory Addressing:
+
+  Scale-Up Domain Address Space:
+  +------------------------------------------+
+  | Unified VA Space (48-bit, 256TB domain)  |
+  |                                          |
+  | GPU 0: VA 0x0000 ~ 0x00FF (256GB)       |
+  | GPU 1: VA 0x0100 ~ 0x01FF (256GB)       |
+  | ...                                      |
+  | GPU 63: VA 0x3F00 ~ 0x3FFF (256GB)      |
+  |                                          |
+  | Address Routing:                         |
+  | VA[47:40] = GPU ID (0-255)              |
+  | VA[39:0]  = Local offset within GPU     |
+  +------------------------------------------+
+
+  Memory Semantic Access Flow:
+  +----------+     +----------+     +-----------+
+  | GPU Core |---->| OLink TL |---->| OLink DL  |
+  | (Load/   |     | (Pack tx,|     | (Frame +  |
+  |  Store)  |     |  route)  |     |  CRC +    |
+  +----------+     +----+-----+     |  Credit)  |
+                        |           +-----+-----+
+                   Local or          |   |
+                   Remote?      +----+   +----->
+                  /        \    |             |
+               Local       Remote|             |
+                |               v             v
+           +----+----+    +-----+------+  +----+----+
+           | Local   |    | OLink SW   |  | Replay  |
+           | HBM/Cache|   | (L1/L2)    |  | Buffer  |
+           +---------+    +-----+------+  +---------+
+                               |
+                          +----+----+
+                          | Remote  |
+                          | GPU TL  |
+                          | -> HBM  |
+                          +---------+
+
+  Key Properties:
+  - Same VA space across all GPUs in HBD (High Bandwidth Domain)
+  - GPU pointer dereference auto-routes to remote GPU
+  - No explicit API call needed for remote access
+  - Atomic operations supported (CAS, FetchAdd, Swap)
+  - RDMA compatible (can bridge to RoCE for Scale-Out)
+  - Multi-protocol: OLink + CLink + SUE + OISA compatible</div>
+
+<h4>5.4.2 编址组件部署位置</h4>
+<table>
+<tr><th>组件</th><th>部署位置</th><th>功能</th></tr>
+<tr><td>OLink 端侧 IP</td><td>GPU Die (I/O subsystem)</td><td>TL/DL/PHY 协议处理，内存语义转换</td></tr>
+<tr><td>OLink 交换芯片</td><td>机柜 (OEX 正交插槽)</td><td>Flit/帧级交换，在网计算，多协议兼容</td></tr>
+<tr><td>MMU/IOMMU</td><td>GPU Die</td><td>VA→PA 翻译，页表管理</td></tr>
+<tr><td>Replay Buffer</td><td>OLink 端侧 IP (TX方向)</td><td>缓存已发送未确认帧，支持重传</td></tr>
+<tr><td>Credit Manager</td><td>OLink 端侧 IP (TX/RX双向)</td><td>按 VC 管理信用授予与消耗</td></tr>
+<tr><td>智能 NIC</td><td>CPU 节点</td><td>Scale-Out 网络接入，DCN 网络连接</td></tr>
+<tr><td>DPU</td><td>CPU 节点</td><td>数据预处理、存储、网络加速</td></tr>
+</table>
+
+<h3 id="ch5-deploy">5.5 功能特性与部署架构</h3>
+<table>
+<tr><th>特性</th><th>规格</th></tr>
+<tr><td>带宽</td><td>高达 800 GB/s</td></tr>
+<tr><td>单节点 GPU 数</td><td>16+ 卡（突破传统 8 卡限制）</td></tr>
+<tr><td>超节点规模</td><td>典型 64 卡超节点</td></tr>
+<tr><td>多级交换</td><td>两级/三级交换支持大规模组网</td></tr>
+<tr><td>在网计算</td><td>支持（交换芯片内置计算加速）</td></tr>
+<tr><td>Scale-Up/Out 融合</td><td>GPU 和第一级交换机物理共享，协议存在差异</td></tr>
+<tr><td>多协议兼容</td><td>OLink + CLink + SUE + OISA</td></tr>
+</table>
+
+<div class="frame-diagram">OLink Deployment Architecture:
+
++===================================================================+
+|           ZTE SuperNode (OEX Orthogonal Architecture)             |
++===================================================================+
+|                                                                     |
+|  Front View:                     Rear View:                        |
+|  +------+------+------+          +------+------+------+           |
+|  |GPU   |GPU   |GPU   |          |OLink |OLink |OLink |           |
+|  |Node 0|Node 1|Node 2|          |SW 0  |SW 1  |SW 2  |           |
+|  +------+------+------+          +------+------+------+           |
+|  |GPU   |GPU   |GPU   |          |OLink |OLink |OLink |           |
+|  |Node 3|Node 4|Node 5|          |SW 3  |SW 4  |SW 5  |           |
+|  +------+------+------+          +------+------+------+           |
+|  |GPU   |GPU   |GPU   |          |OLink |OLink |OLink |           |
+|  |Node 6|Node 7|GPU 8 |          |SW 6  |SW 7  |SW 8  |           |
+|  +------+------+------+          +------+------+------+           |
+|                                                                     |
+|  GPU nodes (horizontal) --| Orthogonal |-- Switch nodes (vertical)|
+|                           |  Connector  |                          |
+|                           +-------------+                         |
+|  0 cables, 0 backplane, direct orthogonal contact                 |
+|                                                                     |
+|  5-Chip Collaboration:                                             |
+|  +-------+  +----------+  +-------+  +-------+  +-------+        |
+|  | CPU   |  | OLink    |  | Smart |  | DPU   |  | Sensor|        |
+|  |       |  | Switch   |  | NIC   |  |       |  |       |        |
+|  +-------+  +----------+  +-------+  +-------+  +-------+        |
+|  All 5 chips collaborate for multi-GPU management                  |
+|                                                                     |
+|  Scale-Up + Scale-Out Fusion:                                      |
+|  [GPU] --> [OLink L1 SW] --> Scale-Up domain (64 cards)           |
+|  [OLink L1 SW] --> [OLink L2 SW] --> Scale-Out (multi-pod)       |
+|  Physical: shared L1 switch; Protocol: different (Up vs Out)     |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 6: Alink ==================== -->
+<h2 id="ch6"><span class="proto-tag tag-alink">阿里 Alink</span> 第6章 阿里 Alink</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">兼容开放</span> &nbsp;
+<strong>主导方：</strong> 阿里云 &nbsp;
+<strong>产品：</strong> 磐久 AI Infra 2.0 AL128 超节点服务器
+</p>
+
+<p>Alink 是阿里云自研的非以太 Scale-Up 互联协议，采用 GPU 原生内存语义。
+Alink 兼容 UALink 国际开放标准，同时支持 NVLink、xLink、UB、xCN 等主流 GPU 互联协议，
+实现"一云多芯"的芯片中立平台。</p>
+
+<h3 id="ch6-phy">6.1 物理层 (PHY)</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>SerDes 速率</td><td>112G / 224G SerDes</td></tr>
+<tr><td>PAM 编码</td><td>PAM4</td></tr>
+<tr><td>每 GPU SerDes 组数</td><td>最大 128 组</td></tr>
+<tr><td>每 GPU 互连带宽</td><td>14T ~ 28T bps</td></tr>
+<tr><td>传输介质</td><td>铜传输（机柜内）+ 光传输（跨区）</td></tr>
+<tr><td>架构</td><td>正交互连（GPU 节点与 ALink SW 节点正交）</td></tr>
+<tr><td>无背板</td><td>背板免缆正交设计，消除线缆损耗</td></tr>
+<tr><td>CPO 连接器</td><td>224 Gb/s per switch chip via CPO connectors</td></tr>
+</table>
+
+<h4>6.1.1 物理层帧格式</h4>
+<p>Alink 物理层使用非以太网自研成帧机制，基于 GPU-first 设计原则。
+物理层将 DL Flit 适配到 SerDes 通道，使用 PAM4 编码和轻量级 FEC：</p>
+<div class="frame-diagram">Alink Physical Layer Framing (Non-Ethernet):
+
+  Per SerDes Lane (224G PAM4):
+
+  +---+------------+------------+------------+---+
+  |PL |  DL Flit 0 |  DL Flit 1 |  DL Flit 2 |PL |
+  |P  |  (640B)    |  (640B)    |  (640B)    |T  |
+  +---+------------+------------+------------+---+
+
+  PLP = Physical Layer Preamble (4B)
+    - Sync pattern (2B)
+    - Lane ID (1B)
+    - Lane status (1B)
+  PLT = Physical Layer Trailer (2B)
+    - Lane-level CRC5
+
+  Multi-Lane Distribution (e.g., 16-lane link):
+  Lane 0:  [PLP][Flit0 byte 0,16,32...][PLT]
+  Lane 1:  [PLP][Flit0 byte 1,17,33...][PLT]
+  ...
+  Lane 15: [PLP][Flit0 byte 15,31,47...][PLT]
+
+  Two Physical Layers:
+  +-------------------+------------------+------------------+
+  | Layer             | Technology       | Use Case         |
+  +-------------------+------------------+------------------+
+  | Copper (intra-    | 224G SerDes +    | Intra-rack,      |
+  |  node/cabinet)    | PCB trace / CPO  | <2m distance     |
+  | Optical (inter-   | NPO / LPO / FRO  | Inter-cabinet,   |
+  |  cabinet)         | optical engine   | >2m distance     |
+  +-------------------+------------------+------------------+
+
+  Bandwidth Calculation (224G x 128 SerDes groups):
+  - Per GPU: 128 groups x 224Gbps = 28.672 Tbps (bidirectional)
+  - Per GPU (one direction): ~14.3 Tbps = 1.79 TB/s
+  - 128 GPUs aggregate: ~230 TB/s (one direction)</div>
+
+<h4>6.1.2 物理层功能</h4>
+<ul style="margin-left:20px;">
+  <li><strong>非以太网成帧</strong>：摒弃以太网 MAC/Preamble/IFG，使用极简物理层成帧</li>
+  <li><strong>双介质支持</strong>：铜传输（机柜内，CPO 连接器）+ 光传输（跨区，NPO/LPO）</li>
+  <li><strong>正交连接器映射</strong>：GPU port0/8 → ALink SW 0，GPU port1/9 → ALink SW 1，实现无背板正交</li>
+  <li><strong>信号完整性</strong>：无背板设计消除线缆插损，缩短 SerDes 链路</li>
+  <li><strong>动态速率调节</strong>：支持 112G/224G 速率切换，适配功耗与性能策略</li>
+</ul>
+
+<h3 id="ch6-dl">6.2 数据链路层 (DL)</h3>
+<p>Alink 数据链路层采用与 UALink 类似的 Flit-based 架构，使用 640B DL Flit、CRC32、LLR 链路级重传和 CBFC 信用流控。
+这是非以太网协议的通用模式——所有放弃以太网帧格式的 Scale-Up 协议最终都采用了类似设计。</p>
+
+<h4>6.2.1 DL Flit 结构 (640 Bytes)</h4>
+<div class="frame-diagram">Alink Data Link Layer Flit (640 Bytes):
+
+  Byte:  0        1        2        3
+  +----------+----------+----------+----------+
+0 | Flit Type| Seq Num (15b)        | VC(5b)  |
+  +----------+----------+----------+----------+
+4 | TC(3b) | Credit Ret Info (13b) | Reserved |
+  +----------+----------+----------+----------+
+8 | Src XPU ID (10b)  | Dst XPU ID (10b)  |Rsvd|
+  +----------+----------+----------+----------+
+12| DL Control (ACK/NACK/Credit/Init)        |
+  +----------+----------+----------+----------+
+16|                                          |
+  |                                          |
+  |     TL Payload (620 Bytes)               |
+  |     (carries ~9-10 TL Flits of 64B each) |
+  |                                          |
+  |                                          |
+636|                                          |
+  +----------+----------+----------+----------+
+636| CRC-32 (4 Bytes)                         |
+  +----------+----------+----------+----------+
+
+  Total: 640 Bytes (16B DL Header + 620B TL Payload + 4B CRC32)
+
+  Flit Types:
+  +--------+------------------+----------------------------------+
+  | Type   | Name             | Description                      |
+  +--------+------------------+----------------------------------+
+  | 0x0    | Data Flit        | Carries TL payload               |
+  | 0x1    | ACK              | Acknowledge seq <= N (cumulative)|
+  | 0x2    | NACK             | Negative ack, retransmit from N |
+  | 0x3    | Credit Grant     | Return credits (CBFC)            |
+  | 0x4    | Link Init        | Link initialization              |
+  | 0x5    | Idle/Keepalive   | Link maintenance                 |
+  | 0x6    | In-Network-Calc  | Collective operation             |
+  | 0x7    | Diagnostic       | RAS / debug / error report       |
+  +--------+------------------+----------------------------------+
+
+  Key Properties:
+  - 640B Flit = same as UALink (Alink compatible with UALink standard)
+  - CRC32 covers entire Flit (header + payload)
+  - 10-bit XPU ID -> supports up to 1024 XPU nodes
+  - 5-bit VC -> 32 Virtual Channels for QoS isolation
+  - Credit Ret Info: piggybacked credit return (reduces control overhead)</div>
+
+<h4>6.2.2 链路层功能</h4>
+<table>
+<tr><th>功能</th><th>实现机制</th><th>说明</th></tr>
+<tr><td>Flit 成帧</td><td>固定 640B Flit</td><td>硬件流水线处理，无需动态解析帧长</td></tr>
+<tr><td>错误检测</td><td>CRC-32 (每 Flit)</td><td>100% 覆盖率，检测所有双比特及多数多比特错误</td></tr>
+<tr><td>链路级重传 (LLR)</td><td>Go-Back-N + Replay Buffer</td><td>NACK 触发重传，Replay Buffer 大小 ≥ RTT × Bandwidth</td></tr>
+<tr><td>流控机制</td><td>CBFC (Credit-Based Flow Control)</td><td>按 VC 粒度授予信用，零丢包无损网络</td></tr>
+<tr><td>多虚拟通道</td><td>32 VC</td><td>支持 TP/EP/DP/PP 通信模式隔离</td></tr>
+<tr><td>帧保序</td><td>Seq Num (15-bit, modulo 32768)</td><td>同 VC 内严格保序</td></tr>
+<tr><td>链路初始化</td><td>Link Init Flit 握手</td><td>协商 Flit 格式、VC 数量、Credit 初始值</td></tr>
+</table>
+
+<h3 id="ch6-tl">6.3 事务层 (TL)</h3>
+<p>Alink 事务层将 GPU/XPU 的内存访问请求转换为 64B TL Flit，支持三种传输语义：
+内存语义 (Load/Store)、消息语义 (Send/Recv) 和张量语义 (Push/Pull)。</p>
+
+<h4>6.3.1 三种传输语义</h4>
+<table>
+<tr><th>语义</th><th>操作</th><th>数据粒度</th><th>典型场景</th></tr>
+<tr><td>内存语义 (Memory)</td><td>Load / Store / Atomic</td><td>小数据 (64B-256B Cacheline)</td><td>TP 权重同步、EP Token 获取、参数读取</td></tr>
+<tr><td>消息语义 (Message)</td><td>Send / Recv (DMA)</td><td>大块数据 (KB-MB)</td><td>模型权重加载、梯度同步、checkpoint</td></tr>
+<tr><td>张量语义 (Tensor)</td><td>Push / Pull (async)</td><td>中等数据 (1KB-100KB)</td><td>大模型训练 Tensor 级通信、动态压缩</td></tr>
+</table>
+
+<h4>6.3.2 TL Flit 结构 (64 Bytes)</h4>
+<div class="frame-diagram">Alink Transaction Layer Flit (64 Bytes):
+
+  Byte:  0    1    2    3    4    5    6    7
+  +----+----+----+----+----+----+----+----+
+0 | Opcode  | Semantic|Len |  Compressed Address (6B)      |
+  +----+----+----+----+----+----+----+----+
+8 | ...Addr | Src XPU ID(10b)| Dst XPU ID(10b)| VC  |TC |
+  +----+----+----+----+----+----+----+----+
+12| Tag(8b) | Attr(8b)|  Reserved (2B)          |
+  +----+----+----+----+----+----+----+----+
+16|                                         |
+  |  Data Payload (0-48 Bytes)             |
+  |  (Write/Push only; Read/Pull has none) |
+  |                                         |
+60|                                         |
+  +----+----+----+----+----+----+----+----+
+60| TL CRC-16 (2B)  | Padding (2B)        |
+  +----+----+----+----+----+----+----+----+
+
+  Total: 64 Bytes (14B Header + 0-48B Data + 2B CRC16 + Padding)
+
+  Compressed Addressing (6 Bytes = 48 bits):
+  +-----------+-----------+--------------------+
+  | XPU ID    | Page Index | Page Offset       |
+  | (10 bits) | (26 bits)  | (12 bits)         |
+  +-----------+-----------+--------------------+
+  - XPU ID: 0-1023 (supports 1024 XPU nodes)
+  - Page Index: identifies 4KB page in XPU's address space
+  - Page Offset: offset within page (4KB granularity)
+  - Total addressable: 1024 XPU x 2^38 = 256TB domain
+  - Protocol efficiency: ~95% (14B header / 64B Flit)
+
+  Opcodes by Semantic:
+  +--------+-----------+-----------+--------------------+
+  | Semantic| Opcode    | Operation | Description        |
+  +--------+-----------+-----------+--------------------+
+  | Memory | 0x01      | Load      | Read cacheline     |
+  | Memory | 0x02      | Store     | Write cacheline    |
+  | Memory | 0x03      | Atomic    | CAS/FetchAdd/Swap  |
+  | Message| 0x10      | Send      | DMA send (large)   |
+  | Message| 0x11      | Recv      | DMA receive        |
+  | Tensor | 0x20      | Push      | Async tensor push  |
+  | Tensor | 0x21      | Pull      | Async tensor pull  |
+  | All    | 0x81      | ReadCpl   | Read completion    |
+  | All    | 0x82      | WriteCpl  | Write completion   |
+  | All    | 0x83      | Ack       | Tensor ack         |
+  +--------+-----------+-----------+--------------------+</div>
+
+<h4>6.3.3 在网计算扩展</h4>
+<p>UPN512 架构在 ALink 交换机上内置计算能力，支持集合通信操作的硬件卸载：</p>
+<div class="frame-diagram">Alink In-Network Computing (UPN512):
+
+  Supported Data Types & Operations:
+  +-----------+-------------------------------------------+
+  | Data Type | Operations                                |
+  +-----------+-------------------------------------------+
+  | INT32     | Sum, Max, Min                             |
+  | Float32   | Sum, Max, Min                             |
+  | Float16   | Sum, Max, Min                             |
+  | BFloat16  | Sum, Max, Min                             |
+  | Float8    | Sum, Max, Min                             |
+  +-----------+-------------------------------------------+
+
+  Collective Communication Flows:
+
+  1. Symmetric (AllReduce / AllGather):
+  +------+  +------+  +------+
+  | XPU0 |  | XPU1 |  | XPU2 |
+  +--+---+  +--+---+  +--+---+
+     |         |         |
+     v         v         v
+  +--+---------+---------+---+
+  |   ALink Switch           |
+  |   (Compute Engine)       |
+  |   Reduce: Sum all -> R   |
+  +--+---------+---------+---+
+     |         |         |
+     v         v         v
+  [Store R]  [Store R]  [Store R]
+  (pre-registered V_G -> real addr)
+
+  2. Asymmetric (Dispatch / Combine):
+  Dispatch Phase:
+  [XPU0] --(Push tensor, dst=XPU1)--> [Switch] --> [XPU1]
+  [XPU0] --(Push tensor, dst=XPU2)--> [Switch] --> [XPU2]
+
+  Combine Phase:
+  [XPU0] --(Pull tensor)--> [Switch: Aggregate] --> [XPU0]
+
+  Computational Header Extension:
+  +----+----+----+----+----+----+----+----+
+  | Comp Hdr (4B)                         |
+  +----+----+----+----+----+----+----+----+
+  | Op(4b)| DT(4b)| Group ID(8b)| Rsvd(16b)|
+  +----+----+----+----+----+----+----+----+
+  Op = Operation type (Sum/Max/Min)
+  DT = Data type (INT32/FP16/BF16/FP8/FP32)
+  Group ID = Virtual group identifier</div>
+
+<h3 id="ch6-addr">6.4 全局编址方案</h3>
+<p>Alink 采用压缩编址 (Compressed Addressing) 方案，在 64B TL Flit 中使用 6 字节 (48 位) 地址，
+支持 1024 个 XPU 节点的全局统一编址。ALS-M 控制面提供虚拟网络和多租户隔离。</p>
+
+<h4>6.4.1 编址架构</h4>
+<div class="frame-diagram">Alink Global Addressing (Compressed 48-bit VA):
+
+  Address Space Layout:
+  +------------------------------------------+
+  | 48-bit Compressed VA                     |
+  |                                          |
+  | [XPU ID (10b)] [Page Index (26b)] [Off(12b)]|
+  |                                          |
+  | XPU 0:   0x0000_0000_0000 ~ 0x003F_FFFF_FFFF
+  | XPU 1:   0x0040_0000_0000 ~ 0x007F_FFFF_FFFF
+  | ...                                      |
+  | XPU 1023: 0xFFC0_0000_0000 ~ 0xFFFF_FFFF_FFFF
+  |                                          |
+  | Per XPU: 256GB addressable (2^38 bytes) |
+  | Total domain: 1024 x 256GB = 256TB       |
+  +------------------------------------------+
+
+  ALS-D (Data Plane) + ALS-M (Control Plane):
+
+  +-------------------------------------------+
+  | ALS-M (Control Plane)                     |
+  | - Unified SW interface for all XPU types  |
+  | - Virtual network creation & QoS policy   |
+  | - Multi-tenant isolation                  |
+  | - Resource allocation & scheduling        |
+  +-------------------------------------------+
+                    |
+  +-------------------------------------------+
+  | ALS-D (Data Plane)                        |
+  | - High-speed GPU-to-GPU data transfer     |
+  | - Memory semantic access (Load/Store)     |
+  | - In-network computing (AllReduce etc.)   |
+  | - ALink Switch with CIPU 2.0 integration  |
+  +-------------------------------------------+
+
+  Multi-Protocol Compatibility:
+  +-------+-------+-------+-------+-------+
+  |UALink |NVLink | xLink |  UB   |  xCN  |
+  +-------+-------+-------+-------+-------+
+  | All protocols plug into ALink SW        |
+  | Address translation per protocol:       |
+  | - UALink: 10-bit XPU ID (native)        |
+  | - NVLink: GPU ID -> XPU ID mapping      |
+  | - xLink:  vendor-specific ID mapping    |
+  | - UB:     UB address -> XPU ID mapping  |
+  | - xCN:    network address -> XPU ID     |
+  +-------------------------------------------+
+
+  Virtual Network & Multi-Tenant:
+  +--- VN 0 (Tenant A) ---+
+  |  XPU 0,1,2,3 -> Group A|
+  |  VA space: 0x0000-0x3FFF|
+  +-------------------------+
+  +--- VN 1 (Tenant B) ---+
+  |  XPU 4,5,6,7 -> Group B|
+  |  VA space: 0x4000-0x7FFF|
+  +-------------------------+
+  (isolation enforced by ALink SW)</div>
+
+<h4>6.4.2 编址组件部署位置</h4>
+<table>
+<tr><th>组件</th><th>部署位置</th><th>功能</th></tr>
+<tr><td>ALink 端侧 IP</td><td>GPU/XPU Die (I/O subsystem)</td><td>TL/DL/PHY 协议处理，地址翻译</td></tr>
+<tr><td>ALink Switch 芯片</td><td>机柜 (正交插槽, 1-2 chips/node)</td><td>Flit 级交换，在网计算，多协议路由</td></tr>
+<tr><td>CIPU 2.0</td><td>机柜 (与 ALink SW 集成)</td><td>计算/存储/网络资源管理，PB级带宽</td></tr>
+<tr><td>ALS-M 控制面</td><td>软件层 (集群管理节点)</td><td>虚拟网络，QoS，多租户隔离</td></tr>
+<tr><td>ALS-D 数据面</td><td>ALink Switch 硬件</td><td>数据传输，内存语义，在网计算</td></tr>
+<tr><td>ScaleOut NIC</td><td>GPU 节点 (4 NICs/node)</td><td>RoCE / 简化协议，400-800Gbps</td></tr>
+<tr><td>DCN NIC</td><td>CPU 节点</td><td>存储/DB/数据预处理网络</td></tr>
+</table>
+
+<h3 id="ch6-deploy">6.5 部署架构与规模</h3>
+<div class="frame-diagram">Alink Three-Layer Interconnect Architecture:
+
++===================================================================+
+|              AL128 SuperNode Server (128-144 GPU)                 |
++===================================================================+
+|                                                                     |
+|  Layer 3: DCN Network (Data Center)                               |
+|  +-----------+    CPU node integrated 400-800G smart NIC          |
+|  | DCN NIC   |    Storage, DB, data preprocessing                 |
+|  +-----------+                                                      |
+|         ^                                                           |
+|  Layer 2: ScaleOut Network (Inter-SuperNode)                      |
+|  +-----------+    4 high-perf NICs per GPU node                   |
+|  | ScaleOut  |    400-800Gbps per GPU                             |
+|  | NICs x4   |    25.6T-51.2Tbps total ScaleOut bandwidth        |
+|  +-----------+    (RoCE or future simplified protocol)            |
+|         ^                                                           |
+|  Layer 1: ScaleUp Network (Intra-SuperNode)                       |
+|  +-----------+    Single-stage switch topology                    |
+|  | ALink SW  |    Non-Ethernet ALink protocol                     |
+|  | (64-128   |    Native GPU memory semantics                     |
+|  |  ports)   |    Max 128 SerDes groups per GPU                   |
+|  +-----------+    14T-28Tbps per GPU                              |
+|         ^                                                           |
+|  +-----------+                                                      |
+|  | GPU Chips |    128-144 GPUs per rack                           |
+|  | (4 per    |    350kW power, 500kW cooling                       |
+|  |  node)    |    Full liquid cooling, BusBar power               |
+|  +-----------+                                                      |
+|                                                                     |
+|  ALink SW Node Internal:                                           |
+|  +-----------------------------------+                             |
+|  | 1-2 x ALink Switch chips          |                             |
+|  | (64 or 128 ports each)            |                             |
+|  | GPU port0/8 -> ALink SW 0         |                             |
+|  | GPU port1/9 -> ALink SW 1         |                             |
+|  | ...                               |                             |
+|  | (orthogonal connector mapping)    |                             |
+|  +-----------------------------------+                             |
+|                                                                     |
+|  Multi-Protocol Compatibility:                                    |
+|  +-------+-------+-------+-------+-------+                       |
+|  |UALink |NVLink | xLink |  UB   |  xCN  |                       |
+|  +-------+-------+-------+-------+-------+                       |
+|  All protocols can plug into ALink SW platform                    |
++===================================================================+</div>
+
+<h4>6.5.1 规模与性能</h4>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>ScaleUp 域规模</td><td>64-128 GPU（当前），256-512（规划）</td></tr>
+<tr><td>单级交换</td><td>是（极致低延迟，不使用二级交换）</td></tr>
+<tr><td>编址方式</td><td>压缩编址 (48-bit VA)，10-bit XPU ID</td></tr>
+<tr><td>协议效率</td><td>~95%（14B header / 64B TL Flit）</td></tr>
+<tr><td>推理性能提升</td><td>同等算力下较传统架构提升 50%</td></tr>
+<tr><td>未来规划</td><td>UPN512（512卡），单层光互联/NPO 混合方案</td></tr>
+<tr><td>光学方案</td><td>NPO (近封装光学) 优于 LPO/FRO</td></tr>
+<tr><td>带宽密度</td><td>NPO: 200-300 Tb/s per rack unit</td></tr>
+</table>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 7: SUE ==================== -->
+<h2 id="ch7"><span class="proto-tag tag-sue">Broadcom SUE</span> 第7章 SUE (Scale-Up Ethernet)</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">OCP 框架</span> &nbsp;
+<strong>主导方：</strong> Broadcom &nbsp;
+<strong>规范版本：</strong> RM100 (v1.0, 2025年9月) &nbsp;
+<strong>贡献至：</strong> OCP (Open Compute Project)
+</p>
+
+<p>SUE 是博通贡献给 OCP 的以太网 Scale-Up 框架规范，目标是在标准以太网基础上实现 XPU 间低延迟、高带宽的内存语义传输。
+支持单跳交换拓扑，最多 1024 个 XPU，端到端 RTT &lt; 2μs，支持 up to 9.6 Tbps 的 XPU-to-XPU 带宽。</p>
+
+<h3 id="ch7-phy">7.1 物理层</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>物理层基础</td><td>完全兼容标准以太网 SerDes</td></tr>
+<tr><td>单通道速率</td><td>200 Gbps（也支持 100G/50G）</td></tr>
+<tr><td>端口配置</td><td>每 SUE 实例支持 1/2/4 端口（1x800G, 2x400G, 4x200G）</td></tr>
+<tr><td>每 XPU 实例数</td><td>可运行多个（如 8-16 个 SUE 实例）</td></tr>
+<tr><td>FEC</td><td>低延迟 FEC 选项（RS-272，减少交织）</td></tr>
+<tr><td>线缆长度</td><td>≤ 10 米</td></tr>
+</table>
+
+<h3 id="ch7-dl">7.2 数据链路层</h3>
+<div class="frame-diagram">SUE Data Link Layer:
+
++===================================================================+
+|                    SUE Data Link Layer                             |
++===================================================================+
+|                                                                     |
+|  +-----------+    Standard Ethernet MAC (preserved)               |
+|  | Ether MAC |    Ensures compatibility with existing switches    |
+|  +-----------+                                                      |
+|  +-----------+    Link-Level Retry (LLR)                           |
+|  | LLR       |    Buffers + retransmits at link layer             |
+|  |           |    Masks errors from higher layers                 |
+|  |           |    Reduces tail latency (avoids end-to-end retry)  |
+|  +-----------+                                                      |
+|  +-----------+    Credit-Based Flow Control (CBFC)                |
+|  | CBFC      |    Receiver-advertised credits per traffic class   |
+|  |           |    Fine-grained, prevents drops                     |
+|  |           |    Better than PFC (no head-of-line blocking)      |
+|  +-----------+                                                      |
+|                                                                     |
+|  Lossless Transport:                                               |
+|  LLR + CBFC = lossless, deterministic, low tail latency           |
+|                                                                     |
+|  Virtual Channels: max 4 VCs for independent traffic classes     |
+|  (avoids deadlock, provides QoS)                                   |
++===================================================================+</div>
+
+<h3 id="ch7-net">7.3 网络层 — AI Fabric Header (AFH)</h3>
+
+<p>SUE 网络层定义了三种报文头选项，从标准以太网到极致压缩：</p>
+
+<div class="frame-diagram">SUE Network Layer - Three Header Options:
+
+Option 1: Standard Ethernet + IP + UDP (max compatibility)
++=======+=======+=======+=======+=======+=======+=======+=======+
+| Dst   | Src   | Ether | IP    | UDP   | SUE   | SUE   | FCS   |
+| MAC   | MAC   | Type  | Hdr   | Hdr   | RH    | Data  |       |
+| (6B)  | (6B)  | (2B)  | (20B) | (8B)  | (var) |       | (4B)  |
++=======+=======+=======+=======+=======+=======+=======+=======+
+|<----------- Total L2-L4 overhead: 42+ bytes ------------------>|
+  Identified by UDP port number
+
+Option 2: AFH Gen 1 (Ethertype-based, ~10-14B overhead)
++=======+=======+=======+=======+=======+=======+
+| Dst   | Src   | Ether | VLAN  | AFH   | SUE   |
+| MAC   | MAC   | Type  | (opt) | Shim  | Data  |
+| (6B)  | (6B)  | (2B)  | (4B)  | (var) |       |
++=======+=======+=======+=======+=======+=======+
+  Ethertype identifies SUE
+  Switch hardware looks at 16-32 bits of MAC for forwarding
+  XPU-id mapped to 16-bit destination address
+
+Option 3: AFH Gen 2 (Compressed, 6-12B total header!)
++=======+=======+=======+=======+
+| AFH   | SUE   | SUE   | FCS   |
+| Gen2  | RH    | Data  |       |
+| (6B   | (var) |       | (4B)  |
+| or12B)|       |       |       |
++=======+=======+=======+=======+
+  Based on IEEE 802.c-2017 Structured Local Address Plan (SLAP)
+  Two options: 6B header (normal) or 12B header (extended)
+
+  AFH Gen 2 (6B Normal Format):
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  |M|V|W|X|Y|Z|    Dest XPU ID (16-bit)    |    Src XPU ID (16-bit)   |
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  |M=multicast | V=version | W=format (0=normal, 1=compressed)      |
+  |X=local     | Y=Z=0 (AAI encoding per SLAP)                     |
+
+  AFH Gen 2 (12B Extended Format):
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  |    Dest XPU ID (32-bit)          |    Src XPU ID (32-bit)       |
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+  | Hop Count | Entropy | QoS  | ECN  | Reserved                   |
+  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+
+  Header Overhead Comparison:
+  +-------------------+----------+----------+-----------------+
+  | Protocol          | Header   | Overhead | Efficiency(64B) |
+  +-------------------+----------+----------+-----------------+
+  | Standard TCP/IP   | 54B      | 45.7%    | 54.3%           |
+  | RoCEv2            | 36B      | 36.0%    | 64.0%           |
+  | AFH Gen 1         | ~14B     | 18.0%    | 82.0%           |
+  | AFH Gen 2 (6B)    | 6B       | 8.6%     | 91.4%           |
+  +-------------------+----------+----------+-----------------+</div>
+
+<h3 id="ch7-tp">7.4 传输层 — SUE Transport</h3>
+
+<div class="frame-diagram">SUE Transport Layer (Mapping & Packing):
+
++===================================================================+
+|                    SUE Transport Layer                             |
++===================================================================+
+|                                                                     |
+|  XPU NoC issues Command:                                          |
+|  +-----------+  opcode, dest XPU, data flag, length              |
+|  | Command   |---                                               |
+|  +-----------+   |                                                |
+|                  v                                                |
+|  +-----------+    Mapping & Packing Layer                        |
+|  | Mapping   |    - Aggregate commands to same dest+VC          |
+|  | & Packing |    - Form SUE PDU (max 4096B / 4KB)              |
+|  +-----------+    - Concatenate full transactions               |
+|         |          (amortize header across multiple payloads)    |
+|         v                                                          |
+|  +-----------+    Transport Layer                                 |
+|  | Transport |    - Add Reliability Header (RH)                  |
+|  | Layer     |    - RH includes: PSN, VC, RPSN (ack)             |
+|  |           |    - Add CRC for PDU                              |
+|  +-----------+                                                      |
+|         |                                                          |
+|         v                                                          |
+|  +-----------+    Network Layer                                    |
+|  | Network   |    - Add AFH Gen1/Gen2 or standard Eth+IP+UDP    |
+|  | Layer     |    - Or standard Ethernet header                  |
+|  +-----------+                                                      |
+|         |                                                          |
+|         v                                                          |
+|  +-----------+    Physical Layer                                   |
+|  | PHY       |    - Ethernet SerDes (200G/100G)                  |
+|  |           |    - Low-latency FEC (RS-272)                      |
+|  +-----------+                                                      |
+|                                                                     |
+|  Reliability:                                                      |
+|  - Link-level: LLR (per-hop retransmit, Go-Back-N)               |
+|  - Transport-level: PSN + RPSN (end-to-end acknowledgment)       |
+|  - CRC at both transport and link levels                          |
+|                                                                     |
+|  SUE PDU Format (max 4KB):                                        |
+|  +-------+-------+-------+-------+-------+                        |
+|  | Cmd 0 | Cmd 0 | Cmd 1 | Cmd 1 | Cmd N |  (multiple cmds)     |
+|  | Hdr   | Data  | Hdr   | Data  | ...   |  merged into 1 PDU   |
+|  +-------+-------+-------+-------+-------+                        |
+|  |<-- Reliability Header (RH) covers entire PDU -->|              |
+|  |<-- CRC covers entire PDU ---------------------->|              |
++===================================================================+</div>
+
+<h3 id="ch7-tl">7.5 事务层</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>操作类型</td><td>One-sided: Put (write), Get (read), Atomic</td></tr>
+<tr><td>接口</td><td>AXI4 双工数据接口（命令接口）</td></tr>
+<tr><td>事务聚合</td><td>多个同目标+同VC事务聚合为最大 4KB PDU</td></tr>
+<tr><td>虚拟通道</td><td>最多 4 个 VC，映射不同流量类别</td></tr>
+<tr><td>无显式写确认</td><td>Write 为 one-sided，不需要 ACK（类似 NVLink Posted Write）</td></tr>
+<tr><td>命令字段</td><td>opcode, dest XPU ID, length, memory address</td></tr>
+</table>
+
+<h3 id="ch7-addr">7.6 全局编址方案</h3>
+<div class="frame-diagram">SUE Global Addressing:
+
++===================================================================+
+|                    SUE Addressing Architecture                     |
++===================================================================+
+|                                                                     |
+|  XPU ID Space:                                                     |
+|  +-----------------------------------+                             |
+|  |  10-bit XPU ID (max 1024 XPUs)   |                             |
+|  |  000  -  XPU 0                    |                             |
+|  |  001  -  XPU 1                    |                             |
+|  |  ...                              |                             |
+|  |  3FF  -  XPU 1023                 |                             |
+|  +-----------------------------------+                             |
+|                                                                     |
+|  Address Encoding (AFH Gen 2):                                     |
+|                                                                     |
+|  Normal (6B): 16-bit dest + 16-bit src XPU ID                     |
+|  +---+---+---+---+---+---+---+---+                                |
+|  |M|V|W|X| Dest XPU ID (16b) | Src XPU ID (16b) |                |
+|  +---+---+---+---+---+---+---+---+                                |
+|                                                                     |
+|  Extended (12B): 32-bit dest + 32-bit src + metadata              |
+|  +---+---+---+---+---+---+---+---+                                |
+|  |  Dest XPU ID (32b)     | Src XPU ID (32b)    |                |
+|  |  Hop | Entropy | QoS | ECN | Reserved        |                |
+|  +---+---+---+---+---+---+---+---+                                |
+|                                                                     |
+|  Memory Addressing:                                                |
+|  - Command carries destination memory address                     |
+|  - XPU NoC handles local address translation                      |
+|  - SUE is transparent to XPU memory architecture                  |
+|  - Each XPU's proprietary protocol-layer transactions             |
+|    can be packed inside SUE PDUs                                   |
+|                                                                     |
+|  Topology:                                                         |
+|  +-------+ +-------+ +-------+                                    |
+|  | XPU 0 | | XPU 1 | | XPU N |                                    |
+|  +---+---+ +---+---+ +---+---+                                    |
+|      |         |         |                                         |
+|  +---+---------+---------+---+  (12-plane parallel switch)      |
+|  | Ether Switch 0 (64-port)|                                     |
+|  | Ether Switch 1 (64-port)|  Each XPU has 12 SUE instances     |
+|  | ...                     |  12 x 800G = 9.6 Tbps per pair     |
+|  | Ether Switch 11         |                                     |
+|  +-------------------------+                                      |
+|  Single switch hop, up to 1024 XPUs                               |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 8: UALink ==================== -->
+<h2 id="ch8"><span class="proto-tag tag-ualink">UALink</span> 第8章 UALink (Ultra Accelerator Link)</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-std">开放标准</span> &nbsp;
+<strong>主导方：</strong> UALink 联盟（AMD, Intel, Google, Meta, Microsoft, Broadcom 等 70+ 成员）&nbsp;
+<strong>规范版本：</strong> UALink 200G 1.0 (2025年4月正式发布)
+</p>
+
+<p>UALink 是面向 AI 加速器的开放互联标准，支持最多 1,024 个加速器组成一个 Pod，使用 Load/Store 和原子操作
+实现直接内存访问。采用四层协议栈：协议层 (UPLI)、事务层 (TL)、数据链路层 (DL) 和物理层 (PL)。</p>
+
+<h3 id="ch8-phy">8.1 物理层</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>物理层基础</td><td>IEEE 802.3 以太网 PHY（修改版）</td></tr>
+<tr><td>信号速率</td><td>212.5 GT/s（含 FEC 开销）</td></tr>
+<tr><td>有效数据速率</td><td>200 GT/s per lane</td></tr>
+<tr><td>通道配置</td><td>x1, x2, x4（最高 800 GT/s 双向）</td></tr>
+<tr><td>支持的 PHY</td><td>100GBASE-KR1/CR1, 200GBASE-KR2/CR2, 400GBASE-KR4/CR4, 800GBASE-KR4/CR4</td></tr>
+<tr><td>FEC</td><td>Reed Solomon (544, 514)，减少交织模式降低延迟</td></tr>
+<tr><td>编码</td><td>64B/66B（IEEE 802.3 标准）</td></tr>
+<tr><td>PMD/AN/LT</td><td>完全复用 IEEE 802.3（未修改）</td></tr>
+<tr><td>线缆长度</td><td>≤ 4 米</td></tr>
+<tr><td>延迟目标</td><td>RTT &lt; 1μs</td></tr>
+</table>
+
+<h4>8.1.1 物理层架构</h4>
+<div class="frame-diagram">UALink Physical Layer Architecture:
+
++===================================================================+
+|                    UALink Physical Layer (PL)                      |
++===================================================================+
+|                                                                     |
+|  +-----------+    Reconciliation Sublayer (RS) *modified          |
+|  | DL Flit   |    - Interface between DL and PCS                  |
+|  | (640B)    |    - Adapts 640B DL Flit to RS codewords          |
+|  +-----------+                                                      |
+|  +-----------+    PCS (Physical Coding Sublayer) *modified        |
+|  | PCS       |    - 64B/66B encoding (IEEE 802.3)                |
+|  |           |    - Modified: reduced codeword interleaving       |
+|  |           |    - Trade: less burst correction for lower delay |
+|  +-----------+                                                      |
+|  +-----------+    PMA (Physical Medium Attachment)                |
+|  | PMA       |    - Serialization / Deserialization               |
+|  +-----------+                                                      |
+|  +-----------+    PMD (Physical Medium Dependent) *unmodified    |
+|  | PMD       |    - 200GBASE-KR1/CR1 etc.                        |
+|  |           |    - Standard Ethernet PMD (no changes)            |
+|  +-----------+                                                      |
+|                                                                     |
+|  FEC Adaptation:                                                   |
+|  +-----------+    Reed Solomon (544, 514) codeword                |
+|  | RS-FEC    |    - Standard IEEE 802.3 FEC                      |
+|  |           |    - UALink: reduced interleaving for lower delay |
+|  |           |    - 640B DL Flit fits precisely into RS codeword |
+|  +-----------+                                                      |
+|                                                                     |
+|  * = modified from IEEE 802.3                                      |
+|  UALink reuses Ethernet PHY components but with latency opts      |
++===================================================================+</div>
+
+<h3 id="ch8-dl">8.2 数据链路层</h3>
+
+<h4>8.2.1 DL Flit 结构</h4>
+<div class="frame-diagram">UALink Data Link Layer (DL) - 640B Flit:
+
++===================================================================+
+|                    UALink DL Flit (640 Bytes)                     |
++===================================================================+
+|                                                                     |
+|  +-------+-------+-------+-------+-------+  ...  +-------+        |
+|  |TL Flit|TL Flit|TL Flit|TL Flit|TL Flit|      |TL Flit|        |
+|  | (64B) | (64B) | (64B) | (64B) | (64B) |      | (64B) |        |
+|  +-------+-------+-------+-------+-------+  ...  +-------+        |
+|  |<----------- 10 x 64B TL Flits = 640B ----------->|             |
+|  |<--- Plus 32-bit CRC (included in 640B) --->|                    |
+|                                                                     |
+|  DL Flit Structure:                                                |
+|  +-------+-----------------------------------+-------+             |
+|  | DL Hdr|  10 x TL Flits (64B each)       | CRC32 |             |
+|  | (4B)  |  (636B total with TL headers)   | (4B)  |  = 640B?    |
+|  +-------+-----------------------------------+-------+             |
+|  Note: Exact layout per spec; CRC covers payload                 |
+|                                                                     |
+|  DL Functions:                                                     |
+|  +-------------------+-----------------------------------+        |
+|  | Flit Packaging    | 10 x 64B TL Flits -> 640B DL Flit|        |
+|  +-------------------+-----------------------------------+        |
+|  | CRC               | 32-bit CRC per 640B DL Flit       |        |
+|  +-------------------+-----------------------------------+        |
+|  | Link-Level Retry  | Per-640B Flit retransmission      |        |
+|  | (LLR)             | (Go-Back-N on CRC failure)        |        |
+|  +-------------------+-----------------------------------+        |
+|  | DL Message Service| Inter-device messaging            |        |
+|  |                   | - Rate notification               |        |
+|  |                   | - Device/port ID query            |        |
+|  |                   | - UART-style firmware comm        |        |
+|  +-------------------+-----------------------------------+        |
+|                                                                     |
+|  Lossless Mechanism:                                               |
+|  LLR (640B granularity) + Credit-based flow control              |
++===================================================================+</div>
+
+<h3 id="ch8-tl">8.3 事务层</h3>
+
+<div class="frame-diagram">UALink Transaction Layer (TL) - 64B Flit:
+
++===================================================================+
+|                    UALink TL Flit (64 Bytes)                       |
++===================================================================+
+|                                                                     |
+|  Control Half-Flit (32B):                                         |
+|  +-------+-------+-------+-------+-------+-------+-------+       |
+|  |Opcode | Addr  | Tag   | Length| VC    | Order | Compr |       |
+|  | (4b)  | (compr| (8b)  | (10b) | (3b)  | (2b)  | Info  |       |
+|  |       | ed)   |       |       |       |       | (8b)  |       |
+|  +-------+-------+-------+-------+-------+-------+-------+       |
+|  |<---------- 32 bytes control half-flit ----------->|            |
+|  |  Accommodates multiple transaction operations                   |
+|                                                                     |
+|  Data Half-Flit (32B):                                            |
+|  +-------+-------+-------+-------+                                 |
+|  | Data  | Data  | Data  | Data  |  (32 bytes payload)            |
+|  +-------+-------+-------+-------+                                 |
+|  |<---------- 32 bytes data half-flit ----------->|               |
+|                                                                     |
+|  Total TL Flit = 32B control + 32B data = 64B                    |
+|                                                                     |
+|  Transaction Types:                                               |
+|  +-----------+-------------------------------------------------+  |
+|  | Read      | Memory read request (resp: read completion)    |  |
+|  | Write     | Memory write (posted or non-posted)            |  |
+|  | Atomic    | Atomic operations (CAS, Fetch-Add, Swap, etc.) |  |
+|  | Event     | Notification / interrupt                        |  |
+|  | Discover  | Device discovery / capability query             |  |
+|  +-----------+-------------------------------------------------+  |
+|                                                                     |
+|  Compressed Addressing:                                            |
+|  - Address cache at both endpoints                                |
+|  - Only transmit changed address bits                             |
+|  - Up to 95% protocol efficiency under real workloads             |
+|  - TL payload: 4-16 bytes typical                                 |
+|                                                                     |
+|  Ordering: preserves order across local and remote memory        |
++===================================================================+</div>
+
+<h4>8.3.1 UALink 协议层 (UPLI)</h4>
+<p>UALink Protocol Layer Interface (UPLI) 是 UALink 协议栈与加速器之间的接口层：</p>
+<ul style="margin-left:20px;">
+  <li>包含 Originator 和 Completer 组件对（入站/出站通道）</li>
+  <li>标准化 Load/Store 和原子操作的内存语义接口</li>
+  <li>支持厂商为同类加速器间通信定制私有协议报文（灵活性）</li>
+  <li>10-bit 加速器源/目的标识符用于路由</li>
+</ul>
+
+<h3 id="ch8-addr">8.4 全局编址方案</h3>
+<div class="frame-diagram">UALink Global Addressing Architecture:
+
++===================================================================+
+|                   UALink Pod Architecture                          |
++===================================================================+
+|                                                                     |
+|  Pod (max 1024 accelerators)                                      |
+|  +-----------------------------------------------------------+   |
+|  |                                                             |   |
+|  |  Accel 0    Accel 1    Accel 2         Accel 1023         |   |
+|  |  +-----+    +-----+    +-----+         +-----+            |   |
+|  |  |ID:0 |    |ID:1 |    |ID:2 |  ...    |ID:1023|           |   |
+|  |  |HBM  |    |HBM  |    |HBM  |         |HBM  |            |   |
+|  |  +--+--+    +--+--+    +--+--+         +--+--+            |   |
+|  |     |          |          |                |               |   |
+|  |  +--+----------+----------+----------------+--+            |   |
+|  |  |         UALink Switch Fabric              |            |   |
+|  |  |  (ULS: UALink Switch ASICs)               |            |   |
+|  |  |  - Non-blocking                           |            |   |
+|  |  |  - Lossless delivery                      |            |   |
+|  |  |  - Virtual pod isolation                  |            |   |
+|  |  +--------------------------------------------+            |   |
+|  |                                                             |   |
+|  +-----------------------------------------------------------+   |
+|                                                                     |
+|  Addressing:                                                      |
+|  - 10-bit Accelerator ID (0-1023)                                |
+|  - Switches use Src/Dst Accel ID for routing                     |
+|  - Per-port routing tables at switches                           |
+|  - Compressed addressing: address cache at endpoints             |
+|                                                                     |
+|  Virtual Pod Partitioning:                                        |
+|  +-------+-------+-------+                                       |
+|  | vPod0 | vPod1 | vPod2 |  (switch-level isolation)            |
+|  | 256   | 256   | 512   |  accelerators per vPod              |
+|  +-------+-------+-------+                                       |
+|  Multi-tenant workloads on shared infrastructure                 |
+|                                                                     |
+|  Security (UALinkSec):                                            |
+|  - Hardware-level encryption + authentication                   |
+|  - TEE support: AMD SEV, Arm CCA, Intel TDX                     |
+|  - Protection against physical tampering                         |
+|  - Tenant-controlled confidential computing                      |
+|                                                                     |
+|  Management:                                                      |
+|  - Pod Controller (dedicated control software)                   |
+|  - REST API, telemetry, workload control                         |
+|  - Fault containment + error isolation                           |
+|  - PCIe and Ethernet for management interfaces                   |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 9: OISA ==================== -->
+<h2 id="ch9"><span class="proto-tag tag-oisa">中国移动 OISA</span> 第9章 OISA (全向智感互联)</h2>
+
+<p>
+<strong>状态：</strong> <span class="badge badge-open">开放标准</span> &nbsp;
+<strong>主导方：</strong> 中国移动研究院 &nbsp;
+<strong>当前版本：</strong> OISA 2.0 &nbsp;
+<strong>全称：</strong> Omni-directional Intelligent Sensing Express Architecture
+</p>
+
+<p>OISA 是中国移动主导的面向 AI 芯片间互联的开放技术体系，核心特征包括全向对等互联、智能动态调度和极速能效突破。
+支持最多 1024 张 AI 芯片的 Scale-Up 互联，提供百纳秒级延迟和 TB/s 级带宽。</p>
+
+<h3>9.1 协议栈架构</h3>
+<div class="frame-diagram">OISA Protocol Stack:
+
++===================================================================+
+|                    OISA Protocol Stack                             |
++===================================================================+
+|                                                                     |
+|  +-----------+    Application Layer                                |
+|  | App       |    CCA / ISA / EPA modes                           |
+|  +-----------+                                                      |
+|  | TL        |    TLP Header (16B) + UDFs                         |
+|  | (Transac.)|    Variable-length payload                         |
+|  |           |    Transaction aggregation (smart packing)         |
+|  +-----------+                                                      |
+|  | DL        |    CRC + DLR (Data-Layer Retransmission)          |
+|  | (Data Link)|   PFC + Buffer-aware flow control                |
+|  +-----------+                                                      |
+|  | PHY       |    Ethernet SerDes + Lite-FEC (RS272)             |
+|  |           |    Reduced interleaving for low latency           |
+|  +-----------+                                                      |
+|                                                                     |
+|  Three Memory Access Modes:                                       |
+|                                                                     |
+|  1. EPA (Extreme-performance Access):                              |
+|     - Min single-hop forwarding latency                           |
+|     - Max payload efficiency                                      |
+|     - Streamlined switch pipeline (parse + lookup + forward)     |
+|     - For latency-sensitive memory semantic transactions         |
+|                                                                     |
+|  2. ISA (Intelligent Sensing Access):                              |
+|     - OPE inserts sensing tag after protocol field               |
+|     - Collects switch + dest GPU state along path                |
+|     - Receiver feedback for bottleneck identification            |
+|     - Source adjusts: rate reduction or path change              |
+|                                                                     |
+|  3. CCA (Collective Communication Acceleration):                  |
+|     - Offloads compute to switch chip                            |
+|     - AllReduce, All-to-All in switch                           |
+|     - Switch becomes compute component                           |
+|     - Reduces inter-node traffic + latency                       |
++===================================================================+</div>
+
+<h3>9.2 报文格式</h3>
+<div class="frame-diagram">OISA Packet Format (TLP-based):
+
++===================================================================+
+|                    OISA Packet                                     |
++===================================================================+
+|                                                                     |
+|  +-------+-------+-------+-------+-------+-------+-------+       |
+|  | Preamble| MAC  | Ether | TLP   | Mem   | Data  | Check |       |
+|  | (Ether) | Dst  | Type  | Hdr   | Addr  | Payload| sum   |       |
+|  |         | Src  | (13-  | (16B  |       |       |       |       |
+|  |         |      | 14B)  | fused)|       |       |       |       |
+|  +-------+-------+-------+-------+-------+-------+-------+       |
+|                                                                     |
+|  TLP Header (16 bytes, fused design):                             |
+|  +-------+-------+-------+-------+-------+-------+               |
+|  | SRC   | DEST  | VC    | Trans | Trans | Pkt   | UDF   |       |
+|  | GPU   | GPU   |       | Type  | Tag   | Len   |       |       |
+|  | ID    | ID    |       |       | ID    |       |       |       |
+|  | (10b) | (10b) | (4b)  | (4b)  | (8b)  | (16b) | (var) |       |
+|  +-------+-------+-------+-------+-------+-------+-------+       |
+|                                                                     |
+|  Key Features:                                                     |
+|  - 10-bit GPU ID addressing (1024 GPUs max)                      |
+|  - Protocol type at bytes 13-14 (Ethernet compatible)            |
+|  - User-Defined Fields (UDFs) for custom extensions              |
+|  - Variable-length payload (no fixed constraint)                 |
+|  - Forwarding + transaction fields fused in one header           |
+|  - Flat design: switch parser-friendly, low parse delay          |
+|                                                                     |
+|  ISA Extension (optional):                                        |
+|  +-------+-------+                                                 |
+|  | Sensing| Feedback|  (after protocol type field)               |
+|  | Tag   | Packet  |                                                |
+|  +-------+-------+                                                 |
+|                                                                     |
+|  CCA Extension (optional):                                        |
+|  +-------+-------+                                                 |
+|  | CCA   | Compute|  (collective operation data)                 |
+|  | Extend| Result |                                                |
+|  +-------+-------+                                                 |
+|                                                                     |
+|  Transaction Aggregation:                                         |
+|  Multiple small TLPs (same type) -> 1 aggregated TLP              |
+|  Single header covers multiple payloads                           |
+|  Spreads fixed overhead -> higher bandwidth utilization           |
+|                                                                     |
+|  Payload Ratio: 82% (16B header in ~90B typical packet)          |
++===================================================================+</div>
+
+<h3>9.3 全局编址与功能特性</h3>
+<table>
+<tr><th>维度</th><th>规格</th></tr>
+<tr><td>编址空间</td><td>10-bit GPU ID（支持 1024 芯片）</td></tr>
+<tr><td>内存语义</td><td>同步（Load/Store）+ 异步（DMA）</td></tr>
+<tr><td>统一内存</td><td>Scale-up 域内统一内存空间</td></tr>
+<tr><td>无损传输</td><td>PFC + Buffer-aware Flow Control + DLR</td></tr>
+<tr><td>智能感知</td><td>Flow Track 感知网络状态，动态调度</td></tr>
+<tr><td>在网计算</td><td>CCA 模式卸载集合通信到交换芯片</td></tr>
+<tr><td>FEC</td><td>Lite-FEC (RS272)，减少交织降低延迟</td></tr>
+<tr><td>拓扑</td><td>Full-Mesh 直连 / 交换芯片单层全连接</td></tr>
+</table>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 10: Addressing Comparison ==================== -->
+<h2 id="ch10">第10章 全局编址方案对比</h2>
+
+<p>Scale-Up 网络要求全局统一编址，使任意 GPU 能直接访问其他 GPU 的内存。以下是各协议编址方案的详细对比：</p>
+
+<table>
+<tr>
+  <th>协议</th>
+  <th>编址标识符</th>
+  <th>地址位宽</th>
+  <th>编址空间</th>
+  <th>地址翻译</th>
+  <th>权限控制</th>
+  <th>一致性</th>
+</tr>
+<tr>
+  <td><strong>NVLink</strong></td>
+  <td>UVM 统一虚拟地址</td>
+  <td>49-bit VA</td>
+  <td>512 TB（CPU+GPU 共享）</td>
+  <td>GPU MMU + 远程页表遍历</td>
+  <td>OS 级页面保护</td>
+  <td>硬件管理缓存一致性</td>
+</tr>
+<tr>
+  <td><strong>UB (灵衢)</strong></td>
+  <td>CNA + EID + UBA + TokenID</td>
+  <td>16-bit CNA + 64-bit UBA</td>
+  <td>64K 组件 × 16EB VA</td>
+  <td>UMMU（VA→PA）+ UB Decoder（PA→UBMD）</td>
+  <td>TokenID + TokenValue（32-bit each）</td>
+  <td>Home-User 模型 + Jetty</td>
+</tr>
+<tr>
+  <td><strong>MTLink</strong></td>
+  <td>全局内存地址</td>
+  <td>-</td>
+  <td>MUSA 统一架构</td>
+  <td>GPU MMU</td>
+  <td>-</td>
+  <td>统一内存模型</td>
+</tr>
+<tr>
+  <td><strong>GLink</strong></td>
+  <td>全局统一内存编址</td>
+  <td>-</td>
+  <td>8192 卡域</td>
+  <td>原生内存语义</td>
+  <td>-</td>
+  <td>UCIe 标准</td>
+</tr>
+<tr>
+  <td><strong>OLink</strong></td>
+  <td>以太网地址 + 内存语义</td>
+  <td>-</td>
+  <td>64+ 卡域</td>
+  <td>RDMA 兼容</td>
+  <td>-</td>
+  <td>内存统一编址</td>
+</tr>
+<tr>
+  <td><strong>Alink</strong></td>
+  <td>GPU 原生内存语义</td>
+  <td>-</td>
+  <td>128-512 卡域</td>
+  <td>GPU MMU（原生）</td>
+  <td>-</td>
+  <td>单级交换统一编址</td>
+</tr>
+<tr>
+  <td><strong>SUE</strong></td>
+  <td>XPU ID (10-bit)</td>
+  <td>10-bit XPU + 32-bit mem addr</td>
+  <td>1024 XPU</td>
+  <td>XPU NoC 本地翻译</td>
+  <td>协议透明</td>
+  <td>无（one-sided ops）</td>
+</tr>
+<tr>
+  <td><strong>UALink</strong></td>
+  <td>Accelerator ID (10-bit)</td>
+  <td>10-bit ID + compressed addr</td>
+  <td>1024 加速器/Pod</td>
+  <td>地址压缩缓存 + TL</td>
+  <td>UALinkSec + TEE</td>
+  <td>内存序保持</td>
+</tr>
+<tr>
+  <td><strong>OISA</strong></td>
+  <td>GPU ID (10-bit)</td>
+  <td>10-bit ID + variable mem addr</td>
+  <td>1024 芯片</td>
+  <td>统一内存空间</td>
+  <td>UDF 自定义</td>
+  <td>同步/异步双模式</td>
+</tr>
+</table>
+
+<h3>10.1 编址架构分类</h3>
+<div class="frame-diagram">Global Addressing Architecture Classification:
+
++===================================================================+
+|                Addressing Approach Comparison                      |
++===================================================================+
+|                                                                     |
+|  Type 1: Hardware-Managed Coherent (NVLink)                       |
+|  +-------+   +-------+   +-------+                                 |
+|  | GPU 0 |---| GPU 1 |---| GPU 2 |  Shared 49-bit VA space      |
+|  | HBM   |   | HBM   |   | HBM   |  HW cache coherence           |
+|  | MMU   |   | MMU   |   | MMU   |  Auto page migration          |
+|  +-------+   +-------+   +-------+  Pros: simplest programming   |
+|                                        Cons: vendor lock-in      |
+|                                                                     |
+|  Type 2: Multi-Layer ID + Token (UB)                               |
+|  +-------+   +-------+   +-------+                                 |
+|  | UBPU  |   | UBPU  |   | UBPU  |  UBMD -> CNA -> EID -> UBA   |
+|  |+UMMU  |   |+UMMU  |   |+UMMU  |  Token-based permission       |
+|  |+Decoder|  |+Decoder|  |+Decoder|  Home-User model              |
+|  +-------+   +-------+   +-------+  Pros: fine-grained control   |
+|  |<-- UBFM manages all -->|           Cons: complex stack         |
+|                                                                     |
+|  Type 3: Flat ID + Compressed Addr (UALink/OISA/SUE)              |
+|  +-------+   +-------+   +-------+                                 |
+|  |Accel 0|   |Accel 1|   |Accel N|  10-bit flat ID (1024 max)   |
+|  | HBM   |   | HBM   |   | HBM   |  Address cache compression     |
+|  | TL    |   | TL    |   | TL    |  Load/Store semantics          |
+|  +---+---+   +---+---+   +---+---+  Pros: open, scalable          |
+|      |           |           |         Cons: no HW coherence      |
+|  +---+-----------+-----------+---+                                 |
+|  |       UALink Switch          |  (v1.0, no coherence yet)      |
+|  +-------------------------------+                                 |
+|                                                                     |
+|  Type 4: Ethernet-Compatible (SUE/OISA/OLink)                     |
+|  +-------+   +-------+   +-------+                                 |
+|  | XPU 0 |   | XPU 1 |   | XPU N |  XPU ID in MAC/AFH header     |
+|  | HBM   |   | HBM   |   | HBM   |  Ethernet switch forwarding    |
+|  | SUE/  |   | SUE/  |   | SUE/  |  Compatible with Ether tools  |
+|  | OISA  |   | OISA  |   | OISA  |  Pros: ecosystem leverage     |
+|  +---+---+   +---+---+   +---+---+  Cons: no native coherence    |
+|      |           |           |                                     |
+|  +---+-----------+-----------+---+                                 |
+|  |     Standard Ethernet Switch  |                                |
+|  +-------------------------------+                                 |
++===================================================================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 11: Deployment Comparison ==================== -->
+<h2 id="ch11">第11章 部署架构与组件位置对比</h2>
+
+<h3>11.1 组件部署位置汇总表</h3>
+<table>
+<tr>
+  <th>协议</th>
+  <th>GPU Die 内</th>
+  <th>基板/节点内</th>
+  <th>机柜内</th>
+  <th>跨机柜/集群</th>
+  <th>管理组件</th>
+</tr>
+<tr>
+  <td><strong>NVLink</strong></td>
+  <td>NVLink Port IP (HSHub), 18 links</td>
+  <td>NVSwitch ASIC (Tier 1)</td>
+  <td>NVSwitch (Tier 2)</td>
+  <td>NVLink Switch System (Tier 3, 576 GPU)</td>
+  <td>CUDA/UVM (软件), NCCL</td>
+</tr>
+<tr>
+  <td><strong>UB</strong></td>
+  <td>UB Controller + UMMU + UB Decoder + embedded UB Switch</td>
+  <td>UB Switch (board-level)</td>
+  <td>UB Switch (rack, 2D-FullMesh)</td>
+  <td>UBoE Bridge / OCS (8192 NPU)</td>
+  <td>UBFM (firmware on UBPU)</td>
+</tr>
+<tr>
+  <td><strong>MTLink</strong></td>
+  <td>MTLink Port IP + ACE Engine</td>
+  <td>MTLink Switch (node)</td>
+  <td>Single-layer Scale-Up (128卡)</td>
+  <td>Cross-cabinet (256卡)</td>
+  <td>MUSA 软件栈</td>
+</tr>
+<tr>
+  <td><strong>GLink</strong></td>
+  <td>GT-Link endpoint IP (UCIe)</td>
+  <td>GT-Fabric Switch ASIC</td>
+  <td>OEX orthogonal (72卡)</td>
+  <td>xD-Mesh (8192卡)</td>
+  <td>GT可编程交换芯片</td>
+</tr>
+<tr>
+  <td><strong>OLink</strong></td>
+  <td>OLink Port IP (GPU集成)</td>
+  <td>OLink Switch ASIC</td>
+  <td>OEX orthogonal (64+卡)</td>
+  <td>Multi-level OLink Switch</td>
+  <td>5-chip协同管理</td>
+</tr>
+<tr>
+  <td><strong>Alink</strong></td>
+  <td>ALink Port (128 SerDes groups)</td>
+  <td>ALink Switch ASIC (64-128 port)</td>
+  <td>正交架构 (128卡)</td>
+  <td>ScaleOut NIC + DCN</td>
+  <td>Pod Controller, CIPU 2.0</td>
+</tr>
+<tr>
+  <td><strong>SUE</strong></td>
+  <td>SUE Instance (AXI4 iface, multi-instance)</td>
+  <td>Standard Ethernet Switch ASIC</td>
+  <td>Single-hop switch (64-1024 XPU)</td>
+  <td>Multi-plane Ether switches</td>
+  <td>Management via PCIe/Ether, REST API</td>
+</tr>
+<tr>
+  <td><strong>UALink</strong></td>
+  <td>UPLI + TL + DL IP</td>
+  <td>UALink Switch (ULS) ASIC</td>
+  <td>ULS (1024 Accel/Pod)</td>
+  <td>Virtual Pod partitioning</td>
+  <td>Pod Controller, UALinkSec</td>
+</tr>
+<tr>
+  <td><strong>OISA</strong></td>
+  <td>OISA TL/DL IP + OPE</td>
+  <td>OISA-compatible Switch ASIC</td>
+  <td>Single-layer full-connect (1024)</td>
+  <td>Multi-level switching</td>
+  <td>Flow Track + 智能调度</td>
+</tr>
+</table>
+
+<h3>11.2 典型部署架构对比图</h3>
+<div class="frame-diagram">Deployment Architecture Comparison (Side by Side):
+
++======================+======================+======================+
+|     NVLink NVL72     |     UB SuperNode     |    Alink AL128      |
++======================+======================+======================+
+|                      |                      |                      |
+|  [GPU Die]           |  [UBPU Die]          |  [GPU Die]           |
+|  NVLink Port IP      |  UB Ctlr+UMMU+Dec    |  Alink Port          |
+|  18 links x 200G     |  + embedded UB SW    |  128 SerDes groups   |
+|        |             |        |             |        |             |
+|  [Baseboard]         |  [Board]             |  [GPU Node]         |
+|  NVSwitch Tier1      |  UB Switch           |  4 GPUs per node    |
+|  4 x NVSwitch        |  (multi-port)        |        |             |
+|        |             |        |             |  [ALink SW Node]    |
+|  [Rack]              |  [Rack]              |  ALink Switch ASIC  |
+|  NVSwitch Tier2      |  2D-FullMesh         |  1-2 x 64/128 port  |
+|  72 GPU per rack     |  64 NPU per rack     |  Orthogonal connect |
+|        |             |        |             |        |             |
+|  [Cluster]           |  [Cluster]           |  [Rack]             |
+|  NVLink Switch Sys   |  UB Switch tier      |  128-144 GPU/rack   |
+|  576 GPU max         |  8192 NPU max        |  Single-stage SW    |
+|        |             |        |             |        |             |
+|  [Scale-Out]         |  [Scale-Out]         |  [Scale-Out]        |
+|  InfiniBand/Ethernet |  UBoE or RoCE        |  RoCE (NIC x4/GPU)  |
+|                      |                      |  400-800G per GPU   |
++======================+======================+======================+
+
++======================+======================+======================+
+|    SUE Framework     |    UALink Pod        |    OLink SuperNode  |
++======================+======================+======================+
+|                      |                      |                      |
+|  [XPU Die]           |  [Accel Die]         |  [GPU Die]           |
+|  SUE Instance x N    |  UPLI + TL + DL      |  OLink Port IP       |
+|  AXI4 command iface  |  10-bit Accel ID     |  (integrated in GPU)|
+|  1/2/4 ports each    |  x1/x2/x4 links      |                      |
+|        |             |        |             |        |             |
+|  [Rack]              |  [Rack]              |  [Board]             |
+|  Standard Ether SW   |  UALink Switch(ULS)  |  OLink Switch ASIC  |
+|  12-plane parallel   |  Non-blocking fabric |  Large capacity     |
+|  64 XPU, 9.6Tbps/pr  |  1024 Accel/Pod      |  OEX orthogonal     |
+|        |             |        |             |        |             |
+|  [Cluster]           |  [Cluster]           |  [Rack]             |
+|  Up to 1024 XPU      |  Virtual Pod isol.   |  64+ GPU/rack       |
+|  Mesh or switched    |  Multi-tenant        |  0 cable, 0 backpln |
+|        |             |        |             |        |             |
+|  [Scale-Out]         |  [Scale-Out]         |  [Scale-Out]        |
+|  Standard Ethernet   |  Standard Ethernet   |  Scale-Up/Out fuse  |
+|  Full Ether compat   |  PCIe/Ether mgmt     |  L1 shared phys     |
++======================+======================+======================+</div>
+
+<div class="divider"></div>
+
+<!-- ==================== Chapter 12: Application Scenarios ==================== -->
+<h2 id="ch12">第12章 应用场景与选型建议</h2>
+
+<h3>12.1 协议技术路线分类</h3>
+<table>
+<tr><th>技术路线</th><th>代表协议</th><th>核心特征</th><th>优势</th><th>劣势</th></tr>
+<tr>
+  <td><strong>自研专用协议</strong></td>
+  <td>NVLink, UB, MTLink</td>
+  <td>完全自研 PHY→App 协议栈，不兼容以太网</td>
+  <td>极致性能，硬件一致性，低延迟</td>
+  <td>生态封闭，成本高，厂商锁定</td>
+</tr>
+<tr>
+  <td><strong>以太网总线化</strong></td>
+  <td>OLink, SUE, OISA</td>
+  <td>保留以太 MAC，增加总线语义层</td>
+  <td>兼容以太生态，成本低，可演进</td>
+  <td>性能略逊专用协议，无硬件一致性</td>
+</tr>
+<tr>
+  <td><strong>开放标准协议</strong></td>
+  <td>UALink</td>
+  <td>以太 PHY + 全新 DL/TL 协议栈</td>
+  <td>开放标准，多厂商兼容，内存语义</td>
+  <td>生态尚在建设，暂无硬件一致性</td>
+</tr>
+<tr>
+  <td><strong>兼容平台型</strong></td>
+  <td>Alink, GLink</td>
+  <td>自研平台，兼容多种协议接入</td>
+  <td>芯片中立，灵活配置</td>
+  <td>需要交换芯片支持多协议</td>
+</tr>
+</table>
+
+<h3>12.2 场景选型建议</h3>
+<table>
+<tr><th>场景</th><th>推荐协议</th><th>理由</th></tr>
+<tr>
+  <td>极致性能训练（万亿参数模型）</td>
+  <td>NVLink 5.0</td>
+  <td>1800 GB/s 双向带宽，UVM 硬件一致性，SHARP 在网计算</td>
+</tr>
+<tr>
+  <td>国产自主可控大规模训练</td>
+  <td>UB 2.0</td>
+  <td>8192 NPU 扩展，六层完整协议栈，开放规范，UBoE 兼容以太网</td>
+</tr>
+<tr>
+  <td>多品牌异构混插场景</td>
+  <td>GLink / Alink</td>
+  <td>支持多品牌芯片混插，芯片中立平台，灵活配置</td>
+</tr>
+<tr>
+  <td>大模型推理（延迟敏感）</td>
+  <td>Alink (AL128)</td>
+  <td>单级交换极致低延迟，128 GPU 域满足 EP144 需求，推理性能提升 50%</td>
+</tr>
+<tr>
+  <td>成本敏感型大规模部署</td>
+  <td>SUE / OLink</td>
+  <td>复用以太网基础设施，部署门槛低，兼容现有工具链</td>
+</tr>
+<tr>
+  <td>开放生态多厂商兼容</td>
+  <td>UALink</td>
+  <td>70+ 厂商联盟支持，标准 PHY + 开放 DL/TL，未来缓存一致性路线图</td>
+</tr>
+<tr>
+  <td>运营商/国资智算中心</td>
+  <td>OISA / GLink</td>
+  <td>国产开放标准，智能感知调度，在网计算加速</td>
+</tr>
+<tr>
+  <td>中等规模推理集群</td>
+  <td>MTLink</td>
+  <td>亚微秒延迟，ACE 异步通信引擎，通算并行，性价比高</td>
+</tr>
+</table>
+
+<h3>12.3 协议演进趋势</h3>
+<div class="callout">
+<strong>五大演进趋势：</strong>
+<ol style="margin-left:20px; margin-top:8px;">
+  <li><strong>协议头极致压缩</strong>：从以太网 54B → AFH Gen2 6B，协议效率从 54% → 91%+</li>
+  <li><strong>以太网基础设施复用</strong>：SUE/OLink/OISA 均选择在以太网 MAC/PHY 上构建总线语义</li>
+  <li><strong>内存语义标准化</strong>：Load/Store + Atomic 成为所有协议的核心抽象</li>
+  <li><strong>链路级可靠性统一</strong>：LLR + CBFC 成为业界共识（UEC/SUE/UALink/OISA 均采用）</li>
+  <li><strong>Scale-Up/Out 融合</strong>：OLink 提出物理共享 + 协议差异的融合方案；ESUN+SUE-T 试图统一</li>
+</ol>
+</div>
+
+<h3>12.4 关键技术指标横向对比</h3>
+<table>
+<tr>
+  <th>指标</th>
+  <th>NVLink 5.0</th>
+  <th>UB 2.0</th>
+  <th>SUE</th>
+  <th>UALink 1.0</th>
+  <th>OISA 2.0</th>
+</tr>
+<tr><td>单通道带宽</td><td>200 Gbps</td><td>~200 Gbps</td><td>200 Gbps</td><td>200 Gbps</td><td>~200 Gbps</td></tr>
+<tr><td>GPU/XPU 互联带宽</td><td>1800 GB/s</td><td>TB/s 级</td><td>9.6 Tbps (12x800G)</td><td>800 Gbps (x4)</td><td>TB/s 级</td></tr>
+<tr><td>端到端延迟</td><td>&lt; 1μs</td><td>~100ns (同步)</td><td>&lt; 2μs RTT</td><td>&lt; 1μs RTT</td><td>百纳秒级</td></tr>
+<tr><td>最大互联规模</td><td>576 GPU</td><td>8192 NPU</td><td>1024 XPU</td><td>1024 Accel</td><td>1024 芯片</td></tr>
+<tr><td>线缆长度</td><td>~50cm + 光纤</td><td>跨柜光互联</td><td>≤ 10m</td><td>≤ 4m</td><td>-</td></tr>
+<tr><td>协议头开销</td><td>6B (2.3% @256B)</td><td>-</td><td>6-12B (AFH Gen2)</td><td>32B ctrl half-flit</td><td>16B (82% payload)</td></tr>
+<tr><td>硬件缓存一致性</td><td>是 (UVM)</td><td>Home-User 模型</td><td>否</td><td>否 (路线图)</td><td>否</td></tr>
+<tr><td>在网计算</td><td>SHARP</td><td>-</td><td>-</td><td>-</td><td>CCA 模式</td></tr>
+<tr><td>无损机制</td><td>CRC + Replay</td><td>CBFC + LLR</td><td>LLR + CBFC</td><td>LLR + Credit FC</td><td>PFC + DLR</td></tr>
+<tr><td>安全特性</td><td>-</td><td>Token 权限</td><td>-</td><td>UALinkSec + TEE</td><td>UDF 自定义</td></tr>
+<tr><td>多租户隔离</td><td>-</td><td>-</td><td>-</td><td>Virtual Pod</td><td>-</td></tr>
+<tr><td>以太网兼容</td><td>否</td><td>UBoE 桥接</td><td>完全兼容</td><td>PHY 兼容</td><td>PHY 兼容</td></tr>
+</table>
+
+<div class="divider"></div>
+
+<h2>总结</h2>
+<p>
+Scale-Up 网络协议正处于百花齐放、加速收敛的关键阶段。
+<strong>NVLink</strong> 凭借垂直整合和 CUDA 生态仍是性能标杆；
+<strong>UB</strong> 以六层完整协议栈和万卡扩展能力引领国产方案；
+<strong>UALink</strong> 作为开放联盟标准正在汇聚行业合力；
+<strong>SUE</strong> 借助以太网生态试图统一 Scale-Up/Out；
+<strong>OLink</strong> 的网络总线化路线展现了独特的演进能力；
+<strong>OISA</strong> 的智能感知和在网计算开创了新方向；
+<strong>Alink</strong> 和 <strong>GLink</strong> 的芯片中立平台为多品牌混插提供了灵活选择；
+<strong>MTLink</strong> 在国产 GPU 互联领域持续迭代。
+</p>
+
+<p>
+所有协议的共同追求是：<strong>更轻的协议头</strong>、<strong>更强的内存语义</strong>、
+<strong>更可靠的链路层</strong>、<strong>更大的 Scale-Up 域</strong>。
+未来 2-3 年，随着 UALink 2.0（缓存一致性）、ESUN/SUE-T 标准化、
+以及国产协议生态成熟，Scale-Up 网络格局将从"一极主导"走向"多极共荣"。
+</p>
+
+<div class="callout success">
+<strong>文档信息：</strong><br>
+本文档基于公开技术资料、学术综述论文、厂商白皮书和行业分析报告整理。<br>
+覆盖协议：NVLink · UB · MTLink · GLink · OLink · Alink · SUE · UALink · OISA<br>
+数据截至：2026年8月 | 参考来源：MDPI Survey, OCP, UALink Consortium, 华为/中兴/阿里/摩尔线程/紫光官方资料
+</div>
+
+</div>
+</div>
+</body>
+</html>
