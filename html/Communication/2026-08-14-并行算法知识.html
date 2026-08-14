@@ -278,37 +278,96 @@ Max Memory = M_F × p / p = M_F
     <img class="doc-image" src="images/interleaved-1f1b-schedule.png" alt="Interleaved-1F1B 调度示意图">
     <p class="img-caption">Interleaved-1F1B（VPP）调度：4 个 device、8 个 micro-batch，每个 stage 内部包含多个 chunk；stage 间交错执行，last stage 更早启动、first stage 反向更早结束，从而进一步降低气泡。</p>
 
-    <h3>5.1 思想与调度</h3>
-    <p>从 1F1B 可以看出，last stage 在稳定阶段已经没有气泡，但整个系统效率仍受前向串行依赖限制：last stage 不能立刻启动，需要 warmup；first stage 的反向也不能更早结束。Interleaved-1F1B 将每个 stage 上的模型再次切分为多个 chunk，这样 last stage 可以更早启动，first stage 的反向也能更早完成。</p>
-
-    <h3>5.2 特点</h3>
+    <h3>5.1 动机：1F1B 还剩多少气泡</h3>
+    <p>1F1B 让流水线在<strong>稳定阶段</strong>达到满载，但整个训练周期仍有两段系统性空闲：</p>
     <ul>
-        <li>每个 pp stage 存在多个 chunk；</li>
-        <li>稳定阶段仍采用 1F1B 调度；</li>
-        <li>相比 1F1B 降低了 Bubble Rate，但通信量和次数增加，显存峰值也增加。</li>
+        <li><strong>启动气泡（warmup）：</strong>last stage 必须等前面 <code>p - 1</code> 个 stage 各完成一次前向、激活逐级传到手上才能开始计算。灌满流水线的 <code>p - 1</code> 个时间步里，后面的 stage 全部闲置。</li>
+        <li><strong>排空气泡（cooldown）：</strong>反向必须从 last stage 逐级回传，前面的 stage 算完自己的反向后，还要等后面 stage 依次收尾，最后 <code>p - 1</code> 个时间步里前面的 stage 闲置。</li>
+    </ul>
+    <p>两项合计 <code>2(p - 1)</code> 个时间单元的空闲。用 p=4、b=8 代入：总时间 = <code>2b + 2(p-1) = 16 + 6 = 22</code>，气泡率 = <code>6/22 ≈ 27.3%</code>。也就是说 4 张卡跑 1F1B，约四分之一的时长整卡空转。</p>
+    <div class="note">
+        <strong>瓶颈的本质：</strong>调度粒度太粗。一个 stage 包含几十层 Transformer，被当作"不可再分的原子单元"。只有把粒度切细，气泡才能被进一步摊薄——这正是 Interleaved-1F1B 的出发点。
+    </div>
+
+    <h3>5.2 核心机制：把 stage 切成 chunk</h3>
+    <p>Interleaved-1F1B（也称 VPP，Virtual Pipeline Parallelism）把每个 stage 的模型层再切成 <code>vpp</code> 个更小的 chunk，整个模型于是被划分为 <code>vpp × p</code> 个 chunk。划分后的关键是<strong>编号交错分配</strong>：</p>
+    <div class="formula">设备 i 的第 j 个 chunk 负责的层 = Layers[ (i + j × p) × L_per_chunk : (i + j × p + 1) × L_per_chunk ]</div>
+    <ul>
+        <li>设备 0 拿 chunk 0、p、2p、…；设备 1 拿 chunk 1、p+1、2p+1、…；依次类推。</li>
+        <li>即：同一台设备上的 chunk 在<strong>逻辑前向链上彼此隔开</strong>，而非集中在相邻层。</li>
+    </ul>
+    <p><strong>具体例子</strong>（p=2、vpp=2、模型共 8 层，每 chunk 2 层）：</p>
+    <ul>
+        <li>设备 0：chunk 0（层 0-1）+ chunk 2（层 4-5）</li>
+        <li>设备 1：chunk 1（层 2-3）+ chunk 3（层 6-7）</li>
+    </ul>
+    <p>交错分配带来两个关键收益：</p>
+    <ul>
+        <li><strong>last stage 更早启动：</strong>设备 1 的 chunk 1（层 2-3）只需等设备 0 的 chunk 0（层 0-1）算完即可开算，不必等设备 0 的全部层（层 0-5）完成，流水线灌入时间缩短约 vpp 倍；</li>
+        <li><strong>first stage 反向更早结束：</strong>反向同样按 chunk 粒度交错回传，设备 0 的 chunk 0 能在流水线更早的阶段拿到梯度并完成反向。</li>
     </ul>
 
-    <h3>5.3 三个阶段</h3>
+    <h3>5.3 调度过程详解</h3>
+    <p>调度仍分为 warmup、稳态 1F1B、cooldown 三个阶段，只是操作单元从 stage 变成了 chunk。以 p=2、vpp=2、b=4 为例：</p>
     <ul>
-        <li><strong>warmup：</strong><code>(vpp - 1) × g + 2 × (p - p_i - 1)</code> 次前向；</li>
-        <li>last stage 需要 <code>(vpp - 1) × group_size</code> 次前向进入 1F1B；</li>
-        <li>其他 stage 由于前向和反向的串行依赖，需要 <code>2 × (p - p_i - 1)</code> 次前向进入 1F1B。</li>
+        <li><strong>warmup：</strong>设备 0 先算 chunk 0 的 micro-batch 1 前向，紧接着设备 1 的 chunk 1 就能启动（无需等设备 0 算完 chunk 2）；两边按"本设备可算的最靠前依赖"交替灌入前向，直到 chunk 3 完成 micro-batch 1 的前向。</li>
+        <li><strong>稳态：</strong>此后每完成一个前向就紧接着执行一个反向（1F1B），前向与反向在 4 个 chunk 间交错展开，激活随反向及时释放。</li>
+        <li><strong>cooldown：</strong>前向全部结束后，剩余反向从 chunk 3 → chunk 2 → chunk 1 → chunk 0 依次排空。</li>
     </ul>
+    <div class="note">
+        <strong>与 1F1B 的直观对比：</strong>1F1B 中设备 1 要等设备 0"整段"算完（等 <code>p - 1</code> 个时间步）才开始；Interleaved 中设备 1 只需等设备 0"一半"（1 个 chunk）就启动。等待时间按比例缩短，宏观效果等同于把气泡从 <code>2(p-1)</code> 摊薄到约 <code>2(p-1)/vpp</code>。
+    </div>
 
-    <h3>5.4 定量分析</h3>
+    <h3>5.4 三个阶段与 warmup 次数</h3>
+    <ul>
+        <li><strong>warmup：</strong>设备执行 <code>(vpp - 1) × g + 2 × (p - p_i - 1)</code> 次前向；</li>
+        <li>last stage（p_i = p - 1）需要 <code>(vpp - 1) × group_size</code> 次前向进入 1F1B；</li>
+        <li>其他 stage 由于同时受前向与反向串行依赖约束，需要额外的 <code>2 × (p - p_i - 1)</code> 次前向进入 1F1B。</li>
+    </ul>
+    <p>其中 <code>g / group_size</code> 表示每个分组连续处理的 micro-batch 数（Megatron-LM 实现中通常取 1）。代入 p=4、vpp=2、g=1 计算各设备 warmup 前向数：</p>
+    <table>
+        <tr><th>设备（stage 编号 p_i）</th><th>warmup 前向数</th><th>数值</th></tr>
+        <tr><td>stage 0</td><td>(2-1)×1 + 2×(4-0-1)</td><td>7 次</td></tr>
+        <tr><td>stage 1</td><td>1 + 2×(4-1-1)</td><td>5 次</td></tr>
+        <tr><td>stage 2</td><td>1 + 2×(4-2-1)</td><td>3 次</td></tr>
+        <tr><td>stage 3（last）</td><td>(2-1)×1</td><td>1 次</td></tr>
+    </table>
+
+    <h3>5.5 定量分析</h3>
     <div class="formula">理论 Bubble Rate = (p - 1) / (p - 1 + vpp × b)
 
 不同设备峰值激活显存 = M_F × ((vpp - 1) × g + 2 × (p - p_i - 1) + 1) / (p × vpp)
 
 系统峰值显存发生在 stage 0。
 </div>
-
+    <p><strong>Bubble Rate 数值演示</strong>（p=4、b=8，vpp 越大气泡越小）：</p>
+    <table>
+        <tr><th>vpp</th><th>Bubble Rate</th><th>相对 1F1B（27.3%）</th></tr>
+        <tr><td>1（即 1F1B）</td><td>3 / 11 ≈ 27.3%</td><td>基准</td></tr>
+        <tr><td>2</td><td>3 / 19 ≈ 15.8%</td><td>降低约 42%</td></tr>
+        <tr><td>4</td><td>3 / 35 ≈ 8.6%</td><td>降低约 69%</td></tr>
+        <tr><td>8</td><td>3 / 67 ≈ 4.5%</td><td>降低约 84%</td></tr>
+    </table>
+    <p><strong>峰值激活显存数值演示</strong>（p=4、vpp=2、g=1，按公式逐项代入）：</p>
+    <table>
+        <tr><th>设备</th><th>分子 (vpp-1)×g + 2×(p-p_i-1) + 1</th><th>峰值显存（M_F / 8 × 分子）</th></tr>
+        <tr><td>stage 0</td><td>1 + 6 + 1 = 8</td><td>1.00 M_F</td></tr>
+        <tr><td>stage 1</td><td>1 + 4 + 1 = 6</td><td>0.75 M_F</td></tr>
+        <tr><td>stage 2</td><td>1 + 2 + 1 = 4</td><td>0.50 M_F</td></tr>
+        <tr><td>stage 3</td><td>1 + 0 + 1 = 2</td><td>0.25 M_F</td></tr>
+    </table>
     <div class="highlight">
-        <strong>举例：</strong>p=4, b=8, vpp=2, g=1。Bubble Rate = (4-1)/(4-1+2×8) = 3/19 ≈ 15.8%，比 1F1B 的 27.3% 进一步降低。代价是每个 micro-batch 的激活量从 1/p 降为 1/(p×vpp)，但同时需要保留的 virtual micro-batch 数量增加。
+        <strong>结论：</strong>Interleaved-1F1B 把 Bubble Rate 从 <code>(p-1)/(p-1+b)</code> 降到 <code>(p-1)/(p-1+vpp×b)</code>，vpp 每增大一倍气泡约减半；激活峰值显存按公式与 1F1B 相当（stage 0 均为 M_F），并未额外增加——真正增加的代价是通信（见 5.6）。
     </div>
 
-    <h3>5.5 实现细节补充</h3>
-    <p>Interleaved-1F1B 在实现上采用<strong>分组交替执行</strong>：每执行一组前向或反向就切换到下一个 chunk。该调度图与 Megatron-LM 原论文在 warmup/cooldown 阶段存在细微出入，本文参考实际 Megatron-LM 代码实现，并受奇偶通信策略影响。</p>
+    <h3>5.6 代价与工程实践</h3>
+    <ul>
+        <li><strong>通信次数增加 vpp 倍：</strong>前向/反向在每两个相邻 chunk 边界都要通信一次。1F1B 每设备每 micro-batch 通信 1 次，Interleaved 变为 vpp 次（每次传输的数据量约为原来的 1/vpp，总流量不变，但<strong>次数上升、单次变小</strong>，对通信启动延迟（latency）更敏感）。</li>
+        <li><strong>调度复杂度上升：</strong>需要维护 vpp × p 个 chunk 的依赖关系；chunk 边界通信更容易与计算重叠不佳，通常配合<strong>奇偶通信策略</strong>（偶数 chunk 与奇数 chunk 错峰通信）避免环状等待。</li>
+        <li><strong>何时使用：</strong>vpp 越大气泡越低，但通信与显存管理成本越高。实践中 p 较大、b 较大、通信带宽充足时，取 vpp=2~4 收益明显；p 较小或带宽受限时收益有限。</li>
+        <li><strong>注意事项：</strong>若每个 chunk 内层数过少，chunk 边界通信开销会抵消气泡收益；一般保证每个 chunk 至少包含 1~2 个 Transformer 层。</li>
+    </ul>
+    <p>实现细节上，Interleaved-1F1B 采用<strong>分组交替执行</strong>：每执行一组前向或反向就切换到下一个 chunk。调度图与 Megatron-LM 原论文在 warmup/cooldown 阶段存在细微出入，本文参考实际 Megatron-LM 代码实现，并受奇偶通信策略影响。</p>
 
     <h2>六、Zero Bubble（零气泡）</h2>
 
