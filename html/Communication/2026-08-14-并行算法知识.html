@@ -169,27 +169,32 @@
     </ul>
 
     <div class="frame-diagram">时间 →
-Stage0: [F1][F2][F3][  ][  ][  ][B3][B2][B1]
-Stage1: [  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
-Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
+Stage0: [F1][F2][F3]                              [B1][B2][B3]
+Stage1:           [F1][F2][F3]                    [B1][B2][B3]
+Stage2:                     [F1][F2][F3][B1][B2][B3]
 
-↑ 空白处即为流水线气泡（Bubble）
+↑ 空白处以及反向需等待全链路前向完成而产生的间隙，即为流水线气泡（Bubble）。
+  反向自最后一个 stage 倒着回传：Stage2 先算 B，再 Stage1，最后 Stage0。
 </div>
 
     <h2>二、Naive Model Parallelism</h2>
 
+    <img class="doc-image" src="images/naive-model-parallelism.png" alt="Naive Model Parallelism 调度示意图">
+    <p class="img-caption">Naive Model Parallelism：batch 被切分为 micro-batch（F0-F3），但设备间不做流水交错；每个 stage 先算完所有 micro-batch 的前向，等最后 stage 前向与 loss 完成后，反向自末 stage 依次倒传回首个 stage。</p>
+
     <h3>2.1 思想与调度</h3>
-    <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。前向传播时数据依次通过每个 stage；反向传播时梯度依次回传。</p>
+    <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。mini-batch 可以被切分为更小的 micro-batch，但在 Naive 模式下<strong>设备间不做流水交错</strong>——前一个 stage 必须把自己负责的所有 micro-batch 前向算完，后一个 stage 才能开始；前向全部完成后，再从最后一个 stage 依次反向回传。</p>
 
     <div class="frame-diagram">时间 →
-设备0(stage0): [ F(整个batch) ][     等待     ][     等待     ][     等待     ][     等待     ][ B(整个batch) ]
-设备1(stage1): [     等待     ][ F(整个batch) ][     等待     ][     等待     ][ B(整个batch) ][     等待     ]
-设备2(stage2): [     等待     ][     等待     ][ F(整个batch) ][ B(整个batch) ][     等待     ][     等待     ]
+设备0(stage0): [F0][F1][F2][F3]                                             [B0][B1][B2][B3]
+设备1(stage1):           [F0][F1][F2][F3]                                   [B0][B1][B2][B3]
+设备2(stage2):                     [F0][F1][F2][F3]                         [B0][B1][B2][B3]
+设备3(stage3):                               [F0][F1][F2][F3][B0][B1][B2][B3]
 
-说明：batch 不切分为 micro-batch，F1..Fb 同属一个 batch，每个 stage 一次性处理整个 batch。
-     必须先等最后一个 stage（stage2）前向完成、loss 计算出来，
-     反向才能从 stage2 开始依次回传（B2 → B1 → B0）；
-     因此每个 stage 的 F 与 B 之间隔着长等待，任意时刻只有一张卡在计算
+说明：batch 被切分为 4 个 micro-batch（F0-F3），但 stage 间不做流水交错。
+     必须等最后一个 stage（stage3）完成全部前向、loss 算出后，
+     反向自 stage3 依次倒传回 stage0（B 在 stage3 紧接着 F，随后 stage2/1/0 依次跟进）；
+     任意时刻仅一个设备在计算
 </div>
 
     <h3>2.2 特点</h3>
@@ -211,9 +216,6 @@ Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
     </div>
 
     <h2>三、GPipe</h2>
-
-    <img class="doc-image" src="images/naive-model-parallelism.png" alt="GPipe 流水线调度示意图">
-    <p class="img-caption">GPipe 调度：将 batch 切分为 4 个 micro-batch（F0-F3），先让所有 micro-batch 完成前向，再统一反向；可显著减少气泡，但会堆积激活值导致显存峰值升高。</p>
 
     <h3>3.1 思想与调度</h3>
     <p>GPipe 将 mini-batch 切分为更小的 micro-batch。第一个 stage 计算完一份数据就立即传给下一个 stage，不必等整个 batch 完成。这样后面的 stage 可以更早开始，从而大幅减少气泡。</p>
