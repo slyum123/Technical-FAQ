@@ -158,6 +158,56 @@
         </div>
         <p>根据 <strong>Eckart–Young 定理</strong>，A<sub>k</sub> 是 A 在秩 k 约束下的最优近似（最小化 Frobenius 范数误差）。压缩率与精度取决于奇异值的衰减速度：奇异值衰减越快，低秩近似越精确，需要的 k 越小。</p>
 
+        <h3>数值示例：4 维表示如何降到 2 维</h3>
+        <p>下面用一个具体向量演示"投影—降维—重建"的完整过程，说明维度确实可以降低，且误差可控。</p>
+
+        <p><strong>步骤 1：原始高维表示</strong></p>
+        <p>假设某个 token 的隐状态是一个 4 维向量：</p>
+        <div class="highlight">
+            h = [6.0, 8.0, 6.4, 7.6]<sup>T</sup> ∈ ℝ<sup>4</sup>
+        </div>
+        <p>观察发现：h 的后两个分量近似是前两个分量的"复制"（h<sub>3</sub> ≈ h<sub>1</sub>，h<sub>4</sub> ≈ h<sub>2</sub>），也就是说这 4 个数实际只由约 2 个独立变量决定——这正是低秩/低维子结构的体现。</p>
+
+        <p><strong>步骤 2：定义低秩投影矩阵</strong></p>
+        <p>学习上投影矩阵 <code>U ∈ ℝ<sup>4×2</sup></code> 和下投影矩阵 <code>W ∈ ℝ<sup>2×4</sup></code>：</p>
+        <div class="highlight">
+            U = [[1, 0], [0, 1], [1, 0], [0, 1]]，  W = [[0.5, 0, 0.5, 0], [0, 0.5, 0, 0.5]]
+        </div>
+        <p>U 把 2 维潜向量扩展回 4 维；W 把 4 维向量压缩到 2 维潜空间。</p>
+
+        <p><strong>步骤 3：计算潜向量（压缩）</strong></p>
+        <p>c = W · h：</p>
+        <div class="highlight">
+            c<sub>1</sub> = 0.5×6.0 + 0×8.0 + 0.5×6.4 + 0×7.6 = 6.2<br>
+            c<sub>2</sub> = 0×6.0 + 0.5×8.0 + 0×6.4 + 0.5×7.6 = 7.8<br>
+            ⇒ c = [6.2, 7.8]<sup>T</sup> ∈ ℝ<sup>2</sup>
+        </div>
+        <p>原始需要存储 4 个浮点数，现在只需存储 2 个，<strong>单 token 存储量减半</strong>。</p>
+
+        <p><strong>步骤 4：重建高维表示</strong></p>
+        <p>h' = U · c：</p>
+        <div class="highlight">
+            h' = [1×6.2 + 0×7.8, 0×6.2 + 1×7.8, 1×6.2 + 0×7.8, 0×6.2 + 1×7.8]<sup>T</sup> = [6.2, 7.8, 6.2, 7.8]<sup>T</sup>
+        </div>
+
+        <p><strong>步骤 5：比较误差</strong></p>
+        <div class="highlight">
+            重建误差 = h − h' = [−0.2, 0.2, 0.2, −0.2]<sup>T</sup><br>
+            ||h − h'||<sub>F</sub> = √((−0.2)<sup>2</sup> + 0.2<sup>2</sup> + 0.2<sup>2</sup> + (−0.2)<sup>2</sup>) = 0.4<br>
+            ||h||<sub>F</sub> = √(6.0<sup>2</sup> + 8.0<sup>2</sup> + 6.4<sup>2</sup> + 7.6<sup>2</sup>) ≈ 14.1<br>
+            相对误差 ≈ 0.4 / 14.1 ≈ 2.8%
+        </div>
+        <p>维度从 4 降到 2（压缩 2 倍），相对误差仅约 2.8%。</p>
+
+        <p><strong>步骤 6：推广到序列（KV cache 场景）</strong></p>
+        <p>若序列长度 L = 4096，每个 token 存储 4 维：</p>
+        <ul>
+            <li>原始存储量：4 × 4096 = 16,384 个浮点数</li>
+            <li>压缩后存储量：2 × 4096 = 8,192 个浮点数</li>
+            <li>若每个浮点 2 字节（BF16），原始约 32 KB，压缩后约 16 KB</li>
+        </ul>
+        <p>维度减半直接带来存储减半；当潜空间维度 d<sub>c</sub> 远小于原始维度 d 时（如 MLA 中 d=7168，d<sub>c</sub>=512），压缩倍数可达 10 倍以上。</p>
+
         <h3>大模型中的典型应用</h3>
         <ul>
             <li><strong>MLA（Multi-head Latent Attention，DeepSeek-V2/V3）</strong>：
