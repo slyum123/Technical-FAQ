@@ -93,6 +93,21 @@
             text-align: left;
         }
         th { background: #21262d; color: #f0883e; }
+        .doc-image {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 18px auto;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            background: #161b22;
+        }
+        .img-caption {
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.9em;
+            margin: -10px 0 18px;
+        }
         code {
             background: rgba(110, 118, 129, 0.3);
             padding: 2px 6px;
@@ -163,14 +178,20 @@ Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
 
     <h2>二、Naive Model Parallelism</h2>
 
+    <img class="doc-image" src="images/naive-model-parallelism.png" alt="Naive Model Parallelism 调度示意图">
+    <p class="img-caption">Naive Model Parallelism：任意时刻仅一个设备在计算，其余设备空闲（气泡占比 (p-1)/p）</p>
+
     <h3>2.1 思想与调度</h3>
     <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。前向传播时数据依次通过每个 stage；反向传播时梯度依次回传。</p>
 
-    <div class="frame-diagram">设备 0: [F1]→[F2]→...→[Fb]→[B1]→[B2]→...→[Bb]
-设备 1: 等待 → [F1]→[F2]→...→[Fb]→[B1]→...→[Bb]
-设备 2: 等待 → 等待 → [F1]→...→[Fb]→[B1]→...→[Bb]
+    <div class="frame-diagram">时间 →
+设备0(stage0): [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
+设备1(stage1):          等待              [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
+设备2(stage2):          等待                   等待                 [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
 
-任意时刻只有一张卡在计算
+说明：batch 不切分为 micro-batch，F1..Fb 同属一个 batch，
+     每个 stage 一次性完成整个 batch 的前向、再一次性完成反向；
+     任意时刻只有一张卡在计算
 </div>
 
     <h3>2.2 特点</h3>
