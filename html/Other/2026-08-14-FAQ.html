@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日技术 FAQ · 2026-08-14</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+h1 { color: #58a6ff; margin: 24px 0 8px; font-size: 1.9em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+.subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+h2 { color: #79c0ff; margin: 32px 0 12px; font-size: 1.45em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+.tag {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+.tag-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+.tag-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+.tag-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+.tag-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../../index.html">&larr; 返回索引</a>
+
+<h1 id="faq">每日技术 FAQ</h1>
+<p class="subtitle">2026-08-14 · 涵盖 AI 大模型 / 计算机基础 / 通信协议等领域的 12 条技术问答与沉淀</p>
+<div class="meta">
+  <span class="tag tag-ai">AI ×7</span>
+  <span class="tag tag-comm">Communication ×3</span>
+  <span class="tag tag-comp">Computer ×1</span>
+  <span class="tag tag-other">Other ×1</span>
+</div>
+<hr/>
+
+<h2 id="toc">目录</h2>
+<ul>
+  <li><a href="#ai-1">DeepSeek V3 架构五大关键技术</a>（AI）</li>
+  <li><a href="#ai-2">MLA 多头潜在注意力：KV 缓存 71× 压缩原理</a>（AI）</li>
+  <li><a href="#ai-3">MoE 路由 + 动态偏置 + 组受限 Top-8 机制详解</a>（AI）</li>
+  <li><a href="#ai-4">FP8 E4M3 量化：128×128 块级粒度</a>（AI）</li>
+  <li><a href="#ai-5">MTP 多 Token 投机：1.76× 加速的数学原理</a>（AI）</li>
+  <li><a href="#ai-6">Transformer 源代码架构与投影/降维机制</a>（AI）</li>
+  <li><a href="#ai-7">推理场景 KV Cache 优化方案速查</a>（AI）</li>
+  <li><a href="#comm-1">流水线并行（PP）四种调度策略对比</a>（Communication）</li>
+  <li><a href="#comm-2">CXL 协议分层 / 一致性 / 内存池编址</a>（Communication）</li>
+  <li><a href="#comm-3">RDMA 零拷贝与传统网络对比</a>（Communication）</li>
+  <li><a href="#comp-1">服务器与计算机核心硬件体系</a>（Computer）</li>
+  <li><a href="#other-1">低秩投影压缩（SVD / LoRA / MLA）</a>（Other）</li>
+</ul>
+<hr/>
+
+<h2 id="ai">AI · 大模型与训练推理</h2>
+
+<h3 id="ai-1">1. DeepSeek V3 综合分析：架构五大关键技术</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：DeepSeek V3（671B 参数，激活 37B）相对于 GPT/Claude 等同规模模型，有哪些独创架构？整体代码结构、训练与推理流程如何？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>MLA（多头潜在注意力）</strong>：将 KV 缓存压缩到潜空间 c，推理时 KV 内存从标准 MHA 的 20.5 GB 压到 288 MB（71× 压缩）</li>
+<li><strong>DeepSeekMoE（细粒度 MoE）</strong>：每层 1 共享专家 + 256 路由专家，使用 Sigmoid 路由分数 + 动态偏置（bias）+ 组受限 Top-8 + 双倍率归一化</li>
+<li><strong>MTP（Multi-Token Prediction）</strong>：训练时同时预测下 D 个 token，提升数据效率；推理时退化为投机解码，p=0.8 接收率下 D=1 加速 1.76×</li>
+<li><strong>FP8 混合精度</strong>：E4M3 权重 + 128×128 块级 amax/scale 量化，H800 上实测相比 BF16 吞吐提升 1.3×</li>
+<li><strong>DualPipe 双向流水线</strong>：每一对 stage 同时跑两个 micro-batch，相向传播，显著压低传统 PP 的气泡率</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>MLA + MoE + MTP 协同，让 671B 模型单 token 激活仅 37B、显存需求与稠密 37B 模型相当</li>
+<li>FP8 + DualPipe 让训练代价相比同规模 BF16 + 传统 PP 训练成本下降一个数量级</li>
+<li>代码层面：<code>model.py → MLA / MoE / MTP</code> 三大组件；<code>train.py → DualPipe + FP8</code>；<code>infer.py → speculative decoding</code></li>
+<li>DeepSeek V3 是当前开源 LLM 中 <strong>训练成本/参数比最低</strong> 的代表（278.8 万 H800 小时训完 671B）</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>DeepSeek 官方技术报告 + 项目内部整理文档 <a href="../AI/2026-08-13-deepseek分析.html">2026-08-13-deepseek分析.html</a></li>
+</ul>
+<hr/>
+
+<h3 id="ai-2">2. MLA 多头潜在注意力：KV 缓存 71× 压缩原理</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：DeepSeek V3 提出的 MLA（Multi-head Latent Attention）如何做到 KV 缓存 71 倍压缩？数学推导是怎样的？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>核心思想</strong>：用一个低秩潜在向量 <code>c ∈ ℝ^d_c</code> 同时承载原本 Q/K/V 三者的投影信息，推理时只缓存 <code>c</code>（d_c ≪ d_kv）</li>
+<li><strong>投影矩阵</strong>：
+  <ul>
+    <li>下投影 <code>W_DKV ∈ ℝ^{d_c×d_kv}</code>，输入 <code>h_t</code> 输出 <code>c_t = W_DKV · h_t</code></li>
+    <li>上投影 <code>W_UK ∈ ℝ^{d_kv×d_c}</code>、<code>W_UV ∈ ℝ^{d_kv×d_c}</code>，用于训练时恢复完整 K/V</li>
+  </ul>
+</li>
+<li><strong>MLA Absorb 优化</strong>：推理时把 <code>q_nope</code> 与 <code>W_UK</code> 矩阵吸收合并，避免实际展开 K/V：
+  <pre><code>q_nope_c = q_nope @ W_UK        # 形状 [L, d_c]
+attn = (q_nope_c @ c_C^T) / sqrt(d)</code></pre>
+</li>
+<li><strong>实测压缩比</strong>：单序列 L=4096 时，标准 MHA 20.5 GB → MLA 288 MB（71.4×）</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>低秩压缩的代价是推理速度略降，但通过 Absorb 数学等价变换，使 <strong>实际推理延迟几乎不变</strong></li>
+<li>MLA 同时也吸收了 RoPE，将位置信息也编码进潜空间，保持外推性</li>
+<li>压缩比 <code>r ≈ d_kv²·d / (d_c·(d_kv + d))</code>，d_c 越小压缩越强，但需权衡质量损失</li>
+<li>MLA 是当前 Long-Context LLM 推理 <strong>最关键</strong> 的工程优化之一</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>DeepSeek-V2 论文 + 名词解释 <a href="名词解释.html#rank-projection">名词解释.html#低秩投影压缩</a></li>
+</ul>
+<hr/>
+
+<h3 id="ai-3">3. MoE 路由 + 动态偏置 + 组受限 Top-8 机制详解</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：DeepSeek V3 的 MoE 路由如何决定每个 token 激活哪些专家？为什么需要动态偏置和组受限机制？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>Sigmoid 路由分数</strong>：每专家得分 <code>s_i = Sigmoid(W_g · h_t)</code>，独立计算，不强制总和=1</li>
+<li><strong>动态偏置（bias）</strong>：每个训练步统计专家负载，对过载专家加分 / 低载减分，引导训练后期专家负载均衡：
+  <pre><code>effective_score_i = s_i + bias_i
+final_score_i = clip(effective_score_i, 0)</code></pre>
+</li>
+<li><strong>组受限路由**</strong>：将 256 个专家分为 8 组（每组 32 专家），先组选 Top-K_g=4 组，再在选中组内选 Top-K_e=8 专家，减少计算量与全互联通信</li>
+<li><strong>归一化倍率 2.5</strong>：路由后对选中专家的权重乘以 2.5（<code>α = 2.5</code>），补偿「被选专家权重分散」的影响</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>细粒度 + 共享专家设计：1 共享 + 256 路由，让更多专家被实际激活（提升参数利用率）</li>
+<li>组受限 + 动态偏置是<strong>训练稳定性</strong>的关键，否则极易出现专家坍缩（所有 token 都路由到少数专家）</li>
+<li>2.5× 缩放是 DeepSeek 通过实验调出的经验值，过高会导致训练不稳定，过低则 MoE 难以收敛</li>
+</ul>
+<p><strong>信息来源</strong>：DeepSeek-V3 技术报告 + 名词解释附录</p>
+<hr/>
+
+<h3 id="ai-4">4. FP8 E4M3 量化：128×128 块级粒度</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：DeepSeek V3 训练为何能全链路使用 FP8？块级 128×128 量化的数学原理与数值例子是什么？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>E4M3 格式</strong>：1 符号位 + 4 指数位 + 3 尾数位，动态范围 <code>[~2^-9, 448]</code>，相比 BF16 减半存储带宽</li>
+<li><strong>块级量化粒度 128×128</strong>：将 tensor 划分为 128×128 块，每块独立计算 amax：
+  <pre><code>scale = amax(块) / 448         # 块级缩放因子
+x_q = round(x / scale)        # 量化为 FP8
+反量化: x' = x_q · scale</code></pre>
+</li>
+<li><strong>为什么需要块级</strong>：张量级量化会被异常值（outlier）拖低所有值精度；块级 128×128 平衡了精度与开销</li>
+<li><strong>保留敏感部分为 BF16</strong>：Embedding、Attention 输出、损失计算、归一化层仍用 BF16，仅 GEMM 主路径用 FP8</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>H800 实测相比 BF16 训练吞吐提升约 1.3×，模型质量损失 &lt; 0.5%</li>
+<li>块级量化对异常值的鲁棒性 <code>≈ 32×</code> 张量级量化</li>
+<li>DeepSeek V3 是<strong>第一个</strong>在超大规模（671B）训练中规模化使用 FP8 的开源模型</li>
+</ul>
+<p><strong>信息来源</strong>：NVIDIA H800 FP8 白皮书 + DeepSeek-V3 论文</p>
+<hr/>
+
+<h3 id="ai-5">5. MTP 多 Token 投机：1.76× 加速的数学原理</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：DeepSeek V3 的 MTP（Multi-Token Prediction）在训练与推理中分别起什么作用？加速比的数学公式是什么？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>训练阶段</strong>：每个主 token 后跟 D 个 MTP head，每个 head 预测下一个 token，主损失 + λ·Σ MTP 损失，提高训练信号密度：
+  <pre><code>L_total = L_main + λ · (L_mtp1 + L_mtp2 + ... + L_mtpD)</code></pre>
+</li>
+<li><strong>推理阶段</strong>：MTP head 用作<strong>投机解码</strong>，主模型一次出 1 个 token，MTP 头额外预测 D 个候选 token，小模型/验证模型并行打分，接受率 p 时平均加速：
+  <pre><code>S(D) = (1 - p^D) / ((1 - p) · D)        # 期望实际步数 / 1</code></pre>
+  <p>D=1, p=0.8 → 1.76×；D=2, p=0.8 → 2.39×（理论上限 3.0×）</p>
+</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>MTP 是<strong>一举两得</strong>的设计：训练提高信号密度，推理可零成本切换为投机解码（无需外挂 draft model）</li>
+<li>投机加速比随接受率 <code>p</code> 上升呈幂函数增长，但 <code>D</code> 也不能无限大（验证开销线性增长）</li>
+<li>工业实测 p 通常在 0.6-0.9 之间，D 取 2~4 是 sweet spot</li>
+</ul>
+<p><strong>信息来源</strong>：DeepSeek-V3 技术报告 + <a href="../AI/2026-08-13-deepseek分析.html#mtp">DeepSeek 分析 - MTP 章节</a></p>
+<hr/>
+
+<h3 id="ai-6">6. Transformer 源代码逐段分析：投影、注意力与降维机制</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：如何读懂 Transformer 的 PyTorch 源码？Multi-Head 注意力如何做到「投影 512→512 但每头 64 维」？FFN 为什么升维到 2048？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>核心 6 模块</strong>：PositionalEncoding → ScaledDotProductAttention → MultiHeadAttention → PositionwiseFFN → LayerNorm → SublayerConnection</li>
+<li><strong>Multi-Head 投影与降维</strong>：
+  <ul>
+    <li><code>W_q / W_k / W_v ∈ ℝ^{512×512}</code> 看起来没降维</li>
+    <li>但实际 <code>Q = X @ W_q</code> 后 reshape 为 <code>[B, h, L, 64]</code>（h=8 头），每头 64 维</li>
+    <li>每头独立做 <code>softmax(QK^T / √64)</code>，最后拼接回 512 后过一次 <code>W_o ∈ ℝ^{512×512}</code></li>
+  </ul>
+</li>
+<li><strong>FFN 升维 → 降维</strong>：<code>512 → 2048 → 512</code>，中间层升维 4×，提供更大表征空间容纳非线性关系，再用 <code>W_2</code> 投影回模型维度</li>
+<li><strong>LayerNorm</strong>：(x − μ)/σ · γ + β，逐样本对 d_model 维归一化，稳定训练</li>
+<li><strong>SublayerConnection</strong>：Pre-Norm 模式 <code>x + dropout(sublayer(norm(x)))</code>，比 Post-Norm 更易训练深层模型</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>「投影 = 矩阵乘法」是 MHA 的核心，但多头 attention 的「降维」是通过<strong>分头 reshape</strong> + 独立 softmax 实现的，而非减小矩阵列数</li>
+<li>残差 + LayerNorm 是不变性的关键：<strong>深度网络的可训练性</strong>几乎完全依赖这两个 trick</li>
+<li>FFN 升维 4× 是经验值，标准 Transformer base 用 4×，large 用 4× ~ 8×</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>"Attention Is All You Need" 论文 + <a href="../AI/2026-08-13-transformer-architecture-analysis.html">Transformer 架构源代码分析</a></li>
+</ul>
+<hr/>
+
+<h3 id="ai-7">7. 推理场景 KV Cache 优化方案速查</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：LLM 推理时 KV Cache 占用越来越大，有哪些主流优化方案？各自适用场景是什么？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>MQA（Multi-Query Attention）</strong>：所有头共享一组 K/V，KV 缓存缩小 h 倍，损失轻微质量，Falcon / PaLM 采用</li>
+<li><strong>GQA（Grouped-Query Attention）</strong>：分组共享（典型 g=8），折中 MHA 与 MQA，LLaMA-2 / Mistral 采用</li>
+<li><strong>MLA（Multi-head Latent Attention）</strong>：DeepSeek 方案，压缩到一个低秩潜向量 c，71× 压缩比，质量近无损</li>
+<li><strong>KV Cache 量化</strong>：FP8/INT4 量化缓存，进一步减半/4×，需谨慎设计 dequant 顺序</li>
+<li><strong>KV Cache 分级（Paged / Offload）</strong>：vLLM PagedAttention 用 OS 风格的页表管理，CPU/GPU 分层 offload 处理超长上下文</li>
+<li><strong>窗口 Attention + 全局 Token</strong>：滑动窗口（如 Mistral 8K） + 少量全局 token，平衡长上下文与显存</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>KV Cache 显存 = <code>2 · L · n_layers · n_heads · head_dim · bytes_per_elem</code>，是 LLM 推理显存的<strong>主要</strong>构成</li>
+<li>方案选型：极致压缩选 MLA（DeepSeek），平衡通用性选 GQA（LLaMA-2 系），工业首选 GQA</li>
+<li>PagedAttention 改变显存分配方式（页表虚拟化），可以<strong>进一步</strong>配合 GQA/MLA 共同使用</li>
+<li>量化 KV 通常在 INT4 / FP8 仍能保持 perplexity 损失 &lt; 1%</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>vLLM / TGI 工程文档 + <a href="../AI/2026-08-14-KV_Cache深度分析报告.html">KV Cache 深度分析报告</a></li>
+</ul>
+<hr/>
+
+<h2 id="comm">Communication · 并行算法 / 总线协议 / RDMA</h2>
+
+<h3 id="comm-1">8. 流水线并行（PP）四种调度策略对比</h3>
+<ul>
+<li><strong>分类</strong>：Communication</li>
+<li><strong>问题描述</strong>：分布式训练中 Pipeline Parallelism 的 GPipe / 1F1B / Interleaved-1F1B / Zero Bubble 调度是怎样的？气泡率、显存、通信量如何对比？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>符号约定</strong>：p stages、b micro-batches、vpp（chunk 数）、g（warmup 数）、T_F/T_B/T_W（前/反向/通信时间）</li>
+<li><strong>Naive Model Parallelism</strong>：batch 整体前向一次再反向
+  <ul>
+    <li>Bubble Rate = (p−1)/p = 75%（p=4）</li>
+  </ul>
+</li>
+<li><strong>GPipe</strong>：batch 切成 b 份 micro-batch，前向流水、反向集中在尾部
+  <ul>
+    <li>Bubble Rate = (p−1)/(b+p−1)（b 越大越好）</li>
+    <li>显存峰值大（M_F × b/p，因为激活值需等到对应 micro-batch 反向完成）</li>
+  </ul>
+</li>
+<li><strong>1F1B</strong>：一次前向立即接一次反向
+  <ul>
+    <li>激活值无需长时间堆积，显存与 stage 位置相关</li>
+    <li>Bubble Rate 比 GPipe 略高，但显存明显更小</li>
+  </ul>
+</li>
+<li><strong>Interleaved-1F1B（VPP）</strong>：每 stage 持有 vpp 个 chunk
+  <ul>
+    <li>Bubble Rate = (p−1)/(p−1 + vpp · b)，可显著降低</li>
+    <li>通信次数 ×vpp；峰值显存 ≈ 1F1B 量级</li>
+    <li>warmup 数公式：<code>g = ⌊(p − vpp) / (vpp · (vpp − 1))⌋ + 1</code></li>
+  </ul>
+</li>
+<li><strong>Zero Bubble</strong>：把反向进一步拆为 weight/B-input/后向传播三段，气泡理论可压至 0，工程实现复杂</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li><strong>b 越大</strong>对所有策略都好（气泡变小），但显存压力会上升</li>
+<li><strong>vpp</strong> 是工程甜甜圈：vpp=2 通常够用，vpp=4 即开始带来可观通信开销</li>
+<li>实测选型：标准选择 1F1B；显存紧 + batch 大 → GPipe；极致吞吐 → Interleaved-1F1B</li>
+<li>提示气泡：<code>p=4, vpp=2, b=8</code> 时 Interleaved-1F1B 气泡率 27.3%，远低于 1F1B 的 42.9%</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>知乎《流水线并行可视化调度》 + <a href="../Communication/2026-08-14-并行算法知识.html">并行算法知识文档</a></li>
+</ul>
+<hr/>
+
+<h3 id="comm-2">9. CXL 协议分层 / 一致性 / 内存池编址</h3>
+<ul>
+<li><strong>分类</strong>：Communication</li>
+<li><strong>问题描述</strong>：CXL 1.0~3.0/3.1/4.0 协议栈、设备类型、一致性模型、内存池拓扑演进如何？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>协议栈</strong>：物理层 PCIe + 3 个上层子协议
+  <ul>
+    <li><code>CXL.io</code>：非一致 DMA（替代 PCIe NVMe 等）</li>
+    <li><code>CXL.cache</code>：设备缓存主机内存（coherency）</li>
+    <li><code>CXL.mem</code>：主机访问设备内存（load/store）</li>
+  </ul>
+</li>
+<li><strong>设备类型</strong>：
+  <ul>
+    <li>Type 1：加速器（仅 cache + io）</li>
+    <li>Type 2：加速器 + 内存</li>
+    <li>Type 3：内存扩展设备（CXL.mem）</li>
+  </ul>
+</li>
+<li><strong>一致性</strong>：基于 MESI 协议扩展，flit 格式嵌入 snoop 信息，三种一致性级别：None / Device-coherent / Host-coherent</li>
+<li><strong>CXL 3.x 内存池</strong>：Multi-Head + FM API，多主机直接访问共享内存池，无 SW fabric 中转</li>
+<li><strong>CXL 4.0</strong>：Fabric 全面化，跨 switch 域支持一致性，性能数量级接近本地 DDR</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>CXL 是<strong>内存解耦</strong>的关键技术：把内存从 CPU 板上搬到 PCIe/CXL 设备上，扩展容量/带宽</li>
+<li>CXL 3.x Multi-Head 让内存池成为可能：8 个 host 共享 4 个 device，省成本</li>
+<li>CXL 4.0 的 Fabric 取代 NUMA，但仍需要 CCIX、OpenCAPI 等竞品协议对比验证</li>
+<li>延迟：CXL 4.0 ~100ns，本地 DDR5 ~80ns，比 NVMe 50μs 好 500×</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>CXL 联盟官方规范 + <a href="../Communication/2026-08-14-CXL协议技术手册.html">CXL 协议技术手册</a></li>
+</ul>
+<hr/>
+
+<h3 id="comm-3">10. RDMA 零拷贝与传统网络对比</h3>
+<ul>
+<li><strong>分类</strong>：Communication</li>
+<li><strong>问题描述</strong>：RDMA 为什么比传统 TCP/IP 网络快？零拷贝、Kernel Bypass、地址搬移的原理是什么？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>传统网络痛点</strong>：每次收发包经过「用户态 → 内核态 → 驱动 → 网卡 → 内核 → 用户态」6 次拷贝 + 4 次上下文切换，CPU 占满</li>
+<li><strong>RDMA 三大特征</strong>：
+  <ul>
+    <li><strong>零拷贝</strong>：网卡直接 DMA 读写用户态注册的内存区（MR），无内核拷贝</li>
+    <li><strong>Kernel Bypass</strong>：应用调用 <code>ibv_post_send</code> 直通网卡，无系统调用</li>
+    <li><strong>CPU Offload</strong>：传输协议全部由网卡硬件完成，CPU 仅做控制面</li>
+  </ul>
+</li>
+<li><strong>三种传输模式</strong>：
+  <ul>
+    <li><strong>RC（Reliable Connection）</strong>：可靠连接，最完整特性，有序交付</li>
+    <li><strong>UC（Unreliable Connection）</strong>：不可靠连接，无重传</li>
+    <li><strong>UD（Unreliable Datagram）</strong>：不可靠数据报，最大 MTU 4KB，用于控制面 / 多播</li>
+  </ul>
+</li>
+<li><strong>核心对象</strong>：MR（Memory Region）→ 虚拟地址 + 物理页 + rkey/lkey 注册到网卡 → 远端通过 rkey 直读</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>RDMA 相比传统 TCP 延迟从 <code>~50μs</code> 降到 <code>~1-2μs</code>，带宽利用提升 70%+</li>
+<li><strong>适用场景</strong>：分布式存储（如 Ceph RDMA）、AI 训练 NCCL 通信、数据库跨节点访问</li>
+<li><strong>代价</strong>：网卡贵、需要专用交换机 / 路由支持（RoCE v2 需无损以太网，配置 PFC+ECN）</li>
+<li>RDMA 不是银弹：<strong>小包场景</strong>反不如 sendmsg/IO_uring（系统调用开销固定）</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>InfiniBand Architecture Spec + <a href="../Communication/2026-08-14-RDMA实现原理.html">RDMA 实现原理</a></li>
+</ul>
+<hr/>
+
+<h2 id="comp">Computer · 服务器与计算机基础</h2>
+
+<h3 id="comp-1">11. 服务器硬件体系速查</h3>
+<ul>
+<li><strong>分类</strong>：Computer</li>
+<li><strong>问题描述</strong>：现代服务器由哪些核心硬件构成？CPU/内存/存储/网络的层级与互通关系是什么？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>主板与总线层次</strong>：
+  <ul>
+    <li>CPU ↔ 内存：DIMM 插槽（DDR5 多通道）</li>
+    <li>CPU ↔ PCIe 设备：PCIe 5.0/6.0 ×16</li>
+    <li>CPU ↔ 网络：PCIe NIC（CXL/RoCE）</li>
+  </ul>
+</li>
+<li><strong>CPU 关键参数</strong>：核心数 / 主频 / 缓存层级（L1 / L2 / L3）/ TDP / NUMA 节点</li>
+<li><strong>内存体系</strong>：DRAM 类型（DDR5 / HBM3）、ECC、channel 数、rank / bank 结构</li>
+<li><strong>存储</strong>：NVMe SSD（PCIe 5.0 ×4 14GB/s）、分层缓存（Optane 已停产）、RAID</li>
+<li><strong>网络</strong>：NIC（25G/100G/200G）、交换芯片、BMC 带外管理口</li>
+<li><strong>机柜与 Scale-Out</strong>：1U/2U 机架、ToR 交换机、Spine-Leaf 拓扑</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li><strong>NUMA 重要性</strong>：跨 socket 访问延迟是本 socket 的 1.5-3×，AI 训练必须绑定亲和性</li>
+<li><strong>PCIe 通道</strong>：服务器 CPU 通常 64-128 lane PCIe 5.0，是带宽瓶颈关键</li>
+<li><strong>BMC</strong>（IPMI）：独立管理通道，OS 崩溃也可重启 / 装系统，是数据中心标配</li>
+<li>Scale-Up（机内/机柜内）与 Scale-Out（跨机柜）是数据中心两种拓扑，PCIe/CXL/UAlink 是 Scale-Up 关键</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li><a href="../Computer/2026-08-14-服务器基础知识学习笔记.html">服务器基础知识学习笔记</a> + <a href="../Computer/2026-08-14-计算机基础知识学习笔记.html">计算机基础知识学习笔记</a></li>
+</ul>
+<hr/>
+
+<h2 id="other">Other · 名词解释</h2>
+
+<h3 id="other-1">12. 低秩投影压缩（SVD / MLA / LoRA 通透解释）</h3>
+<ul>
+<li><strong>分类</strong>：Other</li>
+<li><strong>问题描述</strong>：「低秩投影压缩」是什么？MLA、LoRA 中如何应用？为什么能节约大量存储/参数量？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>SVD 数学基础</strong>：任意矩阵 <code>A ∈ ℝ^{m×n}</code> 可分解为 <code>U Σ Vᵀ</code>，其中 Σ 仅 r=rank(A) 个非零奇异值。截断取 top-k 奇异值后 <code>A ≈ U_k Σ_k V_kᵀ</code>，存储从 m·n 降到 k·(m+n)</li>
+<li><strong>MLA 应用</strong>：将 KV Cache 矩阵 <code>K V ∈ ℝ^{L × d_kv}</code> 通过 <code>W_DKV ∈ ℝ^{d_c × d_kv}</code> 压缩到 <code>c ∈ ℝ^{L × d_c}</code>：
+  <ul>
+    <li>L=4096, d_kv=128, d_c=4：存储从 524288 项 → 16384 项（32×）</li>
+    <li>DeepSeek 实测 KV 缓存压缩 71×，因配置 overhead + 头共享机制叠加</li>
+  </ul>
+</li>
+<li><strong>LoRA 应用</strong>：冻结预训练权重 W，只训练低秩增量 ΔW = B A（其中 <code>B ∈ ℝ^{d×r}</code>, <code>A ∈ ℝ^{r×d}</code>，r≪d）：
+  <pre><code>训练参数量: r·(d + d) ≪ d²
+前向: h = (W + ΔW) x = W x + (B A) x</code></pre>
+  d=4096, r=8：训练参数从 16.78M → 65536（256× 节省）</li>
+<li><strong>数值示例（4 维 → 2 维）</strong>：
+  <pre><code>h = [6.0, 8.0, 6.4, 7.6]ᵀ
+W ∈ ℝ²ˣ⁴, U ∈ ℝ⁴ˣ²
+c = W h = [6.2, 7.8]ᵀ        # 4 维 → 2 维
+h' = U c ≈ [5.91, 7.88, 6.30, 7.48]ᵀ
+相对 Frobenius 误差 ≈ 2.8%</code></pre>
+</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>低秩压缩的<strong>前提</strong>：原矩阵本质低秩（信息冗余），否则截断会损失大量信息</li>
+<li>工程实践：MLA 用于<strong>推理</strong>（压缩 KV），LoRA 用于<strong>微调</strong>（增量训练），二者机制相似但场景不同</li>
+<li><strong>代价</strong>：训练时需要质量较高的 W_DKV / B / A 参数，否则下游任务性能下降</li>
+<li>同一思想还体现在 SVD-based quantization、PCA、Low-Rank Adapter 等多个 LLM 压缩技术中</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li><a href="名词解释.html#rank-projection">名词解释.html - 低秩投影压缩</a> + LoRA / DeepSeek-V2 原文</li>
+</ul>
+<hr/>
+
+<h2 id="summary">今日技术沉淀小结</h2>
+<h3 id="summary-coverage">覆盖维度</h3>
+<table>
+<thead>
+<tr><th>领域</th><th>关键主题</th><th>文档引用</th></tr>
+</thead>
+<tbody>
+<tr><td>AI 大模型</td><td>DeepSeek V3 / Transformer / KV Cache / FP8 / 投机解码</td><td>deepseek分析 / transformer-architecture-analysis / KV_Cache深度分析报告</td></tr>
+<tr><td>并行通信</td><td>PP 流水线并行（GPipe/1F1B/VPP/ZB）</td><td>并行算法知识</td></tr>
+<tr><td>总线/网络</td><td>CXL / RDMA</td><td>CXL协议技术手册 / RDMA实现原理</td></tr>
+<tr><td>硬件基础</td><td>服务器 / 计算机组成</td><td>服务器/计算机基础知识学习笔记</td></tr>
+<tr><td>名词沉淀</td><td>低秩投影压缩（SVD / LoRA / MLA）</td><td>名词解释.html</td></tr>
+</tbody>
+</table>
+
+<h3 id="summary-takeaway">关键 Takeaway</h3>
+<ol>
+<li><strong>大模型推理优化核心</strong>：MLA / GQA / KV Cache 量化 / PagedAttention 四件套</li>
+<li><strong>大模型训练成本压低</strong>：FP8 + DualPipe + MoE 三件套，单 token 激活 37B 训完 671B 模型</li>
+<li><strong>流水线并行调度选型</strong>：标准 1F1B / 显存紧 GPipe / 极致吞吐 VPP</li>
+<li><strong>内存解耦 / Scale-Up</strong>：CXL 4.0 + RDMA + NVLink/UAlink 形成算力池化</li>
+<li><strong>低秩压缩贯穿</strong>：MLA、LoRA、SVD-quantization、PCA 同源思想</li>
+</ol>
+
+<hr/>
+<p style="color: #8b949e; font-size: 0.85em; text-align: center; margin-top: 30px;">
+每日技术 FAQ · 自动化生成 · 2026-08-14 · 由 WorkBuddy 完成回顾与整理
+</p>
+</div>
+</body>
+</html>
