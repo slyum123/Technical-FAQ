@@ -217,6 +217,9 @@ Stage2:                     [F1][F2][F3][B1][B2][B3]
 
     <h2>三、GPipe</h2>
 
+    <img class="doc-image" src="images/gpipe-schedule.png" alt="GPipe 流水线调度示意图">
+    <p class="img-caption">GPipe 调度：4 个 device、4 个 micro-batch（F0-F3）。stage 间流水交错：device 0 算完 F0 就传给 device 1，自己继续算 F1；反向同样流水回传。气泡集中在流水线启动、结束以及前向→反向转换处，但激活值会在前向阶段持续堆积，形成显存峰值。</p>
+
     <h3>3.1 思想与调度</h3>
     <p>GPipe 将 mini-batch 切分为更小的 micro-batch。第一个 stage 计算完一份数据就立即传给下一个 stage，不必等整个 batch 完成。这样后面的 stage 可以更早开始，从而大幅减少气泡。</p>
 
