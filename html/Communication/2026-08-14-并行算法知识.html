@@ -178,9 +178,6 @@ Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
 
     <h2>二、Naive Model Parallelism</h2>
 
-    <img class="doc-image" src="images/naive-model-parallelism.png" alt="Naive Model Parallelism 调度示意图">
-    <p class="img-caption">Naive Model Parallelism：任意时刻仅一个设备在计算，其余设备空闲（气泡占比 (p-1)/p）</p>
-
     <h3>2.1 思想与调度</h3>
     <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。前向传播时数据依次通过每个 stage；反向传播时梯度依次回传。</p>
 
@@ -213,6 +210,9 @@ Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
     </div>
 
     <h2>三、GPipe</h2>
+
+    <img class="doc-image" src="images/naive-model-parallelism.png" alt="GPipe 流水线调度示意图">
+    <p class="img-caption">GPipe 调度：将 batch 切分为 4 个 micro-batch（F0-F3），先让所有 micro-batch 完成前向，再统一反向；可显著减少气泡，但会堆积激活值导致显存峰值升高。</p>
 
     <h3>3.1 思想与调度</h3>
     <p>GPipe 将 mini-batch 切分为更小的 micro-batch。第一个 stage 计算完一份数据就立即传给下一个 stage，不必等整个 batch 完成。这样后面的 stage 可以更早开始，从而大幅减少气泡。</p>
