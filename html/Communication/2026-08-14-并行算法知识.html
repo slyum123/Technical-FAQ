@@ -182,13 +182,14 @@ Stage2: [  ][  ][F1][F2][F3][  ][  ][  ][B3][B2][B1]
     <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。前向传播时数据依次通过每个 stage；反向传播时梯度依次回传。</p>
 
     <div class="frame-diagram">时间 →
-设备0(stage0): [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
-设备1(stage1):          等待              [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
-设备2(stage2):          等待                   等待                 [ F1..Fb（整个batch前向） ][ B1..Bb（整个batch反向） ]
+设备0(stage0): [ F(整个batch) ][     等待     ][     等待     ][     等待     ][     等待     ][ B(整个batch) ]
+设备1(stage1): [     等待     ][ F(整个batch) ][     等待     ][     等待     ][ B(整个batch) ][     等待     ]
+设备2(stage2): [     等待     ][     等待     ][ F(整个batch) ][ B(整个batch) ][     等待     ][     等待     ]
 
-说明：batch 不切分为 micro-batch，F1..Fb 同属一个 batch，
-     每个 stage 一次性完成整个 batch 的前向、再一次性完成反向；
-     任意时刻只有一张卡在计算
+说明：batch 不切分为 micro-batch，F1..Fb 同属一个 batch，每个 stage 一次性处理整个 batch。
+     必须先等最后一个 stage（stage2）前向完成、loss 计算出来，
+     反向才能从 stage2 开始依次回传（B2 → B1 → B0）；
+     因此每个 stage 的 F 与 B 之间隔着长等待，任意时刻只有一张卡在计算
 </div>
 
     <h3>2.2 特点</h3>
