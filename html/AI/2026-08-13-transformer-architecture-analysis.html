@@ -315,6 +315,31 @@ class PositionalEncoding(nn.Module):
       <li>输入输出形状不变：<code>[batch, seq_len, d_model]</code></li>
     </ul>
   </div>
+  <div class="semantic">
+    <h4>工作原理深度拆解</h4>
+    <p>这段代码的数学原型是论文中的正弦/余弦位置编码：</p>
+    <pre><code>PE(pos, 2i)   = sin(pos / 10000^(2i/d_model))
+PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model))</code></pre>
+    <p>代码用了一个技巧把上面公式转成向量运算：</p>
+    <ol>
+      <li><code>position</code> 形状 <code>[max_len, 1]</code>，表示每个位置的序号 0,1,2,...</li>
+      <li><code>div_term = exp(torch.arange(0, d_model, 2) * (-log(10000)/d_model))</code> 等价于 <code>1 / 10000^(2i/d_model)</code></li>
+      <li><code>position * div_term</code> 把每个位置 pos 乘到每个频率上，得到 <code>[max_len, d_model/2]</code></li>
+      <li>偶数维放 sin，奇数维放 cos，最终得到 <code>[max_len, d_model]</code></li>
+    </ol>
+    <h4>数值示例（d_model=4）</h4>
+    <p>假设 max_len=3，d_model=4，则：</p>
+    <pre><code>position = [[0], [1], [2]]
+div_term = [1/10000^0, 1/10000^(2/4)] = [1.0, 0.01]
+pe[0, 0::2] = sin(0 * [1.0, 0.01]) = [0, 0]
+pe[0, 1::2] = cos(0 * [1.0, 0.01]) = [1, 1]
+pe[1, 0::2] = sin(1 * [1.0, 0.01]) = [0.84, 0.01]
+pe[1, 1::2] = cos(1 * [1.0, 0.01]) = [0.54, 1.0]
+# 最终 pe[0] = [0, 1, 0, 1]
+#       pe[1] = [0.84, 0.54, 0.01, 1.0]</code></pre>
+    <p><code>register_buffer</code> 让 <code>pe</code> 不参与反向传播，但会随 <code>model.to(device)</code> 自动搬到 GPU；<code>forward</code> 里用切片 <code>self.pe[:, :x.size(1)]</code> 取前 seq_len 个位置，再与输入相加。</p>
+  </div>
+
 </div>
 
 <!-- ==================== Section 2 ==================== -->
@@ -382,6 +407,25 @@ class PositionalEncoding(nn.Module):
       <li>这个函数没有可学习参数，是纯数学运算</li>
     </ul>
   </div>
+  <div class="semantic teal">
+    <h4>工作原理深度拆解</h4>
+    <p>这 5 行代码本质上是在实现一个<strong>可微分的“软查询”</strong>。用具体形状走一遍就清楚了：</p>
+    <ol>
+      <li><strong>QK^T</strong>：Q 形状 <code>[B, H, Lq, dk]</code>，K 转置后形状 <code>[B, H, dk, Lk]</code>。矩阵乘法把最后两维相乘，得到 <code>[B, H, Lq, Lk]</code>。每个元素 scores[b,h,i,j] = Q[b,h,i,:] · K[b,h,j,:]，即“第 i 个查询和第 j 个键有多像”。</li>
+      <li><strong>/ sqrt(dk)</strong>：当 dk=64 时，随机向量的点积方差大约是 dk 倍。除以 sqrt(dk)=8 后，方差回到 1，softmax 输入不会太大。</li>
+      <li><strong>masked_fill</strong>：把 mask=0 的位置填成 -1e9。softmax 里 exp(-1e9)≈0，所以这些位置权重几乎为 0。</li>
+      <li><strong>softmax</strong>：在最后一个维度（key 维）做归一化，使每行和为 1，得到注意力概率分布。</li>
+      <li><strong>matmul(attn, V)</strong>：attn <code>[B,H,Lq,Lk]</code> 乘 V <code>[B,H,Lk,dv]</code>，得到 <code>[B,H,Lq,dv]</code>。每行是 V 的加权平均。</li>
+    </ol>
+    <h4>数值示例</h4>
+    <pre><code>dk=4, Q=[1,0,1,0], K=[1,0,1,0], V=[10,20,30,40]
+Q·K^T = 2  (两个相同向量的点积)
+score = 2 / sqrt(4) = 1.0
+softmax 权重 ≈ [1.0] (只有一个 key 时)
+output = 1.0 * V = [10,20,30,40]
+# 实际有多个 key 时，V 会被多个值加权组合</code></pre>
+  </div>
+
 </div>
 
 <!-- ==================== Section 3 ==================== -->
@@ -474,6 +518,51 @@ class PositionalEncoding(nn.Module):
       <li>输入输出形状不变：<code>[batch, seq_len, d_model]</code></li>
     </ul>
   </div>
+  <div class="semantic">
+    <h4>深度拆解：投影（Projection）与“降维”</h4>
+    <p>你问到的“投影”和“降维”，核心就在 <code>self.W_q / W_k / W_v / W_o</code> 这四层线性变换里。下面逐层拆开讲。</p>
+
+    <h4>1. nn.Linear 在做什么？</h4>
+    <p>PyTorch 的 <code>nn.Linear(in_features, out_features)</code> 实现的是：</p>
+    <pre><code>y = x @ W.T + b</code></pre>
+    <p>其中 <code>W</code> 形状 <code>[out, in]</code>，<code>b</code> 形状 <code>[out]</code>。可以把 W 的每一行理解成一条“关注方向”：输出向量的第 i 维 = W 的第 i 行与输入 x 做内积，也就是 x 在这条方向上的投影长度。</p>
+
+    <h4>2. W_q/W_k/W_v 的输入输出都是 512→512，怎么叫“降维”？</h4>
+    <p>注意：投影之后还要<strong>分头</strong>。以 d_model=512、n_heads=8 为例：</p>
+    <ol>
+      <li><code>self.W_q(x)</code> 先把 x 映射到一个 512 维的“Query 专属空间”。这一步没有降维，只是重新组合了 512 维信息。</li>
+      <li><code>view(batch, -1, 8, 64)</code> 把 512 维切成 8 段，每段 64 维。</li>
+      <li><code>transpose(1, 2)</code> 把头维度提到前面，变成 <code>[batch, 8, seq_len, 64]</code>。</li>
+    </ol>
+    <p>所以，<strong>从全局看维度没变（512），但从单个头的视角看，每个头只处理 64 维</strong>。这就是你感觉到的“降维”：一个 512 维的复杂问题，被拆成 8 个并行的 64 维子问题。</p>
+
+    <h4>3. 为什么要先投影再分头，而不是直接切原始 x？</h4>
+    <p>直接切原始 x 相当于机械地把 512 维分成 8 段，每段固定对应某些原始维度。这样不同头只能看到固定的信息子集，无法灵活学习。先投影再分头，意味着：</p>
+    <ul>
+      <li>每个头先用自己独立的 W_q/W_k/W_v 对 512 维信息做重新加权</li>
+      <li>再从中取出它最需要的 64 维</li>
+      <li>每个头可以专注于不同语义子空间（语法、指代、位置、情感等）</li>
+    </ul>
+    <p>因此，投影的本质是<strong>让模型自己学习“每个头应该看什么”</strong>，而不是人为主规定。</p>
+
+    <h4>4. W_o 是做什么的？</h4>
+    <p>8 个头各自输出 64 维，拼接后是 512 维。W_o 对这 512 维再做一次线性组合，决定：</p>
+    <ul>
+      <li>哪些头的信息应该被加强</li>
+      <li>哪些头的信息应该被抑制</li>
+      <li>不同头的信息如何融合成最终的上下文向量</li>
+    </ul>
+    <p>如果把多头注意力比作“8 个专家分别给出意见”，W_o 就是“综合各专家意见并给出最终结论”的整合层。</p>
+
+    <h4>5. 形状变化完整链路</h4>
+    <pre><code>x:        [batch, seq_len, d_model] = [2, 3, 512]
+W_q(x):   [2, 3, 512]        (仍是 d_model)
+view+transpose: [2, 8, 3, 64]   (8 个头，每头 64 维)
+attn_out: [2, 8, 3, 64]
+transpose+view: [2, 3, 512]     (8×64=512 拼接回来)
+W_o:      [2, 3, 512]        (最终输出)</code></pre>
+  </div>
+
 </div>
 
 <!-- ==================== Section 4 ==================== -->
@@ -523,6 +612,29 @@ class PositionalEncoding(nn.Module):
       <li>输入输出形状不变：<code>[batch, seq_len, d_model]</code></li>
     </ul>
   </div>
+  <div class="semantic teal">
+    <h4>工作原理深度拆解</h4>
+    <p>FFN 虽然只有一行代码，但包含三个关键操作：</p>
+    <ol>
+      <li><strong>W_1 升维</strong>：<code>self.w_1(x)</code> 把 <code>[B,L,512]</code> 映射到 <code>[B,L,2048]</code>。这一步把每个 token 的特征向量扩展到一个更高维的空间，相当于给模型更多的“内部表达位”来组合特征。</li>
+      <li><strong>ReLU 非线性</strong>：<code>F.relu(...)</code> 把负值截断为 0。如果没有 ReLU，两层线性层叠加仍然只是一个线性变换，模型表达能力会大幅下降。ReLU 让模型可以学习“如果某个组合特征大于阈值就激活”的模式。</li>
+      <li><strong>W_2 降维</strong>：<code>self.w_2(...)</code> 把 <code>[B,L,2048]</code> 压缩回 <code>[B,L,512]</code>。这一步从 2048 维的高维表达里筛选出最有用的 512 维信息，同时保证残差连接时维度匹配。</li>
+    </ol>
+    <h4>为什么是 512→2048→512？</h4>
+    <p>论文里 d_ff = 4 × d_model。升维 4 倍是一个经验折中：</p>
+    <ul>
+      <li>升得不够（如 512→1024→512）：内部表达空间不足，非线性变换能力弱</li>
+      <li>升得太多（如 512→8192→512）：参数量和计算量暴增，容易过拟合</li>
+      <li>4 倍在表达能力和效率之间取得了平衡</li>
+    </ul>
+    <h4>数值直觉</h4>
+    <pre><code>x = [0.5, -0.3, 1.2, -0.8]   # 4维
+W_1 把 x 映射到 8 维: [0.2, 1.5, -0.4, 0.0, 0.9, -1.1, 0.3, 0.7]
+ReLU: [0.2, 1.5, 0.0, 0.0, 0.9, 0.0, 0.3, 0.7]
+W_2 从 8 维压缩回 4 维: [1.1, -0.2, 0.8, 0.5]
+# 可以看到：升维创造了更多非线性组合的可能，降维保留了最重要的信息</code></pre>
+  </div>
+
 </div>
 
 <!-- ==================== Section 5 ==================== -->
@@ -568,6 +680,24 @@ class PositionalEncoding(nn.Module):
     </ul>
     <p>gamma 和 beta 是可学习参数，让模型自己决定归一化后的最佳分布（不一定是标准正态分布）。</p>
   </div>
+  <div class="key-points">
+    <strong>工作原理深度拆解：</strong>
+    <ul>
+      <li><strong>Step 1: 求均值</strong>：<code>mean = x.mean(-1, keepdim=True)</code>。对最后一个维度（特征维 d_model）求平均，每个 token 得到一个均值标量。</li>
+      <li><strong>Step 2: 求标准差</strong>：<code>std = x.std(-1, keepdim=True)</code>。同样是每个 token 独立计算，标准差用于衡量该 token 各维度上的“分散程度”。</li>
+      <li><strong>Step 3: 归一化</strong>：<code>(x - mean) / (std + eps)</code>。每个 token 被调整为均值 0、方差 1 附近。eps 防止除零。</li>
+      <li><strong>Step 4: 缩放和平移</strong>：<code>gamma * normalized + beta</code>。gamma 和 beta 是可学习参数，让模型自己决定最终分布的均值和方差。</li>
+    </ul>
+    <h4 style="margin-top:12px;color:#92400E">数值示例（d_model=3）</h4>
+    <pre><code>x = [2.0, 4.0, 6.0]
+mean = 4.0, std = 1.633
+normalized = ([2,4,6] - 4.0) / 1.633 = [-1.225, 0.0, 1.225]
+gamma = [1.0, 1.0, 1.0], beta = [0.0, 0.0, 0.0]
+output = [-1.225, 0.0, 1.225]
+# 如果 gamma=[2,2,2], beta=[1,1,1]
+# output = [-1.45, 1.0, 3.45]</code></pre>
+  </div>
+
 </div>
 
 <!-- ==================== Section 6 ==================== -->
@@ -615,6 +745,29 @@ class PositionalEncoding(nn.Module):
       <li>Encoder 中使用 2 个（注意力 + FFN），Decoder 中使用 3 个（注意力 + 交叉注意力 + FFN）</li>
     </ul>
   </div>
+  <div class="semantic">
+    <h4>工作原理深度拆解</h4>
+    <p><code>return x + self.dropout(sublayer(self.norm(x)))</code> 这一行是 Transformer 训练稳定性的关键，拆开看：</p>
+    <ol>
+      <li><strong>self.norm(x)</strong>：先把输入 x 归一化，稳定分布。这是 Pre-Norm 结构（先 Norm 再子层）。</li>
+      <li><strong>sublayer(...)</strong>：子层（注意力或 FFN）处理归一化后的输入。因为输入分布稳定，梯度不会爆炸/消失。</li>
+      <li><strong>self.dropout(...)</strong>：对子层输出随机置零一部分维度，防止过拟合。</li>
+      <li><strong>x + ...</strong>：残差连接。即使 dropout 把某些维度置零，原始 x 仍然完整保留，信息可以无损传播。</li>
+    </ol>
+    <h4>Pre-Norm vs Post-Norm</h4>
+    <ul>
+      <li><strong>Post-Norm（原始论文）</strong>：<code>LayerNorm(x + sublayer(x))</code>。残差路径上的梯度会经过 LayerNorm，深层时梯度仍然可能不稳定。</li>
+      <li><strong>Pre-Norm（本实现）</strong>：<code>x + sublayer(LayerNorm(x))</code>。残差路径直接绕过 LayerNorm，梯度传播更稳定，现在几乎成为标准做法。</li>
+    </ul>
+    <h4>数值直觉</h4>
+    <pre><code>x = [1.0, 2.0, 3.0]
+norm(x) = [-1.225, 0.0, 1.225]
+sublayer(norm(x)) = [0.1, 0.2, -0.3]
+dropout(...) = [0.1, 0.0, -0.3]  # 第二个维度被随机置零
+output = x + dropout_out = [1.1, 2.0, 2.7]
+# 即使 dropout 把某些信息扔了，x 的原始信息还在</code></pre>
+  </div>
+
 </div>
 
 <!-- ==================== Section 7 ==================== -->
@@ -1542,6 +1695,22 @@ if __name__ == "__main__":
       <td>[B, tgt_len, vocab_size]</td>
       <td>归一化</td>
     </tr>
+  </table>
+
+    <h3>三（补）. 完整数据流形状变化</h3>
+  <p>以机器翻译为例，从输入到输出，张量形状如何一步步变化：</p>
+  <table>
+    <tr><th>阶段</th><th>形状</th><th>说明</th></tr>
+    <tr><td>src token IDs</td><td>[B, src_len]</td><td>整数序列，如 [B, 20]</td></tr>
+    <tr><td>Embedding + sqrt(d_model)</td><td>[B, src_len, D]</td><td>如 [B, 20, 512]</td></tr>
+    <tr><td>+ Positional Encoding</td><td>[B, src_len, D]</td><td>形状不变，逐元素加</td></tr>
+    <tr><td>EncoderLayer Self-Attn</td><td>[B, src_len, D] → [B, src_len, D]</td><td>每个位置关注全部位置</td></tr>
+    <tr><td>EncoderLayer FFN</td><td>[B, src_len, D] → [B, src_len, D]</td><td>逐位置非线性变换</td></tr>
+    <tr><td>Encoder 输出</td><td>[B, src_len, D]</td><td>传给 Decoder 的 Cross-Attention</td></tr>
+    <tr><td>Decoder 输入</td><td>[B, tgt_len]</td><td>目标序列右移一位</td></tr>
+    <tr><td>Decoder 输出</td><td>[B, tgt_len, D]</td><td>含源序列+目标序列信息</td></tr>
+    <tr><td>Output Projection</td><td>[B, tgt_len, tgt_vocab]</td><td>线性投影到词表大小</td></tr>
+    <tr><td>log_softmax</td><td>[B, tgt_len, tgt_vocab]</td><td>log 概率，配合 NLLLoss</td></tr>
   </table>
 
   <h3>三、核心设计思想总结</h3>
