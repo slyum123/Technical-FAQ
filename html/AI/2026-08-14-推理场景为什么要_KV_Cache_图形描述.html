@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推理场景为什么要 KV Cache（图形描述）</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.7; padding: 40px 20px; }
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.3em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.1em; }
+p { margin: 10px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code { background: #1c2128; color: #f0883e; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+pre { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0; }
+pre code { background: none; color: #c9d1d9; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92em; }
+th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; display: block; }
+.page { margin: 32px 0; padding-top: 16px; border-top: 1px solid #30363d; }
+.page:first-of-type { border-top: none; }
+.back-link { display: inline-block; margin-bottom: 20px; color: #58a6ff; text-decoration: none; font-size: 0.9em; }
+.back-link:hover { text-decoration: underline; }
+.empty { color: #8b949e; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../../index.html">&larr; 返回索引</a>
+<h1>推理场景为什么要 KV Cache（图形描述）</h1>
+<p style="color:#8b949e; margin-bottom:24px;">来源：PDF 学习笔记 · 共 10 页 · 提取文本 2671 字 · 提取插图 16 张</p>
+<div class="page" id="page-1"><h2>第 1 页</h2><p>推理场景为什么要KVcache（图形描述）？​</p><p>1. 推理场景：LLM 矩阵Prefill和decoder阶段全流程​</p><p>•</p><p>​</p><p>•</p><p>LLM推理中，每次预测一个新token都要对于前面的所有token进行一次QKV计算。​</p><p>•</p><p>因为W(q)，W(k)，W(v)权重全局统一， ​</p><p>◦在prefiil阶段时，所有输入的请求token会一起并行计算预测到下一个token，并且得到这些请</p><p>求token对应的K，V。​</p><p>◦在decode阶段，只需要新生成的token做一次KV计算即可，老的请求token并不需要重新计算</p><p>KV（因为在prefill阶段已经生成了，KV 并不会变化）。如果decode阶段，只要新生成一个</p><p>token，就要叠加老的token重新计算，那么计算量非常大，浪费算力。​</p><p>•</p><p>​</p><p>•</p><p>为了降低计算工作量，节省算力，因此将不变的KV先存储下来，通过“以存代算“的机制， 就出</p><p>现了KVcache方案，每次都把之前计算好的KV保存在cache中。这样只需要计算新token的Q和其他</p><p>token的KV即可。大幅减少算力，但是KVcache对于内存空间占用比较大，因此在保存KVcache</p><p>时，需要考虑空间优化方式。​</p><p>•</p><p>​</p><p>•</p><p>举例： 按照 h(num)=2,  D(model)=4（维度）,    D_k = D_v =2  （D_k和D_v的维度</p><p>=D(model)/h(num )）​</p><p>•</p><p>​</p><p>a. 阶段1： prefill​</p><p>•</p><p>​</p><p>•</p><p>Prefill全景图：     Multi-Head  Attention:      ​</p><p>•</p><p>Wq,Wk,Wv的维度只和  h(num)、D(model)  有关， 行列分别为（D(model )(，)D(model)</p><p>/H(num)）​</p><p>•</p><p>​</p></div>
+<div class="page" id="page-2"><h2>第 2 页</h2><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤1： 输入嵌入（Input       embedding）​</p><p>•</p><p>输入序列 &quot;别偷着学了带带我啊&quot; 转换为嵌入矩阵 [L=6,  D_model=4]   （一个序列中包含</p><p>了6个token，每个token按照4维转换成一个4维向量）​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤2： 线性投影（Linear Projection）：  ​</p><p>•</p><p>Input X （token向量）分别乘以 Wq、Wk、Wv （Wq/Wk/Wv的矩阵行 = 输入token向量</p><p>的维度，Wq/Wk/Wv的矩阵列=D_model/header_number  (这种切分便于后续拼接)）得到 Q、</p><p>K、V。每个头的维度为 D_k=2​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p2-img1.png" alt="第 2 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p2-img2.png" alt="第 2 页 插图 2" /></div>
+<div class="page" id="page-3"><h2>第 3 页</h2><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤3：  计算原始分数 (Raw Scores)： ​</p><p>•</p><p>​</p><p>•</p><p>Q和K点积就是为了查找问题和书签的相关性，值越大表示越相似，因为向量相近； ​</p><p>•</p><p>值越小表示越不相似，如果=0表示两个向量垂直，根本没有相似性。​</p><p>•</p><p>Q × K^T 得到 [6, 6] 的原始注意力分数矩阵​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p3-img1.png" alt="第 3 页 插图 1" /></div>
+<div class="page" id="page-4"><h2>第 4 页</h2><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤4：  应用       Causal Mask​</p><p>•</p><p>将右上角（未来位置）设为 -∞，确保每个 token 只能看到自己和之前的 token​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤5： Softmax 归一化​</p><p>•</p><p>对每行做 Softmax，-∞ 位置变为 0，得到注意力权重​</p><p>•</p><p>​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p4-img1.png" alt="第 4 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p4-img2.png" alt="第 4 页 插图 2" /></div>
+<div class="page" id="page-5"><h2>第 5 页</h2><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤6： 加权求和       (Weighted Sum)​</p><p>•</p><p>​</p><p>•</p><p>Attention Weights × V 得到每个头的输出​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤7： 多头拼接 + 输出投影       (Concat + Output Projection)​</p><p>•</p><p>2 个头拼接后通过 Wo 投影回 D_model=4​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p5-img1.png" alt="第 5 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p5-img2.png" alt="第 5 页 插图 2" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p5-img3.png" alt="第 5 页 插图 3" /></div>
+<div class="page" id="page-6"><h2>第 6 页</h2><p>•</p><p>​</p><p>a. 阶段2： decoding​</p><p>•</p><p>​</p><p>•</p><p>Wq,Wk,Wv的维度只和 h(num)、D(model)  有关， 行列分别为（D(model )(，)D(model)</p><p>/H(num)）​</p><p>•</p><p>所以新生成的token起始乘以的 Wq,Wk,Wv权重行列并不会新增，只会基于原先的维度进行</p><p>值的修改。​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤1：  单       Token 输入​</p><p>•</p><p>​</p><p>•</p><p>Decoding 阶段只输入新生成的 1 个 Token &quot;！&quot;​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p6-img1.png" alt="第 6 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p6-img2.png" alt="第 6 页 插图 2" /></div>
+<div class="page" id="page-7"><h2>第 7 页</h2><p>•</p><p>新 token 投影得到自己的q, k, v，     k 和 v 追加到 Cache（下一次更新的token就可以</p><p>直接乘这个kv了）​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤3： 注意力计算​</p><p>•</p><p>q × K_cache^T 得到 [1, 7] 的注意力向量（新token的q需要和老的token的k以及自</p><p>己的k做点积）​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤4：  加权求和​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p7-img1.png" alt="第 7 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p7-img2.png" alt="第 7 页 插图 2" /></div>
+<div class="page" id="page-8"><h2>第 8 页</h2><p>•</p><p>Scores × V_cache 得到单个输出向量（新token的qk需要和老的token的v以</p><p>及自己的v做点积）)​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 步骤5： 多头拼接 + 输出投影​</p><p>•</p><p>2 个头拼接后通过 Wo 投影，输出下一个 token 的表示​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 备注： decoding（no cache）​</p><p>•</p><p>如果没有cache，那么每新增一个token，所有的token的QKV都要重新计算一次。​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p8-img1.png" alt="第 8 页 插图 1" /><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p8-img2.png" alt="第 8 页 插图 2" /></div>
+<div class="page" id="page-9"><h2>第 9 页</h2><p>•</p><p>​</p><p>•</p><p>​</p><p>•</p><p>​</p><p>a. 备注：decoding有KVcache的好处，计算量大幅减少​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p9-img1.png" alt="第 9 页 插图 1" /></div>
+<div class="page" id="page-10"><h2>第 10 页</h2><p>•</p><p>如果没有KV，从后面的下三角可以看出，prefill阶段有21次点积。新增一个token，要重新计算21</p><p>次+7次。​</p><p>•</p><p>如果有KV，prefill阶段有21次点积已经保存，新增一个token，只需要计算7次。​</p><p>•</p><p>​</p><p>•</p><p>​</p><img src="images/2026-08-14-推理场景为什么要_KV_Cache_图形描述-p10-img1.png" alt="第 10 页 插图 1" /></div>
+</div>
+</body>
+</html>

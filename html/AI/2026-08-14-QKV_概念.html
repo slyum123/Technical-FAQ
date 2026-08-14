@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QKV 概念</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.7; padding: 40px 20px; }
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.3em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.1em; }
+p { margin: 10px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code { background: #1c2128; color: #f0883e; padding: 2px 6px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+pre { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; overflow-x: auto; margin: 12px 0; }
+pre code { background: none; color: #c9d1d9; padding: 0; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 0.92em; }
+th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; display: block; }
+.page { margin: 32px 0; padding-top: 16px; border-top: 1px solid #30363d; }
+.page:first-of-type { border-top: none; }
+.back-link { display: inline-block; margin-bottom: 20px; color: #58a6ff; text-decoration: none; font-size: 0.9em; }
+.back-link:hover { text-decoration: underline; }
+.empty { color: #8b949e; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../../index.html">&larr; 返回索引</a>
+<h1>QKV 概念</h1>
+<p style="color:#8b949e; margin-bottom:24px;">来源：PDF 学习笔记 · 共 2 页 · 提取文本 981 字 · 提取插图 1 张</p>
+<div class="page" id="page-1"><h2>第 1 页</h2><p>QKV概念​</p><p>Transformer架构中， 在encoder和decoder阶段，都有一个MHA（multiheader Latent Attention）</p><p>模块，主要用于找到输入各token之间的依赖关系。其中查询（Query，简称Q）、键（Key，简称</p><p>K）和值（Value，简称V）这三个是核心中的核心，它们仨一起参与计算，才能得出序列之间的加权</p><p>依赖关系。​</p><p>​</p><p>核心定义：​</p><p>•</p><p>Query（Q）​：代表当前需要关注的目标，类似&quot;提问&quot;的需求向量，用于确定关注对象。​</p><p>•</p><p>Key（K）​：代表被关注对象的特征标识，类似&quot;响应&quot;的条件向量，用于匹配Query。​</p><p>•</p><p>Value（V）​：代表被选中对象的实际信息内容，类似&quot;回答&quot;的结果向量，用于输出加权后的特征。​</p><p>​</p><p>​</p><p>物理意义：   Q是&quot;我需要什么&quot;，K是&quot;谁能提供&quot;，V是&quot;提供什么价值&quot;，三者通过点积建立关联，模拟</p><p>人类认知中&quot;目标-条件-反馈&quot;的决策过程。​</p><p>​</p><p>​</p><p>•</p><p>Query： 就相当于本token发出的问题。​</p><p>•</p><p>Key：    就相当于能解答这个问题的所有课本的书签​</p><p>•</p><p>value： 就相当于根据书签在对应的课本中查到的答案。​</p><p>​</p><p>每个token都能幻化出自己对应的Q，K，V。​</p><p>Q = X * W_Q​</p><p>K = X * W_K​</p><p>V = X * W_V​</p><p>​</p><p>​</p><p>QKV的运作流程：  ​</p><p>自注意力模块中，每个token都会发出请求问题query，向其他token询问答案。其他token先根据</p><p>token的问题请求query，找到自己的key，然后基于自己的key检索找到自己认为的答案value， 然后</p></div>
+<div class="page" id="page-2"><h2>第 2 页</h2><p>把答案发给提问token。token比较其他答案发来的value，然后给打上各自的权重， 会基于权重的大</p><p>小来挑选更准确的答案。​</p><p>​</p><p>​</p><p>对每一个查询向量 qᵢ（对应第 i 个元素）， 先算它和所有键向量 kⱼ 的点积，  再除以 √dₖ（目的是</p><p>让梯度更稳定），  最后过一下 softmax 做归一化，得到权重 αᵢⱼ。​</p><p>这些权重 αᵢⱼ 就是注意力分数， 代表第 i 个元素和第 j 个元素的关联程度。  最后，对第 i 个元素来</p><p>说，我们就用这些权重 αᵢⱼ，把所有值向量 vⱼ 做一次加权求和，​</p><p>得到的结果 zᵢ，就是这一步的输出。​</p><p>​</p><img src="images/2026-08-14-QKV_概念-p2-img1.png" alt="第 2 页 插图 1" /></div>
+</div>
+</body>
+</html>
