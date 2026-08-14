@@ -168,15 +168,6 @@
         <li>流水线开始和结束阶段，无法让所有 stage 同时满载。</li>
     </ul>
 
-    <div class="frame-diagram">时间 →
-Stage0: [F1][F2][F3]                              [B1][B2][B3]
-Stage1:           [F1][F2][F3]                    [B1][B2][B3]
-Stage2:                     [F1][F2][F3][B1][B2][B3]
-
-↑ 空白处以及反向需等待全链路前向完成而产生的间隙，即为流水线气泡（Bubble）。
-  反向自最后一个 stage 倒着回传：Stage2 先算 B，再 Stage1，最后 Stage0。
-</div>
-
     <h2>二、Naive Model Parallelism</h2>
 
     <img class="doc-image" src="images/naive-model-parallelism.png" alt="Naive Model Parallelism 调度示意图">
@@ -184,18 +175,6 @@ Stage2:                     [F1][F2][F3][B1][B2][B3]
 
     <h3>2.1 思想与调度</h3>
     <p>最直观的按层切分方式：将模型分成 <code>p</code> 个 stage，每个 stage 的参数和计算放在一张卡上。mini-batch 可以被切分为更小的 micro-batch，但在 Naive 模式下<strong>设备间不做流水交错</strong>——前一个 stage 必须把自己负责的所有 micro-batch 前向算完，后一个 stage 才能开始；前向全部完成后，再从最后一个 stage 依次反向回传。</p>
-
-    <div class="frame-diagram">时间 →
-设备0(stage0): [F0][F1][F2][F3]                                             [B0][B1][B2][B3]
-设备1(stage1):           [F0][F1][F2][F3]                                   [B0][B1][B2][B3]
-设备2(stage2):                     [F0][F1][F2][F3]                         [B0][B1][B2][B3]
-设备3(stage3):                               [F0][F1][F2][F3][B0][B1][B2][B3]
-
-说明：batch 被切分为 4 个 micro-batch（F0-F3），但 stage 间不做流水交错。
-     必须等最后一个 stage（stage3）完成全部前向、loss 算出后，
-     反向自 stage3 依次倒传回 stage0（B 在 stage3 紧接着 F，随后 stage2/1/0 依次跟进）；
-     任意时刻仅一个设备在计算
-</div>
 
     <h3>2.2 特点</h3>
     <ul>
@@ -222,15 +201,6 @@ Stage2:                     [F1][F2][F3][B1][B2][B3]
 
     <h3>3.1 思想与调度</h3>
     <p>GPipe 将 mini-batch 切分为更小的 micro-batch。第一个 stage 计算完一份数据就立即传给下一个 stage，不必等整个 batch 完成。这样后面的 stage 可以更早开始，从而大幅减少气泡。</p>
-
-    <div class="frame-diagram">时间 →
-Stage0: [F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
-Stage1: [  ][F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
-Stage2: [  ][  ][F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
-Stage3: [  ][  ][  ][F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
-
-↑ 气泡集中在开始、结束以及前向→反向转换处
-</div>
 
     <h3>3.2 特点</h3>
     <ul>
@@ -262,15 +232,6 @@ Stage3: [  ][  ][  ][F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
 
     <h3>4.1 思想与调度</h3>
     <p>1F1B 的核心是<strong>让每个 micro-batch 尽早进行反向传播</strong>，不必等待所有 micro-batch 前向完成。这样前向保留的激活可以尽早释放，从而降低设备的峰值显存。</p>
-
-    <div class="frame-diagram">时间 →
-Stage0: [F1][F2][B1][F3][B2][F4][B3][F5][B4][F6][B5][F7][B6][F8][B7][B8]
-Stage1: [  ][F1][F2][B1][F3][B2][F4][B3][F5][B4][F6][B5][F7][B6][F8][B7][B8]
-Stage2: [  ][  ][F1][F2][B1][F3][B2][F4][B3][F5][B4][F6][B5][F7][B6][F8][B7][B8]
-Stage3: [  ][  ][  ][F1][F2][B1][F3][B2][F4][B3][F5][B4][F6][B5][F7][B6][F8][B7][B8]
-
-稳定阶段：一次前向（F）紧跟一次反向（B）
-</div>
 
     <h3>4.2 三个阶段</h3>
     <ul>
@@ -317,18 +278,6 @@ Max Memory = M_F × p / p = M_F
     <h3>5.1 思想与调度</h3>
     <p>从 1F1B 可以看出，last stage 在稳定阶段已经没有气泡，但整个系统效率仍受前向串行依赖限制：last stage 不能立刻启动，需要 warmup；first stage 的反向也不能更早结束。Interleaved-1F1B 将每个 stage 上的模型再次切分为多个 chunk，这样 last stage 可以更早启动，first stage 的反向也能更早完成。</p>
 
-    <div class="frame-diagram">每个 stage 包含 2 个 chunk（vpp=2）
-
-时间 →
-Stage0-Ch0: [F1][F3][B1][F5][B3][F7][B5][B7]
-Stage0-Ch1: [F2][F4][B2][F6][B4][F8][B6][B8]
-Stage1-Ch0: [  ][F1][F3][B1][F5][B3][F7][B5][B7]
-Stage1-Ch1: [  ][  ][F2][F4][B2][F6][B4][F8][B6][B8]
-...
-
-组间交替执行，每个 chunk 内部仍维持 1F1B
-</div>
-
     <h3>5.2 特点</h3>
     <ul>
         <li>每个 pp stage 存在多个 chunk；</li>
@@ -362,16 +311,6 @@ Stage1-Ch1: [  ][  ][F2][F4][B2][F6][B4][F8][B6][B8]
 
     <h3>6.1 思想</h3>
     <p>Zero Bubble 系列方法（如 ZB1P、ZB2P）通过将反向传播进一步拆分为 <code>T_B</code>（输入梯度）和 <code>T_W</code>（参数梯度）两个阶段，并重新调度执行顺序，使得前向激活可以在完成 <code>T_B</code> 后立即释放，而 <code>T_W</code> 可以延迟执行以填充气泡，从而在理论上接近零气泡。</p>
-
-    <div class="frame-diagram">传统反向：B = 计算 x 梯度 + 计算 w 梯度 + 释放激活
-Zero Bubble：将 B 拆分为 B(输入梯度) 和 W(参数梯度)
-
-时间 →
-Stage0: [F1][F2][B1][W1][F3][B2][W2][F4][B3][W3]...
-Stage1: [  ][F1][F2][B1][W1][F3][B2][W2][F4][B3][W3]...
-
-W 阶段用来填充原本的空闲气泡
-</div>
 
     <h3>6.2 现状</h3>
     <p>Zero Bubble 目前仍在快速发展中，具体调度策略、内存权衡和工程实现细节因论文版本而异。本文保持“待更新”占位，后续可补充 ZB1P/ZB2P 的精确公式与可视化。</p>
