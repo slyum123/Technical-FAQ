@@ -275,6 +275,9 @@ Max Memory = M_F × p / p = M_F
 
     <h2>五、Interleaved-1F1B</h2>
 
+    <img class="doc-image" src="images/interleaved-1f1b-schedule.png" alt="Interleaved-1F1B 调度示意图">
+    <p class="img-caption">Interleaved-1F1B（VPP）调度：4 个 device、8 个 micro-batch，每个 stage 内部包含多个 chunk；stage 间交错执行，last stage 更早启动、first stage 反向更早结束，从而进一步降低气泡。</p>
+
     <h3>5.1 思想与调度</h3>
     <p>从 1F1B 可以看出，last stage 在稳定阶段已经没有气泡，但整个系统效率仍受前向串行依赖限制：last stage 不能立刻启动，需要 warmup；first stage 的反向也不能更早结束。Interleaved-1F1B 将每个 stage 上的模型再次切分为多个 chunk，这样 last stage 可以更早启动，first stage 的反向也能更早完成。</p>
 
