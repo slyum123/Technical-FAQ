@@ -259,61 +259,45 @@ tr:hover td { background: rgba(88,166,255,0.05); }
 </ol>
 
 <div class="frame-diagram">DeepSeek-V3 Architecture Overview:
-
-+=====================================================================+
-|                     DeepSeek-V3 (671B / 37B active)                 |
-+=====================================================================+
-|                                                                       |
-|  Input Tokens                                                         |
-|  [t_1, t_2, t_3, ..., t_n]                                            |
-|       |                                                               |
-|       v                                                               |
-|  +------------------+                                                 |
-|  | ParallelEmbedding |  (vocab=129280, dim=7168)                     |
-|  | (vocab parallel)  |                                                |
-|  +--------+---------+                                                 |
-|           |                                                           |
-|  +--------v---------+     +-----------------------+                   |
-|  |   Layer 0-2      |---->| MLA (Multi-head       |                   |
-|  |   (Dense Layer)  |     |  Latent Attention)    |                   |
-|  |                  |---->| MLP (Dense FFN)       |                   |
-|  +------------------+     +-----------------------+                   |
-|           |                                                           |
-|  +--------v---------+     +-----------------------+                   |
-|  |   Layer 3-60     |---->| MLA (Multi-head       |                   |
-|  |   (MoE Layer)    |     |  Latent Attention)    |                   |
-|  |   x 58 layers    |---->| DeepSeekMoE           |                   |
-|  |                  |     |  (256 experts, 8 act) |                   |
-|  +------------------+     +-----------------------+                   |
-|           |                                                           |
-|  +--------v---------+                                                 |
-|  | RMSNorm          |                                                 |
-|  | + Linear (head)  |  (dim=7168 -> vocab=129280)                    |
-|  +------------------+                                                 |
-|           |                                                           |
-|       Logits                                                          |
-|           |                                                           |
-|  +--------v---------+     +-----------------------+                   |
-|  | MTP Module 1     |---->| Transformer Block     |                   |
-|  | (Training only)  |---->| + Shared Embed/Head   |                   |
-|  | MTP Module 2     |     +-----------------------+                   |
-|  | ...              |                                                 |
-|  | MTP Module D     |                                                 |
-|  +------------------+                                                 |
-|                                                                       |
-|  Key Parameters:                                                      |
-|  - Total layers:        61 (3 dense + 58 MoE)                        |
-|  - Model dim:           7168                                          |
-|  - Attention heads:     128                                           |
-|  - KV LoRA rank:        512                                           |
-|  - Q LoRA rank:         1536                                          |
-|  - Routed experts:      256                                           |
-|  - Activated experts:   8 (per token)                                |
-|  - Shared experts:      2                                             |
-|  - Expert inter dim:    1408                                          |
-|  - Vocab size:          129280                                        |
-|  - Max context:         128K                                          |
-+=====================================================================+</div>
+DeepSeek-V3 总体架构（总参数 671B / 每 token 激活 37B）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入 Token [t_1, t_2, t_3, ..., t_n]
+   │
+   ▼
+并行嵌入层 ParallelEmbedding（词表 129280 → 维度 7168，词表并行切分）
+   │
+   ▼
+第 0-2 层（密集层，共 3 层）
+   ├──▶ MLA 多头潜在注意力（压缩 KV 缓存）
+   └──▶ MLP 密集前馈网络（全参数参与）
+   │
+   ▼
+第 3-60 层（MoE 层，共 58 层）
+   ├──▶ MLA 多头潜在注意力
+   └──▶ DeepSeekMoE（256 个路由专家，每 token 激活 8 个）
+   │
+   ▼
+RMSNorm 归一化 + 输出投影层（维度 7168 → 词表 129280）
+   │
+   ▼
+Logits（词表概率分布）→ 采样生成下一个 Token
+   │
+   ▼
+MTP 模块 1..D（仅训练时串联，预测未来 D 个 Token）
+   └──▶ Transformer 块 + 共享嵌入层 / 共享输出头
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+关键参数：
+  - 总层数：      61（前 3 密集 + 后 58 MoE）
+  - 模型维度：    7168
+  - 注意力头数：  128
+  - KV LoRA 秩：  512
+  - Q LoRA 秩：   1536
+  - 路由专家数：  256（每 token 激活 8 个）
+  - 共享专家数：  2
+  - 专家中间维度：1408
+  - 词表大小：    129280
+  - 最大上下文：  128K
+</div>
 
 <h3>层级结构</h3>
 <p>DeepSeek-V3 共 61 层 Transformer Block。前 3 层（Layer 0-2）使用密集 MLP 前馈网络，后 58 层（Layer 3-60）使用 MoE 稀疏前馈网络。这种设计使得早期层能学习通用特征表示，后期层通过专家路由实现容量扩展。</p>
@@ -339,59 +323,50 @@ tr:hover td { background: rgba(88,166,255,0.05); }
 </ul>
 
 <div class="frame-diagram">MLA Architecture (Low-Rank Compression):
-
-+=====================================================================+
-|                     MLA Forward Pass                                 |
-+=====================================================================+
-|                                                                       |
-|  Input x (bsz, seqlen, dim=7168)                                     |
-|       |                                                               |
-|       +--------+--------+                                             |
-|       |                 |                                             |
-|       v                 v                                             |
-|  +----------+    +--------------+                                     |
-|  | Query    |    | KV Compress  |                                     |
-|  | Path     |    | Path         |                                     |
-|  +----------+    +--------------+                                     |
-|  | wq_a     |    | wkv_a        |  dim -> kv_lora_rank(512)           |
-|  | (dim->   |    | (dim ->      |        + qk_rope_dim(64)            |
-|  |  1536)   |    |  576)        |                                     |
-|  | q_norm   |    | split        |                                     |
-|  | wq_b     |    |  kv(512)     |  k_pe(64)                           |
-|  | (1536 -> |    |  kv_norm     |  apply RoPE                         |
-|  |  128*192)|    |  wkv_b       |                                     |
-|  | split    |    |  (512 ->     |                                     |
-|  | q_nope   |    |   128*256)   |                                     |
-|  |  (128)   |    |              |                                     |
-|  | q_pe(64) |    |  k_nope(128) |  v(128)                             |
-|  | RoPE     |    |              |                                     |
-|  +----------+    +--------------+                                     |
-|       |                 |                                             |
-|       v                 v                                             |
-|  Attention Computation                                                |
-|  scores = q_nope @ k_nope^T + q_pe @ k_pe^T                          |
-|  scores *= softmax_scale                                              |
-|  output = softmax(scores) @ v                                         |
-|       |                                                               |
-|       v                                                               |
-|  +----------+                                                         |
-|  | wo       |  (128*128 -> dim)                                      |
-|  | RowPar.  |                                                         |
-|  +----------+                                                         |
-|       |                                                               |
-|  Output (bsz, seqlen, dim)                                           |
-+=====================================================================+
-
-KV Cache Comparison (per token, per layer):
-+-----------------------------------+----------+----------+
-| Mode                              | Naive    | Absorb   |
-+-----------------------------------+----------+----------+
-| K cache dims                      | 128*192  | 512      |
-| V cache dims                      | 128*128  | (in 512) |
-| PE cache dims                     | -        | 64       |
-| Total per token                   | 40,960   | 576      |
-| Compression ratio                 | 1x       | 98.6%    |
-+-----------------------------------+----------+----------+</div>
+MLA 前向计算流程（低秩压缩注意力）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入 x（批大小, 序列长度, 维度 7168）
+   │
+   ├──────────────────┬──────────────────┐
+   ▼                  ▼                  ▼
+Query 路径          KV 压缩路径        位置编码（共享）
+   │                  │                  │
+wq_a 下投影         wkv_a 下投影        precompute_freqs_cis
+(7168 → 1536)       (7168 → 576)       预计算 RoPE 频率
+   │                  │ 拆分              │
+q_norm 归一化        kv(512)  k_pe(64)    │
+   │                  │  │                │
+wq_b 上投影          kv_norm  │           │
+(1536 → 128×192)     │  应用 RoPE ◀───────┘
+   │                  │  │
+拆分                wkv_b 上投影(512 → 128×256)
+q_nope(128) q_pe(64)  │  │
+   │  应用 RoPE ◀────┘  │
+   │                  ▼
+   └──────────┬───────┘
+              ▼
+注意力计算：
+  分数 = q_nope @ k_nope^T + q_pe @ k_pe^T
+  分数 × softmax 缩放系数
+  输出 = softmax(分数) @ v
+              │
+              ▼
+wo 输出投影（RowParallel，128×128 → 7168）
+              │
+              ▼
+输出（批大小, 序列长度, 7168）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KV 缓存对比（每 token、每层）：
++-----------------+-----------+-----------+
+| 模式            | Naive 朴素 | Absorb 吸收 |
++-----------------+-----------+-----------+
+| K 缓存维度      | 128×192   | 512       |
+| V 缓存维度      | 128×128   | 含在 512 内 |
+| PE 位置缓存维度  | -         | 64        |
+| 每 token 总计   | 40,960    | 576       |
+| 压缩率          | 1 倍      | 98.6%     |
++-----------------+-----------+-----------+
+</div>
 
 <h3>两种实现模式</h3>
 <table>
@@ -425,66 +400,63 @@ KV Cache Comparison (per token, per layer):
 <p>传统 MoE 通过辅助损失函数强制负载均衡，但这会干扰模型主目标的梯度。DeepSeek-V3 创新性地采用<strong>动态偏置项</strong>策略：</p>
 
 <div class="frame-diagram">Auxiliary-Loss-Free Load Balancing:
+无辅助损失负载均衡（动态偏置机制）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+传统 MoE（带辅助损失）：
+  总损失 L_total = L_主损失 + α × L_辅助损失
+  辅助损失强制负载均衡，但会污染主任务梯度！
 
-+=====================================================================+
-|                Dynamic Bias Update Mechanism                        |
-+=====================================================================+
-|                                                                       |
-|  Traditional MoE (with auxiliary loss):                              |
-|  L_total = L_main + alpha * L_aux                                    |
-|  L_aux forces load balance but pollutes gradients!                   |
-|                                                                       |
-|  DeepSeek-V3 (auxiliary-loss-free):                                   |
-|  L_total = L_main  (+ tiny L_balance for sequence-level)            |
-|                                                                       |
-|  Routing with bias:                                                   |
-|  s_i,t = Sigmoid(u_t^T * e_i)         # affinity score              |
-|  g_i,t = s_i,t  if (s_i,t + b_i) in TopK  else  0                  |
-|                                                                       |
-|  b_i = dynamic bias term (NOT in gradient path!)                     |
-|                                                                       |
-|  Bias Update Rule (per training step):                                |
-|  +-------------------------------+                                   |
-|  | if expert_i is overloaded:    |                                   |
-|  |   b_i -= gamma                |   # decrease bias                 |
-|  | if expert_i is underloaded:   |                                   |
-|  |   b_i += gamma                |   # increase bias                 |
-|  +-------------------------------+                                   |
-|                                                                       |
-|  Key insight: bias adjusts routing WITHOUT entering                  |
-|  the loss function's gradient. Main objective is clean!              |
-|                                                                       |
-|  Additional: tiny sequence-level balance loss L_bal                  |
-|  L_bal = alpha * sum(load_per_expert / N)                           |
-|  (alpha is very small, just a safety net)                           |
-+=====================================================================+</div>
+DeepSeek-V3（无辅助损失）：
+  总损失 L_total = L_主损失（+ 极小的序列级平衡损失）
+  
+带偏置的路由：
+  亲和度分数  s_i = Sigmoid(u_t^T × e_i)
+  最终门控    g_i = s_i（当 s_i + b_i 在 Top-K 内，否则为 0）
+  b_i = 动态偏置项（不进入梯度计算路径！）
+
+偏置更新规则（每个训练步）：
++---------------------------------------------+
+| 若专家 i 过载：   b_i -= γ   （降低被选中概率）|
+| 若专家 i 欠载：   b_i += γ   （提高被选中概率）|
++---------------------------------------------+
+                 │
+                 ▼
+关键洞察：偏置调整路由，但绝不进入损失函数梯度，
+主目标函数保持纯净，不被负载均衡干扰！
+
+辅助安全网（极小权重）：
+  序列级平衡损失 L_bal = α × Σ(各专家负载 / N)
+  α 非常小，仅作为兜底防止极端失衡
+</div>
 
 <h3>路由机制</h3>
 <p>DeepSeek-V3 使用 Sigmoid 评分函数 + 组路由限制（Node-Limited Routing）。256 个专家分为 8 组，每 token 从受限组中选择 Top-K 专家。这种设计限制了跨节点通信开销——因为每个 GPU 节点承载一组专家（EP=64，8 节点 × 8 GPU/节点 = 64 GPU，每组 32 专家）。</p>
 
 <div class="frame-diagram">MoE Routing Flow (Per Token):
+MoE 路由流程（单个 Token 视角）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 1：计算亲和度分数
+  u_t（Token 隐状态，维度 7168）
+  s_i = Sigmoid(u_t^T × e_i)  对 i = 1..256
+  （e_i = 门控权重第 i 行，形状 [7168]）
 
-Step 1: Compute affinity scores
-  u_t (token hidden state, dim=7168)
-  s_i = Sigmoid(u_t^T * e_i)   for i = 1..256
-  (e_i = gate.weight[i], shape=[7168])
-
-Step 2: Add dynamic bias
+步骤 2：叠加动态偏置
   s_i' = s_i + b_i
 
-Step 3: Group-Limited Top-K Selection
-  256 experts = 8 groups x 32 experts
-  Limited groups = 1 (only select from top-1 groups)
-  Select Top-8 from allowed groups based on s_i'
+步骤 3：组受限 Top-K 选择
+  256 专家 = 8 组 × 32 专家
+  受限组数 = 1（只从得分最高的 1 个组内选）
+  在允许的组内按 s_i' 选出 Top-8 专家
 
-Step 4: Normalize weights
-  g_i = s_i / sum(selected s_j)   (for selected experts)
-  g_i = 0                          (for non-selected)
+步骤 4：归一化权重
+  g_i = s_i / Σ(被选中专家的 s_j)   （对选中专家）
+  g_i = 0                            （对未选中专家）
 
-Step 5: Expert computation
-  output = sum(g_i * Expert_i(u_t)) + SharedExperts(u_t)
-  where Expert_i(x) = w2(silu(w1(x)) * w3(x))
-  and SharedExperts = 2 always-active MLPs</div>
+步骤 5：专家计算
+  输出 = Σ(g_i × Expert_i(u_t)) + 共享专家输出(u_t)
+  其中 Expert_i(x) = w2( silu(w1(x)) × w3(x) )
+  共享专家 = 2 个始终激活的 MLP
+</div>
 
 <!-- ==================== MTP ==================== -->
 
@@ -494,53 +466,45 @@ Step 5: Expert computation
 <p>MTP 在训练时不仅预测下一个 token，还顺序预测未来 D 个 token。这增加了训练信号密度，让模型学会"提前规划"其表示。推理时 MTP 模块可丢弃（不影响主模型性能），也可用于投机解码加速推理。</p>
 
 <div class="frame-diagram">Multi-Token Prediction (MTP) Architecture:
+多 Token 预测（MTP）训练架构
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入 Token 序列：t_1, t_2, t_3, t_4, t_5
 
-+=====================================================================+
-|                     MTP Training Pipeline                            |
-+=====================================================================+
-|                                                                       |
-|  Input Tokens:  t_1, t_2, t_3, t_4, t_5                             |
-|                                                                       |
-|  Main Model (Next Token Prediction):                                 |
-|  t_1 -> [Transformer x61] -> h_1 -> [Head] -> P(t_2)  -> L_main     |
-|  t_2 -> [Transformer x61] -> h_2 -> [Head] -> P(t_3)  ->            |
-|  ...                                                                  |
-|                                                                       |
-|  MTP Module 1 (predict t_3 from h_1, t_2):                           |
-|  +-------+   +-----------+   +-----------+   +-------+              |
-|  | h_1   |-->| Concat    |-->| Transformer|-->| Head  |--> P(t_3)  |
-|  | (main)|   | + emb(t_2)|   | Block      |   |(shared)|   L_MTP1  |
-|  +-------+   +-----------+   +-----------+   +-------+              |
-|       ^                                                           |
-|       |   h'_1 (MTP1 output)                                      |
-|       |                                                           |
-|  MTP Module 2 (predict t_4 from h'_1, t_3):                       |
-|  +-------+   +-----------+   +-----------+   +-------+              |
-|  | h'_1  |-->| Concat    |-->| Transformer|-->| Head  |--> P(t_4)  |
-|  |(MTP1) |   | + emb(t_3)|   | Block      |   |(shared)|   L_MTP2  |
-|  +-------+   +-----------+   +-----------+   +-------+              |
-|       ^                                                           |
-|       |   h''_1 (MTP2 output)                                     |
-|       |                                                           |
-|  ... (up to D modules)                                             |
-|                                                                       |
-|  Total Loss:                                                         |
-|  L = L_main + (lambda/D) * sum(L_MTP_k for k=1..D)                 |
-|                                                                       |
-|  Shared Components:                                                  |
-|  - Embedding layer (weight sharing with main model)                 |
-|  - Output head (weight sharing with main model)                     |
-|                                                                       |
-|  Independent Components:                                             |
-|  - Transformer Block (each MTP module has its own)                  |
-|  - Linear projection (concat -> dim)                                |
-|  - RMSNorm                                                           |
-|                                                                       |
-|  At Inference:                                                       |
-|  - MTP modules can be REMOVED (main model works standalone)        |
-|  - OR used for Speculative Decoding (predict D candidates,         |
-|    verify in parallel)                                               |
-+=====================================================================+</div>
+主模型（预测下一个 Token）：
+  t_1 → [61 层 Transformer] → h_1 → [输出头] → P(t_2) → 主损失
+  t_2 → [61 层 Transformer] → h_2 → [输出头] → P(t_3)
+  ...
+
+MTP 模块 1（利用 h_1 和 t_2 预测 t_3）：
+  h_1(主模型) ──┐
+                ├─→ 拼接 ─→ Transformer 块 ─→ 输出头(共享) ─→ P(t_3) → L_MTP1
+  emb(t_2) ────┘
+                │
+                ▼（输出 h'_1 传给下一个模块）
+MTP 模块 2（利用 h'_1 和 t_3 预测 t_4）：
+  h'_1(MTP1) ──┐
+               ├─→ 拼接 ─→ Transformer 块 ─→ 输出头(共享) ─→ P(t_4) → L_MTP2
+  emb(t_3) ───┘
+                │
+                ▼
+  ... 依此类推，最多 D 个模块
+
+总损失：
+  L = L_主损失 + (λ/D) × Σ(L_MTP_k)，k = 1..D
+
+共享组件（与主模型权重绑定）：
+  - 嵌入层 Embedding
+  - 输出头 Output Head
+
+独立组件（每个 MTP 模块各有一份）：
+  - Transformer 块
+  - 拼接投影 Linear
+  - RMSNorm
+
+推理时：
+  - MTP 模块可以完全移除（主模型独立工作）
+  - 或用于投机解码（预测 D 个候选，主模型并行验证）
+</div>
 
 <h3>MTP 参数</h3>
 <table>
@@ -563,52 +527,37 @@ Step 5: Expert computation
 <p>采用 E4M3 格式（4 位指数，3 位尾数），优先尾数精度而非指数范围。所有 FP8 张量统一使用此格式。</p>
 
 <div class="frame-diagram">FP8 Mixed Precision Framework:
+FP8 混合精度训练框架
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+各组件精度分配：
++--------------------------+----------+----------------------------+
+| 组件                     | 精度     | 原因                       |
++--------------------------+----------+----------------------------+
+| GEMM 矩阵乘法            | FP8      | 吞吐量最高                 |
+|   - 激活值               | FP8 E4M3 | 1×128 块级量化            |
+|   - 权重                 | FP8 E4M3 | 128×128 块级量化          |
+|   - 累加                 | FP32     | 每 Nc=128 个元素提升到 FP32|
++--------------------------+----------+----------------------------+
+| 嵌入层                   | BF16/FP32| 对精度敏感                 |
+| 输出投影层               | BF16/FP32| 对精度敏感                 |
+| 注意力分数计算           | BF16/FP32| 对精度敏感                 |
+| MoE 门控路由             | BF16/FP32| 必须精确                   |
+| LayerNorm / RMSNorm      | BF16     | 标准做法                   |
++--------------------------+----------+----------------------------+
+| 主权重（优化器）         | FP32     | 梯度更新精度               |
+| 优化器状态（AdamW）      | BF16     | 省内存                     |
+| 激活检查点               | FP8      | 省内存                     |
+| All-to-All 通信          | FP8      | 省带宽                     |
++--------------------------+----------+----------------------------+
 
-+=====================================================================+
-|                FP8 Mixed Precision Training                         |
-+=====================================================================+
-|                                                                       |
-|  Precision Assignment by Component:                                  |
-|                                                                       |
-|  +----------------------------+----------+----------------------------+|
-|  | Component                  | Precision| Rationale                 ||
-|  +----------------------------+----------+----------------------------+|
-|  | GEMM (MatMul)              | FP8      | Max throughput            ||
-|  |   - Activations            | FP8 E4M3 | 1x128 tile quantization   ||
-|  |   - Weights                | FP8 E4M3 | 128x128 block quant.      ||
-|  |   - Accumulation           | FP32     | Every Nc=128 elements    ||
-|  |                            |          | promote to FP32 on CUDA  ||
-|  +----------------------------+----------+----------------------------+|
-|  | Embedding layers           | BF16/FP32| Sensitive to precision   ||
-|  | Output projection (head)   | BF16/FP32| Sensitive to precision   ||
-|  | Attention score computation| BF16/FP32| Sensitive to precision   ||
-|  | MoE gating (routing)       | BF16/FP32| Must be precise          ||
-|  | LayerNorm/RMSNorm          | BF16     | Standard practice        ||
-|  +----------------------------+----------+----------------------------+|
-|  | Master weights (optimizer) | FP32     | Gradient update precision ||
-|  | Optimizer states (AdamW)   | BF16     | Memory saving            ||
-|  | Activation checkpoints     | FP8      | Memory saving            ||
-|  | All-to-All communication   | FP8      | Bandwidth saving         ||
-|  +----------------------------+----------+----------------------------+|
-|                                                                       |
-|  Fine-Grained Quantization Strategy:                                 |
-|                                                                       |
-|  Activations:                                                        |
-|  +---+---+---+---+---+---+---+---+---+---+---+---+                 |
-|  | 1 | 1 | 1 | 1 | ... (each tile = 1 row x 128 cols)              |
-|  +---+---+---+---+---+---+---+---+---+---+---+---+                 |
-|  Each 1x128 tile gets its own scaling factor                         |
-|  => handles outliers at fine granularity                            |
-|                                                                       |
-|  Weights:                                                            |
-|  +-----------+-----------+-----------+                                |
-|  | 128 x 128 | 128 x 128 | 128 x 128 | ...                          |
-|  | block     | block     | block     |                                |
-|  +-----------+-----------+-----------+                                |
-|  Each 128x128 block gets its own scaling factor                      |
-|                                                                       |
-|  Result: <0.25% relative loss error vs BF16 baseline                 |
-+=====================================================================+</div>
+细粒度量化策略：
+激活值：每个 1×128 的块独立计算缩放因子
+  → 对异常值有更好的鲁棒性
+权重：每个 128×128 的块独立计算缩放因子
+  → 按块捕捉数值范围差异
+
+最终效果：相对 BF16 基线的损失误差 < 0.25%
+</div>
 
 <!-- ==================== DualPipe ==================== -->
 
@@ -618,42 +567,77 @@ Step 5: Expert computation
 <p>MoE 架构的跨节点 All-to-All 通信开销巨大（计算通信比接近 1:1）。DualPipe 算法通过将前向和后向计算分块，与通信重叠执行，实现接近零的 All-to-All 通信开销。</p>
 
 <div class="frame-diagram">DualPipe Algorithm: Computation-Communication Overlap:
+DualPipe 算法：计算与通信重叠
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+传统流水线（存在气泡空闲）：
+  GPU0: [F1][F2][F3]........[B3][B2][B1]
+  GPU1: ....[F1][F2][F3]........[B3][B2][B1]
+  GPU2: ........[F1][F2][F3]........[B3][B2][B1]
+         ^^^^                    ^^^^
+         气泡空闲                气泡空闲
 
-+=====================================================================+
-|                DualPipe Pipeline Schedule                           |
-+=====================================================================+
-|                                                                       |
-|  Traditional Pipeline (with bubbles):                                |
-|  GPU0: [F1][F2][F3]........[B3][B2][B1]                             |
-|  GPU1: ....[F1][F2][F3]........[B3][B2][B1]                        |
-|  GPU2: ........[F1][F2][F3]........[B3][B2][B1]                   |
-|         ^^^^                    ^^^^                                |
-|         bubbles                 bubbles                              |
-|                                                                       |
-|  DualPipe (bidirectional, overlap):                                  |
-|                                                                       |
-|  Forward chunks:  F1a | F1b | F2a | F2b | ...                       |
-|  Backward chunks: B1a | B1b | B2a | B2b | ...                       |
-|  Communication:   C1  | C2  | C3  | C4  | ... (All-to-All)        |
-|                                                                       |
-|  GPU0: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
-|  GPU1: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
-|  GPU2: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]                            |
-|        ^^^^^^^^  ^^^^^^^^  ^^^^^^^^  ^^^^^^^^                       |
-|        compute||comm  compute||comm  compute||comm                  |
-|                                                                       |
-|  Key: [compute] overlaps with [communication]                        |
-|  => Near-zero pipeline bubbles                                       |
-|  => Near-zero All-to-All overhead                                    |
-|                                                                       |
-|  Cross-Node All-to-All Kernel:                                       |
-|  - Custom kernel using ~20 SMs (out of ~132 on H800)               |
-|  - Remaining ~112 SMs available for GEMM compute                    |
-|  - Adapts to both IB (50GB/s) and NVLink (160GB/s)                 |
-|  - IB for cross-node, NVLink for intra-node                         |
-+=====================================================================+</div>
+DualPipe（双向 + 重叠）：
+  前向分块：F1a | F1b | F2a | F2b | ...
+  反向分块：B1a | B1b | B2a | B2b | ...
+  通信：    C1  | C2  | C3  | C4  | ...（All-to-All）
+
+  GPU0: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]
+  GPU1: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]
+  GPU2: [F1a+C1][F1b+C2][B1a+C3][B1b+C4]
+        ^^^^^^^^^  ^^^^^^^^^  ^^^^^^^^^
+        计算‖通信   计算‖通信   计算‖通信
+
+  关键：计算与通信在【不同 SM 上】并行执行
+  => 流水线气泡几乎为零
+  => All-to-All 通信开销几乎为零
+
+跨节点 All-to-All 定制内核：
+  - 定制内核只用约 20 个 SM（H800 共约 132 个）
+  - 剩余约 112 个 SM 可同时做 GEMM 计算
+  - 自适应两种带宽：IB（跨节点 50GB/s）与 NVLink（节点内 160GB/s）
+</div>
 
 <!-- ==================== Model Dimensions ==================== -->
+
+<h3>DualPipe 详细展开：为什么能隐藏通信开销</h3>
+
+<h4>1. 传统流水线的气泡来源</h4>
+<p>在 16 路流水线并行（PP16）下，一个 micro-batch 需要依次经过 16 个 stage。反向传播时，梯度需要从最后一段传回第一段。在两段之间，GPU 必须等待前一个 stage 完成，产生流水线气泡（pipeline bubble）。</p>
+<pre><code>设每个前向分块耗时 T_f，每个反向分块耗时 T_b，通信耗时 T_c
+传统 1F1B 气泡占比 ≈ (PP - 1) / (micro_batches × (T_f + T_b))</code></pre>
+<p>当 micro-batch 数量不够大时，气泡占比可达 30%-50%。</p>
+
+<h4>2. DualPipe 的双向流动</h4>
+<p>DualPipe 将每个 stage 的前向和反向进一步拆分为两个子块（a/b），并让前向从流水线左侧进入、反向从右侧进入。这样同一时刻每个 GPU 上既有前向又有反向，且通信与计算在不同 SM 上重叠：</p>
+<pre><code>GPU0: [F0a+C][F0b+C][B0a+C][B0b+C]
+GPU1: [F1a+C][F1b+C][B1a+C][B1b+C]
+GPU2: [B2a+C][B2b+C][F2a+C][F2b+C]
+GPU3: [B3a+C][B3b+C][F3a+C][F3b+C]
+
+C = All-to-All（MoE 分发/回收）+ 流水线点对点传输
+| = 计算与通信在同一 GPU 的不同 SM 上并行</code></pre>
+
+<h4>3. SM 分配</h4>
+<p>H800 每张卡约 132 个 SM。DeepSeek 定制通信内核只占用约 20 个 SM，其余约 112 个 SM 同时运行 GEMM：</p>
+<pre><code>通信 SM ≈ 20 个  → 负责 IB/NVLink 上的 All-to-All
+计算 SM ≈ 112 个 → 负责 FP8 GEMM、Attention 等</code></pre>
+
+<h4>4. 带宽自适应</h4>
+<p>定制内核同时感知两种网络拓扑：</p>
+<ul>
+  <li>节点内：NVLink 160 GB/s，延迟低，可走大消息</li>
+  <li>跨节点：InfiniBand 50 GB/s，延迟高，需合并小消息</li>
+</ul>
+<p>内核会根据目标专家所在的物理位置，选择最短、最宽的路径发送 token。</p>
+
+<h4>5. 结果</h4>
+<ul>
+  <li>流水线气泡：几乎为零</li>
+  <li>All-to-All 通信开销：几乎为零（被计算重叠）</li>
+  <li>GPU 利用率：接近 100%</li>
+</ul>
+
+<div class="note"><strong>关键洞见</strong>：DualPipe 不是减少通信量，而是把通信“藏”在计算后面。只要计算时间 ≥ 通信时间，通信就不出现在关键路径上。</div>
 
 <h2 id="arch-dims">01-架构介绍 / 模型规格总表</h2>
 
@@ -724,30 +708,29 @@ Step 5: Expert computation
 
 <h3>上下文对接关系</h3>
 <div class="frame-diagram">MLA Context Flow (within a Block):
-
-  Previous Layer Output
-        |
-        v
-  +----------+
-  | attn_norm|  (RMSNorm, dim=7168)
-  +----+-----+
-       |
-       v
-  +----------+         +-----------+
-  |   MLA    |<------->| freqs_cis |  (precomputed RoPE)
-  |  (attn)  |         +-----------+
-  +----+-----+
-       |
-       v
-  x = x + MLA_output   (residual connection)
-       |
-       v
-  +----------+
-  | ffn_norm |  (RMSNorm)
-  +----+-----+
-       |
-       v
-  [MLP or MoE] (FFN layer)</div>
+MLA 上下文数据流（Transformer 块内部）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+上一层输出 x（维度 7168）
+   │
+   ▼
+attn_norm 归一化（RMSNorm，维度 7168）
+   │
+   ▼
+MLA 注意力层 ◀────────────── 预计算 RoPE 频率 freqs_cis
+（接收 x、start_pos、freqs_cis、mask）   （跨所有层共享）
+   │
+   ▼
+x = x + MLA 输出（残差连接）
+   │
+   ▼
+ffn_norm 归一化（RMSNorm）
+   │
+   ▼
+前馈网络层（MLP 或 MoE）
+   │
+   ▼
+x = x + FFN 输出（残差连接）→ 下一层
+</div>
 
 <h3>MLA 内部组件结构</h3>
 <table>
@@ -763,30 +746,63 @@ Step 5: Expert computation
 
 <h3>两种缓存模式对比</h3>
 <div class="frame-diagram">MLA Cache Modes:
+MLA 两种缓存模式
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NAIVE 朴素模式（缓存完整 K/V）：
++---+---+---+---+---+---+---+---+
+|K_1|K_2|K_3|K_4|...|K_n|   |   |    × 128 头，K 维度 = 192
++---+---+---+---+---+---+---+---+
++---+---+---+---+---+---+---+---+
+|V_1|V_2|V_3|V_4|...|V_n|   |   |    × 128 头，V 维度 = 128
++---+---+---+---+---+---+---+---+
+每 token 总计：128 × (192 + 128) = 40,960 维
 
-NAIVE MODE (full K/V cache):
-+---+---+---+---+---+---+---+---+     x 128 heads
-|K_1|K_2|K_3|K_4|K_5|...|K_n|   |     K dim = 192 (128 nope + 64 rope)
+ABSORB 吸收模式（压缩缓存，默认）：
 +---+---+---+---+---+---+---+---+
-+---+---+---+---+---+---+---+---+     x 128 heads
-|V_1|V_2|V_3|V_4|V_5|...|V_n|   |     V dim = 128
+|kv_1|kv_2|kv_3|kv_4|...|kv_n|   |    kv 维度 = 512（潜表示）
 +---+---+---+---+---+---+---+---+
-Total per token: 128 * (192 + 128) = 40,960 dims
++---+---+---+---+---+---+---+---+
+|pe_1|pe_2|pe_3|pe_4|...|pe_n|   |    pe 维度 = 64（仅 RoPE）
++---+---+---+---+---+---+---+---+
+每 token 总计：512 + 64 = 576 维（压缩 98.6%！）
 
-ABSORB MODE (compressed cache, DEFAULT):
-+---+---+---+---+---+---+---+---+
-|kv_1|kv_2|kv_3|kv_4|...|kv_n| |     kv dim = 512 (latent)
-+---+---+---+---+---+---+---+---+
-+---+---+---+---+---+---+---+---+
-|pe_1|pe_2|pe_3|pe_4|...|pe_n| |     pe dim = 64 (RoPE only)
-+---+---+---+---+---+---+---+---+
-Total per token: 512 + 64 = 576 dims  (98.6% reduction!)
+吸收模式下：
+  - 缓存前不应用 wkv_b 上投影
+  - wkv_b 被"吸收"进注意力计算
+  - 分数 = q_nope_c @ kv_cache^T + q_pe @ pe_cache^T
+  - 输出 = 分数 @ kv_cache，再用 wkv_b 的 V 部分投影回来
+</div>
 
-In Absorb mode:
-- wkv_b is NOT applied before caching
-- wkv_b is "absorbed" into the attention computation
-- scores = q_nope_c @ kv_cache^T + q_pe @ pe_cache^T
-- output = scores @ kv_cache, then project via wkv_b[*, -v_head_dim:]</div>
+<h3>MLA 数值示例：KV 缓存压缩的真实计算</h3>
+<p>以下用 671B 模型参数，对一个 batch=1、序列长度 4096 的 prompt 做完整估算，直观对比标准 MHA 与 MLA Absorb 的内存占用。</p>
+
+<h4>1. 标准 Multi-Head Attention（无压缩）</h4>
+<ul>
+  <li>注意力头数 n_heads = 128</li>
+  <li>每个头的 K 维度 = 192，V 维度 = 128</li>
+  <li>每 token 每层 K 缓存 = 128 × 192 = 24,576 维</li>
+  <li>每 token 每层 V 缓存 = 128 × 128 = 16,384 维</li>
+  <li>每 token 每层 KV 缓存 = 24,576 + 16,384 = <strong>40,960 维</strong></li>
+</ul>
+<p>序列长度 4096、BF16（2 字节）时：</p>
+<pre><code>单层 KV 缓存 = 4096 × 40960 × 2 B = 335,544,320 B ≈ 336 MB
+61 层总缓存  = 336 MB × 61 ≈ <span class="num">20.5 GB</span></code></pre>
+
+<h4>2. MLA Absorb 模式</h4>
+<ul>
+  <li>压缩潜在表示 kv 维度 = 512</li>
+  <li>位置编码分量 pe 维度 = 64</li>
+  <li>每 token 每层缓存 = 512 + 64 = <strong>576 维</strong></li>
+</ul>
+<p>同样 4096 序列、BF16：</p>
+<pre><code>单层 KV 缓存 = 4096 × 576 × 2 B = 4,718,592 B ≈ 4.7 MB
+61 层总缓存  = 4.7 MB × 61 ≈ <span class="num">288 MB</span></code></pre>
+
+<h4>3. 压缩比</h4>
+<pre><code>压缩比 = 20480 MB / 288 MB ≈ <span class="num">71 倍</span>
+每 token 压缩比 = 40960 / 576 ≈ <span class="num">71.1 倍</span></code></pre>
+
+<div class="note"><strong>结论</strong>：在 4K 上下文下，MLA Absorb 将 KV 缓存从约 20.5 GB 降至 288 MB，使得单 batch 即可轻松装入显存；扩展到 128K 上下文时，标准 MHA 需要约 655 GB，而 MLA 仅需约 9.2 GB。</div>
 
 <h2 id="comp-gate">02-关键功能与组件 / MoE 门控组件</h2>
 
@@ -795,37 +811,37 @@ In Absorb mode:
 
 <h3>Gate 工作流程</h3>
 <div class="frame-diagram">Gate Routing Mechanism:
+Gate 门控路由机制
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入：x（批大小×序列长度, 维度 7168）
 
-Input: x (bsz*seqlen, dim=7168)
+步骤 1：计算分数
+  分数 = Sigmoid(x @ 门控权重^T)   # 形状 (N, 256)
+  # 门控权重形状：[256, 7168]，即 256 个专家中心向量
 
-Step 1: Compute scores
-  scores = Sigmoid(x @ gate.weight^T)  # (N, 256)
-  # gate.weight shape: [256, 7168]
+步骤 2：组受限选择（Node-Limited Routing）
+  # 256 专家 = 8 组 × 32 专家
+  # 受限组数 = 1（只从得分最高的 1 个组内选）
+  # 作用：限制跨节点通信量！
 
-Step 2: Group-Limited Selection
-  # 256 experts = 8 groups x 32 experts
-  # n_limited_groups = 1 (select from top-1 group only)
-  # This limits cross-node communication!
-
-  For each token:
   +-------------------------------------------+
-  | Group 0  | Group 1  | ... | Group 7       |
-  | Exp 0-31 | Exp 32-63| ... | Exp 224-255   |
+  | 组 0    | 组 1    | ... | 组 7             |
+  | 专家0-31| 专家32-63| ... | 专家224-255      |
   +-------------------------------------------+
-       |         |               |
-  Select top-1 groups (by max score in group)
-       |         |               |
-  From selected groups, pick Top-8 experts
+       │         │               │
+  先选出得分最高的 1 个组
+       │
+  再从选中的组内取 Top-8 专家
 
-Step 3: Normalize weights
-  # For sigmoid: normalize AFTER selection
-  weights = scores[selected] / sum(scores[selected])
-  # scale by route_scale (2.5)
-  weights *= 2.5
+步骤 3：归一化权重
+  # 对 Sigmoid：选完再归一化
+  权重 = 分数[选中] / Σ(分数[选中])
+  权重 ×= 路由缩放系数 2.5
 
-Output:
-  - indices: (N, 8)    selected expert IDs
-  - weights: (N, 8)    routing weights for each selected expert</div>
+输出：
+  - 专家索引 indices：(N, 8)   选中的专家 ID
+  - 路由权重 weights：(N, 8)   各选中专家的权重
+</div>
 
 <h3>负载均衡偏置项</h3>
 <p>偏置项 <code>b_i</code> 是一个长度为 256 的向量，<strong>不参与梯度计算</strong>。每个训练步骤后，根据每个专家的实际负载动态调整：</p>
@@ -835,6 +851,46 @@ Output:
 </ul>
 <p>此外还有一个极小权重的序列级平衡损失 <code>L_bal = α × Σ(load_i / N)</code> 作为安全网。</p>
 
+<h3>MoE 路由数值示例：一个 Token 如何被分配专家</h3>
+<p>假设某 token 经过 <code>ffn_norm</code> 后得到隐藏状态 <code>x</code>（1×7168），门控权重 <code>weight</code> 形状为 [256, 7168]。下面给出完整计算过程。</p>
+
+<h4>步骤 1：计算 Sigmoid 分数</h4>
+<pre><code>logits = x @ weight.t()   # 形状 (1, 256)
+scores = Sigmoid(logits)  # 每个值在 (0, 1) 之间</code></pre>
+<p>为便于说明，假设前 16 个专家的 Sigmoid 分数如下（其余专家分数均较低）：</p>
+<table>
+<tr><th>专家编号</th><th>0</th><th>1</th><th>2</th><th>3</th><th>…</th><th>30</th><th>31</th></tr>
+<tr><td>分数</td><td>0.12</td><td>0.35</td><td>0.08</td><td>0.21</td><td>…</td><td>0.18</td><td>0.09</td></tr>
+</table>
+
+<h4>步骤 2：叠加动态偏置</h4>
+<p>当前训练步中，专家 0、2、31 略过载，偏置被调低；专家 1、3、30 略欠载，偏置被调高。例如：</p>
+<pre><code>scores'[0]  = 0.12 - 0.02 = 0.10
+scores'[1]  = 0.35 + 0.03 = 0.38
+scores'[2]  = 0.08 - 0.01 = 0.07
+scores'[3]  = 0.21 + 0.02 = 0.23
+scores'[30] = 0.18 + 0.02 = 0.20
+scores'[31] = 0.09 - 0.02 = 0.07</code></pre>
+
+<h4>步骤 3：组受限 Top-K 选择</h4>
+<p>256 个专家分成 8 组，每组 32 个。本例中专家 0-31 属于第 0 组。由于 <code>n_limited_groups=1</code>，系统只在得分最高的那一组内选 Top-8。</p>
+<pre><code>组内候选 = {0,1,2,...,31}
+按 scores' 排序后 Top-8 = [1, 3, 30, 0, 7, 15, 22, 5]</code></pre>
+
+<h4>步骤 4：归一化并缩放</h4>
+<p>提取这 8 个专家的原始 Sigmoid 分数（不加偏置），归一化后乘以 route_scale=2.5：</p>
+<pre><code>原始分数 = [0.35, 0.21, 0.18, 0.12, 0.11, 0.10, 0.09, 0.08]
+求和     = 1.24
+归一化   = [0.282, 0.169, 0.145, 0.097, 0.089, 0.081, 0.073, 0.065]
+×2.5 后  = [0.705, 0.423, 0.363, 0.242, 0.222, 0.202, 0.182, 0.162]</code></pre>
+
+<h4>步骤 5：专家计算与加权求和</h4>
+<pre><code>expert_out = 0.705×Expert_1(x) + 0.423×Expert_3(x) + ... + 0.162×Expert_5(x)
+shared_out = MLP_shared(x)      # 2 个共享专家始终激活
+y = expert_out + shared_out</code></pre>
+
+<div class="note"><strong>关键观察</strong>：动态偏置只影响“选谁”，不参与梯度；归一化时使用的仍是原始 Sigmoid 分数。这样既保证了负载均衡，又不会污染主损失梯度。</div>
+
 <h2 id="comp-mtp">02-关键功能与组件 / MTP 组件详解</h2>
 
 <h3>组件定位</h3>
@@ -842,40 +898,63 @@ Output:
 
 <h3>上下文对接关系</h3>
 <div class="frame-diagram">MTP Module Context Flow:
+MTP 模块上下文数据流
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+主模型输出：h_t（位置 t 的隐藏状态，维度 7168）
+   │                +-------------------+
+   ├───────────────▶│ 拼接投影 Linear    │（合并 h 与嵌入）
+   │                +---------+---------+
+emb(t_{t+1})                    │
+   │                  拼接后的表示
+   ├───────────────▶ +---------+---------+
+   │                 │ Transformer 块    │（MTP 专用 1 层）
+   │                 +---------+---------+
+   │                           │
+   │                           ▼
+   │                 +---------+---------+
+   │                 │ RMSNorm 归一化     │
+   │                 +---------+---------+
+   │                           │
+   │                           ▼
+   │                 +---------+---------+
+   └───────────────▶ │ 输出头（与主模型共享）│
+                     │ Linear: 7168→129280│
+                     +---------+---------+
+                               │
+                               ▼
+                     P(t_{t+2}) → L_MTP_k（交叉熵损失）
 
-  Main Model Output: h_t (hidden state at position t)
-       |
-       |     +-------------------+
-       +----->| Linear Projection |  (dim -> dim, combine h + emb)
-       |      +---------+---------+
-       |                |
-  emb(t_{t+1})         v  (concatenated representation)
-       |      +---------+---------+
-       +----->|  Transformer Block |  (1 layer, MTP-specific)
-              +---------+---------+
-                        |
-                        v
-              +---------+---------+
-              |  RMSNorm          |
-              +---------+---------+
-                        |
-                        v
-              +---------+---------+
-              |  Output Head      |  (shared with main model)
-              |  (Linear: dim->vocab)
-              +---------+---------+
-                        |
-                        v
-                   P(t_{t+2})  -> L_MTP_k (cross-entropy loss)
+与主模型共享：嵌入层、输出头（权重绑定）
+每个 MTP 模块独立：拼接投影 Linear、Transformer 块、RMSNorm
+</div>
 
-  Shared with Main Model:
-  - Embedding layer (weight tied)
-  - Output head (weight tied)
+<h3>MTP 训练示例：多 Token 预测如何增加监督信号</h3>
+<p>假设输入文本为 <code>"深度学习 是 未来 技术"</code>，分词后得到 token 序列：</p>
+<pre><code>t_1 = [深], t_2 = [度], t_3 = [学], t_4 = [习], t_5 = [是], t_6 = [未], t_7 = [来], t_8 = [技], t_9 = [术]</code></pre>
 
-  Independent per MTP Module:
-  - Linear Projection (combines previous h + current emb)
-  - Transformer Block (1 layer)
-  - RMSNorm</div>
+<h4>主模型监督信号</h4>
+<p>主模型在位置 1 看到 <code>[深]</code>，预测位置 2 的 <code>[度]</code>；看到 <code>[深, 度]</code> 预测 <code>[学]</code>，依此类推。每个位置只产生一个交叉熵损失：</p>
+<pre><code>L_main = CE(P(t_2)|t_1) + CE(P(t_3)|t_1,t_2) + ... + CE(P(t_9)|t_1..t_8)</code></pre>
+
+<h4>MTP 模块 1 的监督信号</h4>
+<p>MTP1 利用主模型在位置 1 的隐藏状态 <code>h_1</code> 和真实 token <code>t_2</code> 的嵌入，预测 <code>t_3</code>：</p>
+<pre><code>输入 = concat( h_1, emb(t_2) )  # 形状 (1, 2×7168)
+输出 = MTP_Block( 拼接投影(输入) )
+P_MTP1(t_3) = OutputHead( RMSNorm(输出) )
+L_MTP1 = CE( P_MTP1(t_3), t_3 )</code></pre>
+
+<h4>MTP 模块 2 的监督信号（若 D=2）</h4>
+<pre><code>输入 = concat( h'_1, emb(t_3) )  # h'_1 是 MTP1 的输出隐藏状态
+P_MTP2(t_4) = OutputHead( RMSNorm( MTP_Block(输入) ) )
+L_MTP2 = CE( P_MTP2(t_4), t_4 )</code></pre>
+
+<h4>总损失</h4>
+<p>DeepSeek-V3 实际使用 D=1，因此总损失为：</p>
+<pre><code>L_total = L_main + λ × L_MTP1    # λ 为 MTP 损失权重</code></pre>
+<p>若 D=2，则：</p>
+<pre><code>L_total = L_main + (λ/2) × (L_MTP1 + L_MTP2)</code></pre>
+
+<div class="note"><strong>效果</strong>：每个训练 token 除了预测下一个 token，还要预测更远的 token，迫使模型学习更稳定的中间表示。论文指出即使 D=1，也能显著提升主模型性能；推理时若不需要投机解码，可直接移除 MTP 模块。</div>
 
 <h2 id="comp-fp8">02-关键功能与组件 / FP8 训练组件</h2>
 
@@ -884,36 +963,72 @@ Output:
 
 <h3>量化流程</h3>
 <div class="frame-diagram">FP8 Quantization Pipeline:
+FP8 量化流水线
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+权重存储（离线，检查点阶段）：
+  原始权重 W（FP32/BF16，形状 [输出, 输入]）
+    │
+    ▼
+  128×128 块级量化
+    │
+    ▼
+  W_fp8（FP8 E4M3）+ 缩放因子 scale（FP32，[输出/128, 输入/128]）
 
-Weight Storage (offline, during checkpoint):
-  Original weight W (FP32/BF16, shape [out, in])
-    |
-    v
-  Block-wise quantization (128x128 blocks)
-    |
-    v
-  W_fp8 (FP8 E4M3, shape [out, in])  +  scale (FP32, shape [out//128, in//128])
-
-Runtime Forward (per Linear layer):
-  Activation x (BF16, shape [N, in])
-    |
-    v
-  act_quant(x)  -- tile-wise 1x128 quantization
-    |
-    v
-  x_fp8 (FP8 E4M3) + x_scale (FP32, shape [N, in//128])
-    |
-    v
+运行时前向（每个 Linear 层内部）：
+  激活值 x（BF16，形状 [N, 输入]）
+    │
+    ▼
+  act_quant(x) 按 1×128 块量化
+    │
+    ▼
+  x_fp8（FP8 E4M3）+ x_scale（FP32，[N, 输入/128]）
+    │
+    ▼
   fp8_gemm(x_fp8, W_fp8, x_scale, W_scale)
-    |
-    |  Internal: FP8 MMA on Tensor Cores
-    |  Every Nc=128 elements: promote accumulation to FP32
-    |
-    v
-  output (BF16, shape [N, out])
+    │
+    │  内部：FP8 矩阵乘在 Tensor Core 上执行
+    │       每 Nc=128 个元素将累加提升到 FP32
+    │
+    ▼
+  输出（BF16，形状 [N, 输出]）
 
-  [Note: Embedding, attention scores, gating → BF16/FP32 path
-   → uses weight_dequant() to convert FP8 weights back to BF16]</div>
+  [注意] 嵌入层、注意力分数、门控路由 → 走 BF16/FP32 路径
+        （用 weight_dequant() 把 FP8 权重转回 BF16）
+</div>
+
+<h3>FP8 E4M3 量化数值示例</h3>
+<p>FP8 E4M3 用 1 位符号、4 位指数、3 位尾数，可表示的最大值约为 448.0，最小正规格数约为 0.00195。下面以激活值的一个 1×128 块为例。</p>
+
+<h4>1. 计算缩放因子</h4>
+<p>假设该块内 128 个 BF16 激活值为：</p>
+<pre><code>x = [0.5, -1.2, 3.4, -0.8, ..., 2.1]   # 共 128 个数</code></pre>
+<p>取绝对值最大值：</p>
+<pre><code>amax = max(|x_i|) = 3.4
+scale = amax / 448.0 = 3.4 / 448.0 ≈ 0.00759</code></pre>
+
+<h4>2. 量化到 FP8</h4>
+<pre><code>x_fp8_i = round( x_i / scale )
+# 例如 3.4  -> round(3.4 / 0.00759) = round(448) = 448（最大可表示值）
+#     -1.2 -> round(-1.2 / 0.00759) = round(-158) = -158</code></pre>
+<p>FP8 张量只保存整数索引 [-448, 448]，实际值需要与 scale 相乘还原。</p>
+
+<h4>3. 反量化还原</h4>
+<pre><code>x_hat_i = x_fp8_i × scale
+# 3.4  -> 448 × 0.00759 = 3.40032  ≈ 3.4（误差 0.009%）
+# -1.2 -> -158 × 0.00759 = -1.19922 ≈ -1.2（误差 0.065%）</code></pre>
+
+<h4>4. 矩阵乘法中的累加精度</h4>
+<p>FP8 GEMM 在 Tensor Core 上计算，但每累加 128 个乘积后提升到 FP32：</p>
+<pre><code>acc_fp32 += Σ_{k=0}^{127} x_fp8[k] × W_fp8[k] × scale_x × scale_W
+# 每 128 个元素做一次 FP32 累加，避免多次小量叠加导致精度崩溃</code></pre>
+
+<h4>5. 权重块级量化（128×128）</h4>
+<p>权重按 128×128 的块独立量化。例如一个 7168×7168 的权重矩阵被划分为：</p>
+<pre><code>(7168/128) × (7168/128) = 56 × 56 = 3136 个块
+每个块有自己的 scale（FP32）</code></pre>
+<p>块级量化比全局量化对异常值更鲁棒：某个块中出现大权重只影响该块的 scale，不会压低其他块的精度。</p>
+
+<div class="note"><strong>精度验证</strong>：论文报告 FP8 训练相对 BF16 基线的损失误差小于 0.25%。这得益于 (1) 细粒度块级量化，(2) 敏感操作保留 BF16/FP32，(3) 每 128 元素 FP32 累加。</div>
 
 <h2 id="comp-parallel">02-关键功能与组件 / 分布式并行组件</h2>
 
@@ -927,72 +1042,69 @@ Runtime Forward (per Linear layer):
 
 <h3>专家并行 (EP)</h3>
 <div class="frame-diagram">Expert Parallelism (EP=64, across 8 nodes x 8 GPUs):
+专家并行 EP=64（8 节点 × 8 GPU）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+节点 0（GPU 0-7）   节点 1（GPU 0-7）   ...   节点 7（GPU 0-7）
++---------------+   +---------------+         +---------------+
+| 专家 0-31     |   | 专家 32-63    |   ...   | 专家 224-255  |
++---------------+   +---------------+         +---------------+
 
-Node 0 (GPU 0-7)     Node 1 (GPU 0-7)    ...    Node 7 (GPU 0-7)
-+---------------+    +---------------+         +---------------+
-| Experts 0-31  |    | Experts 32-63 |   ...   | Experts 224-255|
-+---------------+    +---------------+         +---------------+
+Token 路由流程：
+1. 门控计算每个 Token 需要哪些专家
+2. All-to-All 分发：Token 被发送到承载其专家的 GPU
+3. 目标 GPU 上执行专家计算
+4. All-to-All 回收：结果送回来源 GPU
+5. All-Reduce：与共享专家输出相加
 
-Token Routing Flow:
-1. Gate computes which expert each token needs
-2. All-to-All dispatch: tokens sent to the GPU hosting their expert
-3. Expert computation on target GPU
-4. All-to-All return: results sent back to origin GPU
-5. All-Reduce: combine with shared experts output
-
-Communication Optimization:
-- Custom kernel uses ~20 SMs for All-to-All (out of ~132)
-- Remaining ~112 SMs do GEMM in parallel
-- IB (50GB/s) for cross-node, NVLink (160GB/s) for intra-node
-- => Near-zero communication overhead via DualPipe overlap</div>
+通信优化：
+  - 定制内核用约 20 个 SM 处理 All-to-All（共约 132 个）
+  - 剩余约 112 个 SM 并行做 GEMM
+  - IB（50GB/s）用于跨节点，NVLink（160GB/s）用于节点内
+  - 配合 DualPipe 实现通信开销近乎为零
+</div>
 
 <h2 id="comp-deploy">02-关键功能与组件 / 组件部署架构图</h2>
 
 <div class="frame-diagram">Component Deployment Architecture:
+组件部署架构图
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[训练集群：2048 × H800 GPU]
 
-+=====================================================================+
-|                DeepSeek-V3 Full Deployment Map                      |
-+=====================================================================+
-|                                                                       |
-|  [TRAINING CLUSTER: 2048 x H800 GPU]                                 |
-|                                                                       |
-|  +-------------------+  16-way Pipeline Parallelism                  |
-|  | Pipeline Stage 0  |  <==========>  Stage 1  <==> ... <==> Stage 15|
-|  | (Layer 0-3)       |     DualPipe overlap                          |
-|  | - ParallelEmbed   |                                               |
-|  | - MLA x4          |     Each stage: ~4 layers                     |
-|  | - MLP x3          |                                               |
-|  | - MoE x1          |                                               |
-|  +--------+----------+                                               |
-|           |                                                          |
-|     EP=64 (Expert Parallel)                                          |
-|     +-----+-----+-----+-----+                                        |
-|     | GPU | GPU | GPU | ... |  (8 nodes x 8 GPUs = 64 GPUs)        |
-|     | 0   | 1   | 2   |     |                                       |
-|     |Exp  |Exp  |Exp  |     |  256 experts / 64 GPUs = 4 per GPU   |
-|     |0-3  |4-7  |8-11 |     |                                       |
-|     +-----+-----+-----+-----+                                        |
-|           |                                                          |
-|     ZeRO-1 (Data Parallel)                                           |
-|     Optimizer states sharded across all data-parallel replicas       |
-|                                                                       |
-|  [INFERENCE: single node or multi-node]                              |
-|                                                                       |
-|  +-------------------+                                               |
-|  | GPU 0 (TP rank 0) |  Model Parallel (TP/EP)                     |
-|  | - Embedding (1/N) |                                               |
-|  | - MLA heads 0-15  |  (128 heads / 8 GPUs = 16 per GPU)          |
-|  | - Experts 0-31    |  (256 / 8 = 32 per GPU)                      |
-|  | - KV cache (absorb)|                                              |
-|  +-------------------+                                               |
-|  | GPU 1 (TP rank 1) |                                               |
-|  | ...                |                                               |
-|  +-------------------+                                               |
-|                                                                       |
-|  FP8 kernel.py deployed in EVERY Linear layer                        |
-|  RMSNorm deployed before attn and ffn in EVERY Block                 |
-|  MTP modules (14B) only loaded if speculative decoding is used      |
-+=====================================================================+</div>
++-------------------+  16 路流水线并行（PP16）
+| 流水线阶段 0      |  <=========> 阶段 1 <==> ... <==> 阶段 15
+| （第 0-3 层）     |     DualPipe 重叠
+| - 并行嵌入层      |
+| - MLA × 4         |     每个阶段约 4 层
+| - MLP × 3         |
+| - MoE × 1         |
++---------+---------+
+          │
+    EP=64（专家并行）
+    +------+------+------+------+
+    | GPU0 | GPU1 | GPU2 | ...  |   （8 节点 × 8 GPU = 64 GPU）
+    |专家0-3|专家4-7|专家8-11|    |   256 专家 / 64 GPU = 每 GPU 4 个
+    +------+------+------+------+
+          │
+    ZeRO-1（数据并行）
+    优化器状态在所有数据并行副本间分片
+
+[推理：单节点或多节点]
+
++-------------------+
+| GPU 0（TP rank 0）|  模型并行（TP/EP）
+| - 嵌入层（1/N）   |
+| - MLA 头 0-15    |  （128 头 / 8 GPU = 每 GPU 16 头）
+| - 专家 0-31      |  （256 / 8 = 每 GPU 32 个）
+| - KV 缓存（吸收） |
++-------------------+
+| GPU 1（TP rank 1）|
+| ...              |
++-------------------+
+
+FP8 kernel.py 部署在每个 Linear 层内部
+RMSNorm 部署在每个 Block 的 attn 和 ffn 之前
+MTP 模块（14B）仅在启用投机解码时才加载
+</div>
 
 <h2 id="comp-context">02-关键功能与组件 / 上下文对接关系</h2>
 
@@ -1000,64 +1112,67 @@ Communication Optimization:
 <p>以下展示一个 token 从输入到输出的完整上下文对接链：</p>
 
 <div class="frame-diagram">Full Context Chain (per token):
-
-  [Input] token_ids (bsz, seqlen)
-     |
-     v
-  [ParallelEmbedding] --vocab parallel--> all_reduce --> embeddings (bsz, seqlen, 7168)
-     |
-     v
-  [freqs_cis] = precompute_freqs_cis(seqlen, dim)  -- precomputed, shared across all layers
-     |
-     v
-  +--- For each of 61 layers: ---+
-  |   [RMSNorm (attn_norm)] -- normalizes x
-  |        |
-  |        v
-  |   [MLA (attn)]
-  |     - receives: x_normed, start_pos, freqs_cis, mask
-  |     - internal: wq_a -> q_norm -> wq_b -> split(q_nope, q_pe)
-  |     - internal: wkv_a -> split(kv, k_pe) -> kv_norm
-  |     - internal: apply_rotary_emb(q_pe, freqs_cis), apply_rotary_emb(k_pe, freqs_cis)
-  |     - internal: attention (naive or absorb mode)
-  |     - internal: wo projection
-  |     - outputs: attn_out (bsz, seqlen, 7168)
-  |        |
-  |        v
-  |   x = x + attn_out  (residual)
-  |        |
-  |        v
-  |   [RMSNorm (ffn_norm)]
-  |        |
-  |        v
-  |   if layer_id < 3:
-  |     [MLP (dense)]
-  |       - w1 (ColumnPar), w3 (ColumnPar), w2 (RowPar)
-  |       - silu(w1(x)) * w3(x) -> w2
-  |   else:
-  |     [MoE (sparse)]
-  |       - [Gate] receives x_normed -> scores -> topk -> indices, weights
-  |       - [Expert_i] for each selected: w2(silu(w1(x)) * w3(x)) * weight_i
-  |       - [SharedExperts] always active: MLP(x)
-  |       - all_reduce (if distributed)
-  |       - output = routed_experts_out + shared_experts_out
-  |        |
-  |        v
-  |   x = x + ffn_out  (residual)
-  +------------------------------+
-     |
-     v (after 61 layers)
-  [RMSNorm (final norm)]
-     |
-     v
-  [Linear (head)] -- dim=7168 -> vocab=129280
-     |
-     v
-  [Logits] (bsz, seqlen, 129280)
-     |
-     v
-  (Training: cross-entropy loss + MTP loss)
-  (Inference: argmax/sampling -> next token)</div>
+一个 Token 的完整上下文数据链
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[输入] token 编号（批大小, 序列长度）
+   │
+   ▼
+[并行嵌入层] --词表并行--> all_reduce 聚合 --> 嵌入 (批, 序列, 7168)
+   │
+   ▼
+[freqs_cis] = precompute_freqs_cis(序列长度, 维度)
+              （预计算，跨所有层共享）
+   │
+   ▼
+┌──── 循环 61 层：────┐
+│ [RMSNorm attn_norm] 归一化 x                        │
+│   │                                                  │
+│   ▼                                                  │
+│ [MLA 注意力层]                                       │
+│   - 输入：x_normed, start_pos, freqs_cis, mask       │
+│   - 内部：wq_a → q_norm → wq_b → 拆分(q_nope, q_pe) │
+│   - 内部：wkv_a → 拆分(kv, k_pe) → kv_norm          │
+│   - 内部：对 q_pe、k_pe 应用旋转位置编码              │
+│   - 内部：注意力计算（朴素或吸收模式）                 │
+│   - 内部：wo 输出投影                                 │
+│   - 输出：attn_out (批, 序列, 7168)                  │
+│   │                                                  │
+│   ▼                                                  │
+│ x = x + attn_out（残差连接）                          │
+│   │                                                  │
+│   ▼                                                  │
+│ [RMSNorm ffn_norm]                                   │
+│   │                                                  │
+│   ▼                                                  │
+│ 若 层号 < 3：                                        │
+│   [MLP 密集前馈]                                     │
+│     - w1(列并行), w3(列并行), w2(行并行)             │
+│     - silu(w1(x)) × w3(x) → w2                       │
+│ 否则：                                               │
+│   [MoE 稀疏前馈]                                     │
+│     - [门控] 接收 x_normed → 分数 → TopK → 索引/权重  │
+│     - [专家_i] 每个选中专家：w2(silu(w1(x))×w3(x))×权重│
+│     - [共享专家] 始终激活：MLP(x)                     │
+│     - all_reduce（分布式时）                          │
+│     - 输出 = 路由专家输出 + 共享专家输出              │
+│   │                                                  │
+│   ▼                                                  │
+│ x = x + FFN 输出（残差连接）                          │
+└──────────────────────┘
+   │
+   ▼（61 层之后）
+[RMSNorm 最终归一化]
+   │
+   ▼
+[输出投影层] -- 7168 → 词表 129280
+   │
+   ▼
+[Logits]（批, 序列, 129280）
+   │
+   ▼
+（训练：交叉熵损失 + MTP 损失）
+（推理：argmax/采样 → 下一个 Token）
+</div>
 
 <!-- ================================================================== -->
 <!-- ==================== PART 3: CODE ANALYSIS ======================= -->
@@ -1068,47 +1183,49 @@ Communication Optimization:
 <p>DeepSeek-V3 的开源代码位于 <code>github.com/deepseek-ai/DeepSeek-V3</code>，核心代码集中在 <code>inference/</code> 目录下。</p>
 
 <div class="frame-diagram">Repository File Structure:
-
+开源代码文件结构
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DeepSeek-V3/
-|
-|-- inference/
-|   |-- model.py          # 核心: 模型架构定义 (912 lines)
-|   |   |-- ModelArgs     # 配置数据类 (L19-85)
-|   |   |-- ParallelEmbedding  # 词表并行嵌入 (L87-127)
-|   |   |-- linear()      # FP8/BF16 自适应线性函数 (L129-162)
-|   |   |-- Linear        # 带量化的线性层 (L165-206)
-|   |   |-- ColumnParallelLinear  # 列并行线性层 (L208-232)
-|   |   |-- RowParallelLinear     # 行并行线性层 (L234-265)
-|   |   |-- RMSNorm      # RMS 归一化 (L267-290)
-|   |   |-- precompute_freqs_cis  # RoPE 频率预计算 (L292-340)
-|   |   |-- apply_rotary_emb      # RoPE 应用 (L342-391)
-|   |   |-- MLA         # 多头潜在注意力 (L393-495)
-|   |   |-- MLP         # 密集前馈网络 (L497-529)
-|   |   |-- Gate        # MoE 门控路由 (L532-595)
-|   |   |-- Expert      # 单个专家 (L598-631)
-|   |   |-- MoE         # 混合专家层 (L633-691)
-|   |   |-- Block       # Transformer 块 (L693-732)
-|   |   |-- Transformer # 完整模型 (L735-795)
-|   |
-|   |-- generate.py      # 推理生成入口
-|   |   |-- generate()   # 单步生成函数 (L30-70)
-|   |   |-- main()       # CLI 入口 (L100-185)
-|   |
-|   |-- kernel.py        # FP8 高性能计算核
-|   |   |-- fp8_gemm     # FP8 矩阵乘法 (Triton)
-|   |   |-- weight_dequant # 权重反量化
-|   |   |-- act_quant    # 激活值量化
-|   |
-|   |-- convert.py       # 权重格式转换工具
-|   |-- fp8_cast_bf16.py  # FP8 -> BF16 精度转换
-|   |-- configs/
-|       |-- config_671B.json  # 671B 模型配置
-|       |-- config_236B.json  # 236B 模型配置
-|       |-- config_16B.json   # 16B 模型配置
-|
-|-- README.md
-|-- README_WEIGHTS.md    # 权重结构说明
-|-- DeepSeek_V3.pdf      # 技术论文</div>
+│
+├── inference/
+│   ├── model.py          # 核心：模型架构定义（912 行）
+│   │   ├── ModelArgs     # 配置数据类（L19-85）
+│   │   ├── ParallelEmbedding  # 词表并行嵌入（L87-127）
+│   │   ├── linear()      # FP8/BF16 自适应线性函数（L129-162）
+│   │   ├── Linear        # 带量化的线性层（L165-206）
+│   │   ├── ColumnParallelLinear  # 列并行线性层（L208-232）
+│   │   ├── RowParallelLinear     # 行并行线性层（L234-265）
+│   │   ├── RMSNorm       # RMS 归一化（L267-290）
+│   │   ├── precompute_freqs_cis  # RoPE 频率预计算（L292-340）
+│   │   ├── apply_rotary_emb      # RoPE 应用（L342-391）
+│   │   ├── MLA           # 多头潜在注意力（L393-495）
+│   │   ├── MLP           # 密集前馈网络（L497-529）
+│   │   ├── Gate          # MoE 门控路由（L532-595）
+│   │   ├── Expert        # 单个专家（L598-631）
+│   │   ├── MoE           # 混合专家层（L633-691）
+│   │   ├── Block         # Transformer 块（L693-732）
+│   │   └── Transformer   # 完整模型（L735-795）
+│   │
+│   ├── generate.py       # 推理生成入口
+│   │   ├── generate()    # 单步生成函数（L30-70）
+│   │   └── main()        # CLI 入口（L100-185）
+│   │
+│   ├── kernel.py         # FP8 高性能计算核
+│   │   ├── fp8_gemm      # FP8 矩阵乘法（Triton）
+│   │   ├── weight_dequant # 权重反量化
+│   │   └── act_quant     # 激活值量化
+│   │
+│   ├── convert.py        # 权重格式转换工具
+│   ├── fp8_cast_bf16.py  # FP8 → BF16 精度转换
+│   └── configs/
+│       ├── config_671B.json  # 671B 模型配置
+│       ├── config_236B.json  # 236B 模型配置
+│       └── config_16B.json   # 16B 模型配置
+│
+├── README.md
+├── README_WEIGHTS.md     # 权重结构说明
+└── DeepSeek_V3.pdf       # 技术论文
+</div>
 
 <h2 id="code-modelargs">03-代码分析 / ModelArgs 配置类</h2>
 
@@ -1608,66 +1725,56 @@ DeepSeek-V3/
 <p>以下是从用户输入到生成输出的完整主流程：</p>
 
 <div class="frame-diagram">Main Flow: From Input to Output (inference/generate.py):
+主流程：从输入到输出（inference/generate.py）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 1：初始化（main 函数）
+  1. 从 JSON 读取配置 → ModelArgs
+  2. 设置默认精度为 bfloat16
+  3. 在 CUDA 上创建模型 = Transformer(ModelArgs)
+  4. 从检查点路径加载 tokenizer
+  5. 预热：生成 2 个 dummy token（触发 JIT 编译、初始化缓存）
+  6. 从 safetensors 加载权重（model{rank}-mp{world_size}）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 2：生成循环（generate 函数）
 
-+=====================================================================+
-|  Step 1: Initialization (main function)                              |
-+=====================================================================+
-|                                                                       |
-|  1. Load config from JSON --> ModelArgs                              |
-|  2. Set default dtype to bfloat16                                    |
-|  3. Create model = Transformer(ModelArgs) on CUDA                   |
-|  4. Load tokenizer from checkpoint path                              |
-|  5. Warmup: generate 2 tokens (trigger JIT, init caches)            |
-|  6. Load weights from safetensors (model{rank}-mp{world_size})     |
-|                                                                       |
-+=====================================================================+
-|  Step 2: Generation Loop (generate function)                         |
-+=====================================================================+
-|                                                                       |
-|  @torch.inference_mode()                                             |
-|  def generate(model, tokens, max_new_tokens, temperature):          |
-|                                                                       |
-|    for cur_pos in range(start_pos, start_pos + max_new_tokens):     |
-|                                                                       |
-|      +-------------------------------------------------------+       |
-|      | 2a. Forward Pass                                      |       |
-|      |     logits = model.forward(tokens[:, :cur_pos],       |       |
-|      |                              prev_pos)                 |       |
-|      |     --> Transformer.forward()                         |       |
-|      |         embed -> 61 layers -> norm -> head -> logits  |       |
-|      +-------------------------------------------------------+       |
-|                              |                                        |
-|      +-------------------------------------------------------+       |
-|      | 2b. Get Next Token                                    |       |
-|      |     if temperature == 0:                              |       |
-|      |       next_token = argmax(logits[:, -1])             |       |
-|      |     else:                                              |       |
-|      |       probs = softmax(logits[:, -1] / temp)          |       |
-|      |       next_token = multinomial(probs, 1)              |       |
-|      +-------------------------------------------------------+       |
-|                              |                                        |
-|      +-------------------------------------------------------+       |
-|      | 2c. Update Token Array                                |       |
-|      |     tokens[:, cur_pos] = next_token                   |       |
-|      |     prev_pos = cur_pos                                |       |
-|      +-------------------------------------------------------+       |
-|                              |                                        |
-|      +-------------------------------------------------------+       |
-|      | 2d. Check Stop Condition                              |       |
-|      |     if next_token == EOS: break                      |       |
-|      |     if cur_pos >= max_seq_len: break                 |       |
-|      +-------------------------------------------------------+       |
-|                                                                       |
-|    return tokens                                                      |
-|                                                                       |
-+=====================================================================+
-|  Step 3: Output                                                      |
-+=====================================================================+
-|                                                                       |
-|  Interactive mode: print decoded text, wait for next input          |
-|  Batch mode: write decoded text to output file                      |
-|                                                                       |
-+=====================================================================+</div>
+  @torch.inference_mode()
+  def generate(model, tokens, max_new_tokens, temperature):
+    for cur_pos in range(start_pos, start_pos + max_new_tokens):
+
+      ┌──────────────────────────────────────┐
+      │ 2a. 前向传播                          │
+      │   logits = model.forward(tokens,      │
+      │                            prev_pos)   │
+      │   --> 嵌入 → 61 层 → 归一化 → 输出头    │
+      └──────────────────────────────────────┘
+                      │
+      ┌──────────────────────────────────────┐
+      │ 2b. 选择下一个 Token                  │
+      │   若 temperature == 0：              │
+      │     next = argmax(logits[-1]) 贪心    │
+      │   否则：                              │
+      │     概率 = softmax(logits[-1]/温度)   │
+      │     next = 多项式采样(概率)            │
+      └──────────────────────────────────────┘
+                      │
+      ┌──────────────────────────────────────┐
+      │ 2c. 更新 Token 数组                   │
+      │   tokens[cur_pos] = next             │
+      │   prev_pos = cur_pos                 │
+      └──────────────────────────────────────┘
+                      │
+      ┌──────────────────────────────────────┐
+      │ 2d. 检查停止条件                      │
+      │   若 next == EOS：退出                │
+      │   若 cur_pos >= 最大序列长度：退出     │
+      └──────────────────────────────────────┘
+
+  返回 tokens
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 3：输出
+  交互模式：打印解码文本，等待下一轮输入
+  批处理模式：将解码文本写入输出文件
+</div>
 
 <h3>Transformer.forward() 内部流程详解</h3>
 <pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, tokens, start_pos):
@@ -1730,117 +1837,164 @@ DeepSeek-V3/
 
 <h3>训练执行流程全景</h3>
 <div class="frame-diagram">Training Execution Flow Overview:
+训练执行流程全景
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+阶段 1：预训练（2.664M GPU 小时）
+┌──────────────────────────────────────────────────┐
+│ [数据管线]                                        │
+│ 14.8T token → 分词 → 批次（3072 → 15360 序列）    │
+│      │                                            │
+│      ▼                                            │
+│ [前向传播]                                        │
+│ token → 嵌入 → 61 块 → 归一化 → 输出头 → logits   │
+│      │                         │                 │
+│      │             [MTP 模块]（D=1）             │
+│      │                         │                 │
+│      ▼                         ▼                 │
+│ 主损失 = CE(logits, 目标)    MTP损失 = CE(未来)   │
+│ 平衡损失 = α × Σ(负载/N)（极小，兜底）             │
+│ 总损失 = 主损失 + (λ/D)×MTP损失 + 平衡损失        │
+│      │                                            │
+│      ▼                                            │
+│ [反向传播]                                        │
+│ 总损失.backward() → 梯度（FP32 主权重）            │
+│      │                                            │
+│      ▼                                            │
+│ [DualPipe 调度]                                   │
+│ 前向分块 + 反向分块 + All-to-All 通信              │
+│ 在 16 个流水线阶段间重叠                          │
+│      │                                            │
+│      ▼                                            │
+│ [优化器更新]                                      │
+│ AdamW：m = β1·m + (1-β1)·梯度                    │
+│        v = β2·v + (1-β2)·梯度²                   │
+│        w = w - lr·m/(√v + ε)                     │
+│ （ZeRO-1：优化器状态在 DP 副本间分片）             │
+│      │                                            │
+│      ▼                                            │
+│ [偏置更新]（无辅助损失负载均衡）                   │
+│ 对每个专家 i：                                    │
+│   若负载 > 平均：b_i -= γ                        │
+│   若负载 < 平均：b_i += γ                        │
+│ （偏置不在梯度路径中）                             │
+│      │                                            │
+│      ▼                                            │
+│ 对 14.8T token 重复上述过程                        │
+└──────────────────────────────────────────────────┘
 
-+=====================================================================+
-|                DeepSeek-V3 Training Pipeline                         |
-+=====================================================================+
-|                                                                       |
-|  Phase 1: PRETRAINING (2.664M GPU-hours)                            |
-|  ================================================================    |
-|                                                                       |
-|  [Data Pipeline]                                                      |
-|  14.8T tokens --> tokenize --> batch (3072->15360 seqs)             |
-|       |                                                               |
-|       v                                                               |
-|  [Forward Pass]                                                       |
-|  tokens --> Embedding --> 61 Blocks --> Norm --> Head --> logits     |
-|       |                                |                              |
-|       |                    [MTP Modules] (D=1)                       |
-|       |                         |                                    |
-|       v                         v                                    |
-|  L_main = CE(logits, targets)  L_MTP = CE(MTP_logits, future)       |
-|  L_bal  = alpha * sum(load_i / N)  (tiny sequence balance)          |
-|  L_total = L_main + (lambda/D) * L_MTP + L_bal                     |
-|       |                                                               |
-|       v                                                               |
-|  [Backward Pass]                                                      |
-|  L_total.backward() --> gradients (FP32 master)                     |
-|       |                                                               |
-|       v                                                               |
-|  [DualPipe Schedule]                                                  |
-|  Forward chunk + Backward chunk + All-to-All communication           |
-|  overlapped across 16 pipeline stages                                |
-|       |                                                               |
-|       v                                                               |
-|  [Optimizer Update]                                                   |
-|  AdamW: m = beta1*m + (1-beta1)*grad                                 |
-|         v = beta2*v + (1-beta2)*grad^2                               |
-|         w = w - lr * m / (sqrt(v) + eps)                             |
-|  (ZeRO-1: optimizer states sharded across DP replicas)              |
-|       |                                                               |
-|       v                                                               |
-|  [Bias Update] (auxiliary-loss-free)                                 |
-|  for each expert i:                                                   |
-|    if load_i > avg: b_i -= gamma                                     |
-|    if load_i < avg: b_i += gamma                                     |
-|  (bias NOT in gradient path)                                         |
-|       |                                                               |
-|       v                                                               |
-|  Repeat for 14.8T tokens                                              |
-|                                                                       |
-|  Phase 2: LONG CONTEXT EXTENSION                                     |
-|  ================================================================    |
-|  Stage 1: 4K --> 32K (YaRN, rope_factor)                            |
-|  Stage 2: 32K --> 128K (YaRN, extended training)                    |
-|                                                                       |
-|  Phase 3: POST-TRAINING (0.1M GPU-hours)                            |
-|  ================================================================    |
-|  SFT: 1.5M samples (reasoning + non-reasoning)                     |
-|  RL: GRPO (Group Relative Policy Optimization)                      |
-|  R1 Distillation: inject CoT reasoning from DeepSeek-R1             |
-|                                                                       |
-+=====================================================================+</div>
+阶段 2：长上下文扩展
+  第 1 步：4K → 32K（YaRN，rope_factor）
+  第 2 步：32K → 128K（YaRN，扩展训练）
+
+阶段 3：后训练（0.1M GPU 小时）
+  SFT：150 万样本（推理 + 非推理数据）
+  RL：GRPO（组相对策略优化）
+  R1 蒸馏：从 DeepSeek-R1 注入思维链推理能力
+</div>
+
+<h3>预训练一个训练步的完整展开</h3>
+<p>下面以一个全局 batch=15,360 序列、序列长度 4,096 的训练步为例，展示从数据到参数更新的完整流程。</p>
+
+<h4>步骤 1：数据准备</h4>
+<pre><code>总 token 数 = 15360 × 4096 = 62,914,560 tokens
+这些数据来自 14.8T 预训练语料，经过去重、过滤、混合配比</code></pre>
+
+<h4>步骤 2：分布式切分</h4>
+<pre><code>PP=16：模型 61 层被切成 16 个阶段，每阶段约 3-4 层
+EP=64：256 个路由专家分布在 64 张 GPU 上，每张 GPU 承载 4 个专家
+DP=ZeRO-1：优化器状态在数据并行副本间分片</code></pre>
+
+<h4>步骤 3：前向传播</h4>
+<ol>
+  <li>嵌入层：每个 token 被映射为 7168 维向量，词表并行后 all_reduce</li>
+  <li>61 层 Block：每层先 MLA，再 MLP（0-2 层）或 MoE（3-60 层）</li>
+  <li>输出头：投影到 129,280 维词表，得到 logits</li>
+  <li>MTP 模块：D=1，用主模型隐藏状态预测未来 1 个 token</li>
+</ol>
+
+<h4>步骤 4：损失计算</h4>
+<pre><code>主损失   = CrossEntropy(logits, target_tokens)          # 每个位置都参与
+MTP 损失 = CrossEntropy(MTP_logits, target_tokens[1:])  # 预测未来 1 个 token
+平衡损失 = α × Σ(load_i / N)                            # α 极小，安全网
+总损失   = 主损失 + λ × MTP 损失 + 平衡损失</code></pre>
+
+<h4>步骤 5：反向传播</h4>
+<ol>
+  <li>总损失.backward() 触发梯度计算</li>
+  <li>Distributed Data Parallel 下 all_reduce 同步梯度</li>
+  <li>FP8 权重在反向时通过 scale 反量化为 BF16 计算梯度</li>
+</ol>
+
+<h4>步骤 6：优化器更新</h4>
+<pre><code>AdamW（BF16 优化器状态）：
+  m_t = β1 × m_{t-1} + (1-β1) × g_t
+  v_t = β2 × v_{t-1} + (1-β2) × g_t²
+  θ_t = θ_{t-1} - lr_t × m_t / (√v_t + ε) - wd × lr_t × θ_{t-1}
+
+其中 lr_t 按余弦调度从 2.2e-4 衰减到 7.3e-6</code></pre>
+
+<h4>步骤 7：无辅助损失负载均衡偏置更新</h4>
+<pre><code>对每个专家 i：
+  若 load_i > average_load：b_i -= γ
+  若 load_i < average_load：b_i += γ
+
+偏置 b_i 只参与下一次前向的路由选择，不进入反向梯度图</code></pre>
+
+<h4>步骤 8：FP8 重新量化</h4>
+<pre><code>更新后的 FP32 主权重按 128×128 块重新量化为 FP8 E4M3
+scale 同步更新，供下一个训练步使用</code></pre>
+
+<div class="note"><strong>稳定性</strong>：整个 2.664M GPU 小时的预训练过程零回滚、零不可恢复 loss spike，主要得益于细粒度 FP8 量化、无辅助损失负载均衡、以及 DualPipe 对通信和计算的精细重叠。</div>
 
 <h2 id="train-fp8">04-训练场景执行流程 / FP8 训练框架</h2>
 
 <h3>FP8 混合精度训练执行流程</h3>
 <div class="frame-diagram">FP8 Training Execution (per training step):
+FP8 训练执行（每个训练步）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 1：前向传播
+  ┌──────────────────────────────────┐
+  │ 激活值流经各层：                  │
+  │ x (BF16) → act_quant → x_fp8     │
+  │ x_fp8 + W_fp8 → fp8_gemm → 输出   │
+  │ 输出 (BF16) → 下一层              │
+  │                                   │
+  │ 敏感操作保持 BF16/FP32：           │
+  │ - 嵌入层查表                      │
+  │ - 注意力分数计算                  │
+  │ - MoE 门控路由                    │
+  │ - 输出头投影                      │
+  └──────────────────────────────────┘
 
-Step 1: Forward Pass
-  +--------------------------------------------------+
-  | Activations flow through layers:                |
-  |                                                   |
-  | x (BF16) --> act_quant --> x_fp8 (FP8 E4M3)    |
-  | x_fp8 + W_fp8 --> fp8_gemm --> out (BF16)       |
-  | out (BF16) --> next layer                       |
-  |                                                   |
-  | Sensitive operations stay in BF16/FP32:          |
-  | - Embedding lookup                                |
-  | - Attention score computation                    |
-  | - MoE gate routing                               |
-  | - Output head projection                         |
-  +--------------------------------------------------+
+步骤 2：激活检查点
+  ┌──────────────────────────────────┐
+  │ 仅缓存 FP8 压缩的激活供反向使用   │
+  │ RMSNorm 激活重计算（不缓存）      │
+  └──────────────────────────────────┘
 
-Step 2: Activation Checkpointing
-  +--------------------------------------------------+
-  | Only FP8-compressed activations are cached       |
-  | for backward pass (saves memory)                 |
-  | RMSNorm activations recomputed (not cached)     |
-  +--------------------------------------------------+
+步骤 3：反向传播
+  ┌──────────────────────────────────┐
+  │ 梯度用 FP32 计算（主权重）        │
+  │ 梯度计算尽可能使用 FP8 GEMM       │
+  └──────────────────────────────────┘
 
-Step 3: Backward Pass
-  +--------------------------------------------------+
-  | Gradients computed in FP32 (master weights)      |
-  | FP8 GEMM used for gradient computation           |
-  | where possible                                    |
-  +--------------------------------------------------+
+步骤 4：优化器更新
+  ┌──────────────────────────────────┐
+  │ 主权重：FP32                      │
+  │ 优化器状态（m, v）：BF16         │
+  │ 权重更新：FP32                    │
+  │ 更新后：权重重新量化为 FP8        │
+  └──────────────────────────────────┘
 
-Step 4: Optimizer Update
-  +--------------------------------------------------+
-  | Master weights: FP32                              |
-  | Optimizer states (m, v): BF16                    |
-  | Weight update: FP32                               |
-  | After update: weights re-quantized to FP8        |
-  +--------------------------------------------------+
+步骤 5：通信
+  ┌──────────────────────────────────┐
+  │ All-to-All（MoE 分发）：FP8       │
+  │ All-Reduce（梯度同步）：BF16      │
+  │ 流水线通信：尽可能用 FP8          │
+  └──────────────────────────────────┘
 
-Step 5: Communication
-  +--------------------------------------------------+
-  | All-to-All (MoE dispatch): FP8                   |
-  | All-Reduce (gradient sync): BF16                 |
-  | Pipeline communication: FP8 where possible       |
-  +--------------------------------------------------+
-
-Result: less than 0.25% relative loss error vs BF16 baseline</div>
+结果：相对 BF16 基线的损失误差 < 0.25%
+</div>
 
 <h2 id="train-dualpipe">04-训练场景执行流程 / DualPipe 调度详解</h2>
 
@@ -1855,35 +2009,36 @@ Result: less than 0.25% relative loss error vs BF16 baseline</div>
 
 <h3>DualPipe 调度原理</h3>
 <div class="frame-diagram">DualPipe Schedule Detail:
-
-Traditional 1F1B Pipeline:
-  Time --->
-  GPU0: [F0][F1][F2][F3]............[B3][B2][B1][B0]
+DualPipe 调度细节
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+传统 1F1B 流水线：
+  时间 ——▶
+  GPU0: [F0][F1][F2][F3]........[B3][B2][B1][B0]
   GPU1: ....[F0][F1][F2][F3]........[B3][B2][B1][B0]
   GPU2: ........[F0][F1][F2][F3]....[B3][B2][B1][B0]
-  Bubbles: ^^^^              ^^^^
+  气泡: ^^^^              ^^^^
 
-DualPipe (bidirectional + overlap):
-  Time --->
-  GPU0: [F0a|C][F0b|C][B0a|C][B0b|C]  <-- forward+backward from LEFT
+DualPipe（双向 + 重叠）：
+  时间 ——▶
+  GPU0: [F0a|C][F0b|C][B0a|C][B0b|C]  ◀─ 前向+反向从左侧进入
   GPU1: [F1a|C][F1b|C][B1a|C][B1b|C]
   GPU2: [F2a|C][F2b|C][B2a|C][B2b|C]
-  GPU3: [B3a|C][B3b|C][F3a|C][F3b|C]  <-- backward from RIGHT
+  GPU3: [B3a|C][B3b|C][F3a|C][F3b|C]  ◀─ 反向从右侧进入
 
-  F = Forward chunk, B = Backward chunk
-  C = Communication (All-to-All for MoE + Pipeline transfer)
-  | = overlapping (compute + comm on different SMs)
+  F = 前向分块，B = 反向分块
+  C = 通信（MoE 的 All-to-All + 流水线传输）
+  | = 重叠（计算与通信在不同的 SM 上并行）
 
-  Key: Both forward and backward flow BIDIRECTIONALLY,
-       meeting in the middle. Communication is fully hidden
-       behind computation on separate SMs.
+  关键：前向和反向【双向】流动，在中间汇合，
+  通信完全被计算隐藏在独立的 SM 上。
 
-  SM Allocation (H800 has ~132 SMs):
-  - ~20 SMs: All-to-All communication kernel
-  - ~112 SMs: GEMM computation (fully utilized)
+  SM 分配（H800 约 132 个 SM）：
+  - 约 20 个 SM：All-to-All 通信内核
+  - 约 112 个 SM：GEMM 计算（充分使用）
 
-  Result: Near-zero pipeline bubbles
-          Near-zero All-to-All overhead</div>
+  结果：流水线气泡几乎为零
+        All-to-All 开销几乎为零
+</div>
 
 <h3>跨节点 All-to-All 通信优化</h3>
 <p>MoE 的核心通信开销是跨节点的 All-to-All dispatch/return。DeepSeek 开发了定制通信内核：</p>
@@ -1909,25 +2064,27 @@ DualPipe (bidirectional + overlap):
 <p>预训练后，通过两阶段 YaRN (Yet another RoPE extensioN) 方法扩展上下文长度：</p>
 
 <div class="frame-diagram">Long Context Extension (YaRN):
+长上下文扩展（YaRN）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+阶段 1：4K → 32K
+  - 方法：YaRN（rope_factor 缩放）
+  - 训练数据：长上下文序列
+  - 批次大小：为更长序列减小
+  - 步数：约 1000 步
 
-Phase 1: 4K --> 32K
-  - Method: YaRN with rope_factor
-  - Training data: Long context sequences
-  - Batch size: reduced for longer sequences
-  - Steps: ~1000 steps
+阶段 2：32K → 128K
+  - 方法：YaRN（扩展 rope_factor）
+  - 训练数据：超长上下文序列
+  - 批次大小：进一步减小
+  - 步数：约 1000 步
 
-Phase 2: 32K --> 128K
-  - Method: YaRN with extended rope_factor
-  - Training data: Very long context sequences
-  - Batch size: further reduced
-  - Steps: ~1000 steps
+YaRN 在 MLA 中的缩放：
+  - RoPE 频率按 rope_factor 调整
+  - softmax 缩放系数 ×= yarn_get_mscale(rope_factor, beta_fast)
+  - mscale 补偿注意力分布扩散带来的影响
 
-YaRN Scaling in MLA:
-  - RoPE frequencies adjusted by rope_factor
-  - softmax_scale *= yarn_get_mscale(rope_factor, beta_fast)
-  - mscale compensates for attention distribution spreading
-
-Result: 128K context window with maintained quality</div>
+结果：128K 上下文窗口，且质量保持
+</div>
 
 <h2 id="train-post">04-训练场景执行流程 / 后训练 (SFT+RL)</h2>
 
@@ -1943,30 +2100,32 @@ Result: 128K context window with maintained quality</div>
 
 <h3>强化学习 (GRPO)</h3>
 <div class="frame-diagram">GRPO (Group Relative Policy Optimization):
+GRPO（组相对策略优化）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+传统 RL（PPO）：
+  +------+     +--------+     +--------+
+  | 演员  |──▶| 评论家  |──▶| 奖励    |
+  +------+     +--------+     +--------+
+  （需要独立的评论家模型 = 成本高昂！）
 
-  Traditional RL (PPO):
-  +-----+     +-----+     +-------+
-  | Actor |-->| Critic |-->| Reward |
-  +-----+     +-----+     +-------+
-  (needs separate critic model = expensive!)
+GRPO：
+  +------+     +--------+
+  | 演员  |──▶| 奖励    |
+  +------+     +--------+
+  （无需评论家！用组内统计量作为基线）
 
-  GRPO:
-  +-----+     +-------+
-  | Actor |-->| Reward |
-  +-----+     +-------+
-  (no critic! uses group statistics as baseline)
+算法步骤：
+  1. 对同一提示采样 G 个输出（组成一个组）
+  2. 用奖励模型给每个输出打分
+  3. 计算优势值：A_i = (r_i - 组均值) / 组标准差
+  4. 策略梯度：用 A_i 优化演员模型
+  5. KL 正则化防止策略漂移
 
-  Algorithm:
-  1. Sample G outputs for same prompt (group)
-  2. Score each output with reward model
-  3. Compute advantage: A_i = (r_i - mean(r)) / std(r)
-  4. Policy gradient: optimize actor with A_i
-  5. KL regularization to prevent drift
-
-  Reward Sources:
-  - Rule-based (math, code: execution verification)
-  - Model-based (general tasks: DeepSeek-V3 self-evaluation)
-  - Self-Rewarding (constitutional AI approach)</div>
+奖励来源：
+  - 基于规则（数学/代码：执行结果验证）
+  - 基于模型（通用任务：DeepSeek-V3 自评）
+  - 自奖励（宪法 AI 思路）
+</div>
 
 <h3>R1 蒸馏</h3>
 <p>从 DeepSeek-R1 系列模型蒸馏长思维链推理能力到 DeepSeek-V3。通过精心设计的系统提示，将 R1 的验证和反思模式注入 V3，显著提升数学和编程性能，同时控制输出风格和长度。</p>
@@ -1978,159 +2137,184 @@ Result: 128K context window with maintained quality</div>
 <h2 id="infer-init">05-推理场景执行流程 / 推理初始化</h2>
 
 <div class="frame-diagram">Inference Initialization Flow:
-
-+=====================================================================+
-|                DeepSeek-V3 Inference Startup                         |
-+=====================================================================+
-|                                                                       |
-|  Step 1: Distributed Setup                                           |
-|  +---------------------------------------------------+               |
-|  | torchrun --nproc_per_node=8 generate.py           |               |
-|  |   --> WORLD_SIZE, RANK, LOCAL_RANK set             |               |
-|  |   --> init_process_group(backend="nccl")           |               |
-|  |   --> each process assigned to its GPU             |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-|  Step 2: Configuration Loading                                       |
-|  +---------------------------------------------------+               |
-|  | Load JSON config --> ModelArgs                     |               |
-|  | Set attn_impl = "absorb" (default, memory saving) |               |
-|  | Set dtype = "fp8" (or "bf16")                     |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-|  Step 3: Model Construction                                          |
-|  +---------------------------------------------------+               |
-|  | model = Transformer(ModelArgs)                     |               |
-|  |   - ParallelEmbedding (vocab split across GPUs)   |               |
-|  |   - 61 Blocks (MLA + MLP/MoE)                     |               |
-|  |   - RMSNorm + Linear head                         |               |
-|  |   - All Linear layers have FP8 quantized weights  |               |
-|  |   - KV cache buffers pre-allocated (absorb mode)  |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-|  Step 4: Warmup                                                      |
-|  +---------------------------------------------------+               |
-|  | Generate 2 dummy tokens to trigger:                |               |
-|  |   - JIT compilation of Triton kernels              |               |
-|  |   - CUDA graph capture (if enabled)               |               |
-|  |   - KV cache initialization                        |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-|  Step 5: Weight Loading                                              |
-|  +---------------------------------------------------+               |
-|  | Load model{rank}-mp{world_size}.safetensors       |               |
-|  |   - Each GPU loads its weight shard                |               |
-|  |   - FP8 weights + BF16 scale factors               |               |
-|  |   - Expert weights for local experts only         |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-|  Step 6: Ready for Inference                                         |
-|  +---------------------------------------------------+               |
-|  | rank 0: handles user I/O, broadcasts prompts      |               |
-|  | rank 1+: receive broadcasts, participate silently |               |
-|  +---------------------------------------------------+               |
-|                                                                       |
-+=====================================================================+</div>
+推理初始化流程
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 1：分布式环境搭建
+  torchrun --nproc_per_node=8 generate.py
+    --> 设置 WORLD_SIZE、RANK、LOCAL_RANK
+    --> init_process_group(backend="nccl")
+    --> 每个进程分配到自己的 GPU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 2：加载配置
+  读取 JSON 配置 → ModelArgs
+  设置 attn_impl = "absorb"（默认，省内存）
+  设置 dtype = "fp8"（或 "bf16"）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 3：构建模型
+  model = Transformer(ModelArgs)
+    - 并行嵌入层（词表按 GPU 切分）
+    - 61 个 Block（MLA + MLP/MoE）
+    - RMSNorm + 输出投影层
+    - 所有 Linear 层带 FP8 量化权重
+    - KV 缓存缓冲预分配（吸收模式）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 4：预热（Warmup）
+  生成 2 个 dummy token，触发：
+    - Triton 内核的 JIT 编译
+    - CUDA Graph 捕获（若启用）
+    - KV 缓存初始化
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 5：加载权重
+  加载 model{rank}-mp{world_size}.safetensors
+    - 每张 GPU 只加载自己的权重分片
+    - FP8 权重 + BF16 缩放因子
+    - 只加载本地专家权重
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+步骤 6：就绪
+  rank 0：负责用户输入输出，广播 prompt
+  rank 1+：接收广播，静默参与计算
+</div>
 
 <h2 id="infer-prefill">05-推理场景执行流程 / 预填充阶段</h2>
 
 <p>预填充（Prefilling）阶段处理整个输入 prompt，为所有输入 token 计算 KV 缓存。这是计算密集型操作，可以充分利用 GPU 并行性。</p>
 
 <div class="frame-diagram">Prefilling Phase Execution:
+预填充阶段执行（处理整个 Prompt）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入：tokens（批, prompt 长度）  例：(1, 4096)
 
-+=====================================================================+
-|                Prefilling (seqlen > 1)                               |
-+=====================================================================+
-|                                                                       |
-|  Input: tokens (bsz, prompt_len)  e.g. (1, 4096)                    |
-|                                                                       |
-|  1. Embedding                                                        |
-|     tokens --> ParallelEmbedding --> all_reduce --> x (bsz, 4096, 7168)|
-|                                                                       |
-|  2. Causal Mask Construction                                         |
-|     mask = full((4096, 4096), -inf)                                  |
-|     mask = triu(mask, diagonal=1)  # upper triangle = -inf           |
-|     # shape: (4096, 4096) -- allows attending to all previous tokens |
-|                                                                       |
-|  3. RoPE Frequencies                                                 |
-|     freqs_cis = precomputed[0 : 4096]                                |
-|                                                                       |
-|  4. Forward Through 61 Layers                                        |
-|     For each layer:                                                   |
-|       x = x + MLA(RMSNorm(x), start_pos=0, freqs_cis, mask)          |
-|         - Compute Q, K, V for ALL 4096 tokens at once               |
-|         - Q: wq_a -> q_norm -> wq_b -> split (nope, pe)             |
-|         - KV: wkv_a -> split (kv, k_pe) -> kv_norm                  |
-|         - Apply RoPE to q_pe and k_pe                               |
-|         - Cache: kv_cache[0:4096] = kv_norm(kv)                     |
-|         - Attention: full (4096 x 4096) matrix                     |
-|         - Absorb mode: q_nope_c @ kv_cache^T + q_pe @ pe_cache^T   |
-|       x = x + FFN(RMSNorm(x))                                       |
-|         - Dense (layer 0-2): MLP(x)                                 |
-|         - MoE (layer 3-60): Gate routes -> Expert compute -> merge  |
-|                                                                       |
-|  5. Output                                                            |
-|     x = RMSNorm(x)                                                   |
-|     logits = head(x)  # (bsz, 4096, 129280)                         |
-|     next_token = argmax/sample(logits[:, -1])                       |
-|                                                                       |
-|  Key Characteristics:                                                 |
-|  - Full parallelism: all prompt tokens computed simultaneously      |
-|  - KV cache populated for ALL positions                              |
-|  - Memory intensive: large attention matrix (4096^2)                |
-|  - GEMM dominant: good GPU utilization                              |
-|                                                                       |
-+=====================================================================+</div>
+1. 嵌入
+   token → 并行嵌入层 → all_reduce → x (1, 4096, 7168)
+
+2. 构造因果掩码
+   mask = full((4096, 4096), -inf)
+   mask = triu(mask, diagonal=1)  # 上三角 = -inf
+   # 形状 (4096, 4096)，只允许关注历史 token
+
+3. RoPE 频率
+   freqs_cis = 预计算[0 : 4096]
+
+4. 前向通过 61 层
+   对每一层：
+     x = x + MLA(RMSNorm(x), start_pos=0, freqs_cis, mask)
+       - 一次性计算全部 4096 个 token 的 Q、K、V
+       - Q: wq_a → q_norm → wq_b → 拆分（nope, pe）
+       - KV: wkv_a → 拆分（kv, k_pe）→ kv_norm
+       - 对 q_pe 和 k_pe 应用 RoPE
+       - 缓存：kv_cache[0:4096] = kv_norm(kv)
+       - 注意力：完整 (4096 × 4096) 矩阵
+       - 吸收模式：q_nope_c @ kv_cache^T + q_pe @ pe_cache^T
+     x = x + FFN(RMSNorm(x))
+       - 密集层（0-2）：MLP(x)
+       - MoE 层（3-60）：门控路由 → 专家计算 → 合并
+
+5. 输出
+   x = RMSNorm(x)
+   logits = 输出头(x)   # (1, 4096, 129280)
+   next_token = argmax/采样(logits[:, -1])
+
+关键特征：
+  - 全并行：所有 prompt token 同时计算
+  - KV 缓存被所有位置填满
+  - 内存密集：大注意力矩阵（4096²）
+  - GEMM 主导：GPU 利用率高
+</div>
+
+<h3>预填充阶段算力与内存估算</h3>
+<p>预填充阶段一次性处理整个 prompt，计算密度高，适合 FP8 GEMM 大矩阵乘。</p>
+
+<h4>示例：batch=1，prompt 长度 4096</h4>
+<pre><code>输入 token 形状 = (1, 4096)
+嵌入后形状      = (1, 4096, 7168)
+因果掩码形状    = (4096, 4096)  # 下三角可访问</code></pre>
+
+<h4>MLA 计算量</h4>
+<p>每层 MLA 的注意力矩阵大小为 (4096, 4096)：</p>
+<pre><code>注意力 QK^T：4096 × 4096 × 128 头 × 2 FLOP ≈ 4.3 TFLOPS/层
+Softmax @ V：4096 × 4096 × 128 头 × 2 FLOP ≈ 4.3 TFLOPS/层
+61 层合计：≈ 525 TFLOPS</code></pre>
+
+<h4>MoE 计算量</h4>
+<pre><code>每层 MoE 激活参数 ≈ 37B / 61 ≈ 606 M 参数
+每次矩阵乘 FLOPs ≈ 2 × 参数 × token 数
+61 层 MoE 前向 FLOPs ≈ 2 × 37B × 4096 ≈ 303 TFLOPS</code></pre>
+
+<h4>KV 缓存写入</h4>
+<pre><code>每层写入 4096 × 576 = 2,359,296 个 BF16 数 = 4.7 MB
+61 层共写入 ≈ 288 MB</code></pre>
+
+<div class="note"><strong>瓶颈</strong>：预填充是计算密集型，主要瓶颈在 FP8 GEMM 吞吐。使用较大 batch 和 FP8 精度可显著提升吞吐。4096 长度 prompt 在 H800 上通常可在数百毫秒内完成预填充。</div>
 
 <h2 id="infer-decode">05-推理场景执行流程 / 解码阶段</h2>
 
 <p>解码（Decoding）阶段逐 token 生成输出。每个 step 只处理 1 个 token，主要瓶颈是内存带宽（KV cache 读取）而非计算。</p>
 
 <div class="frame-diagram">Decoding Phase Execution:
+解码阶段执行（逐 Token 生成）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+输入：tokens（批, 1）—— 单个 token
 
-+=====================================================================+
-|                Decoding (seqlen == 1)                                |
-+=====================================================================+
-|                                                                       |
-|  Input: tokens (bsz, 1)  -- single token                            |
-|                                                                       |
-|  1. Embedding                                                        |
-|     tokens --> ParallelEmbedding --> all_reduce --> x (bsz, 1, 7168) |
-|                                                                       |
-|  2. No Mask Needed                                                   |
-|     mask = None  (KV cache handles causality)                       |
-|                                                                       |
-|  3. RoPE Frequencies                                                 |
-|     freqs_cis = precomputed[cur_pos : cur_pos + 1]                  |
-|                                                                       |
-|  4. Forward Through 61 Layers                                        |
-|     For each layer:                                                   |
-|       x = x + MLA(RMSNorm(x), start_pos=cur_pos, freqs_cis, None)   |
-|         - Compute Q, K, V for 1 token only                          |
-|         - Q: wq_a -> q_norm -> wq_b -> split                        |
-|         - KV: wkv_a -> split -> kv_norm                             |
-|         - Apply RoPE                                                 |
-|         - Cache: kv_cache[cur_pos] = kv_norm(kv)  (512 dims)        |
-|         -          pe_cache[cur_pos] = k_pe          (64 dims)      |
-|         - Attention: (1 x cur_pos) -- read entire KV cache          |
-|         - Absorb: q_nope_c @ kv_cache[:cur_pos+1]^T                |
-|         -          + q_pe @ pe_cache[:cur_pos+1]^T                 |
-|       x = x + FFN(RMSNorm(x))                                       |
-|         - Dense: MLP(1 token)                                       |
-|         - MoE: Gate(1 token) -> route to 8 experts -> compute      |
-|                                                                       |
-|  5. Output                                                            |
-|     logits = head(x)  # (bsz, 1, 129280)                            |
-|     next_token = argmax/sample(logits)                              |
-|     tokens[:, cur_pos+1] = next_token                               |
-|                                                                       |
-|  Key Characteristics:                                                 |
-|  - Sequential: one token at a time                                  |
-|  - Memory bound: KV cache read dominates (576 dims x 61 layers)    |
-|  - MoE routing: 1 token -> 8 experts (low GPU utilization)          |
-|  - Absorb mode critical: 576 vs 40960 dims per token per layer     |
-|                                                                       |
-+=====================================================================+</div>
+1. 嵌入
+   token → 并行嵌入层 → all_reduce → x (1, 1, 7168)
+
+2. 无需掩码
+   mask = None（KV 缓存天然保证因果性）
+
+3. RoPE 频率
+   freqs_cis = 预计算[cur_pos : cur_pos + 1]
+
+4. 前向通过 61 层
+   对每一层：
+     x = x + MLA(RMSNorm(x), start_pos=cur_pos, freqs_cis, None)
+       - 只计算 1 个 token 的 Q、K、V
+       - Q: wq_a → q_norm → wq_b → 拆分
+       - KV: wkv_a → 拆分 → kv_norm
+       - 应用 RoPE
+       - 缓存：kv_cache[cur_pos] = kv_norm(kv)  (512 维)
+       -        pe_cache[cur_pos] = k_pe        (64 维)
+       - 注意力：(1 × cur_pos) —— 读取整个 KV 缓存
+       - 吸收：q_nope_c @ kv_cache[:cur_pos+1]^T
+             + q_pe @ pe_cache[:cur_pos+1]^T
+     x = x + FFN(RMSNorm(x))
+       - 密集层：MLP(1 token)
+       - MoE 层：门控(1 token) → 路由到 8 个专家 → 计算
+
+5. 输出
+   logits = 输出头(x)   # (1, 1, 129280)
+   next_token = argmax/采样(logits)
+   tokens[cur_pos+1] = next_token
+
+关键特征：
+  - 串行：一次一个 token
+  - 内存受限：KV 缓存读取占主导（576 维 × 61 层）
+  - MoE 路由：1 个 token → 8 个专家（GPU 利用率低）
+  - 吸收模式至关重要：576 vs 40,960 维每 token 每层
+</div>
+
+<h3>解码阶段延迟分析</h3>
+<p>解码阶段每次只处理 1 个新 token，计算量小，但需要从显存读取整个 KV 缓存，因此是内存带宽受限。</p>
+
+<h4>示例：已生成 4096 个 token，继续生成第 4097 个</h4>
+<pre><code>输入 token 形状 = (1, 1)
+嵌入后形状      = (1, 1, 7168)</code></pre>
+
+<h4>每步 MLA 读取量</h4>
+<pre><code>单层读取 = 4097 token × 576 维 × 2 B = 4.72 MB
+61 层读取 = 4.72 MB × 61 ≈ 288 MB</code></pre>
+<p>若目标生成 100 个 token，则总读取量 ≈ 28.8 GB。</p>
+
+<h4>注意力计算量</h4>
+<pre><code>QK^T: 1 × 4097 × 128 头 × 2 FLOP ≈ 1.05 MFLOPS/层
+Softmax@V: 1 × 4097 × 128 头 × 2 FLOP ≈ 1.05 MFLOPS/层</code></pre>
+<p>与预填充相比，计算量极小，主要耗时在加载 KV 缓存。</p>
+
+<h4>MoE 路由</h4>
+<pre><code>1 个 token → Gate → Top-8 专家 → 发送到承载专家的 GPU
+专家计算：2 × 8 × 7168 × 1408 × 2 FLOP ≈ 322 MFLOP
+加上共享专家：2 × 2 × 7168 × 1408 × 2 ≈ 80 MFLOP</code></pre>
+
+<div class="note"><strong>优化方向</strong>：解码延迟主要受限于 (1) KV 缓存带宽，(2) 小 batch 下 MoE 专家切换开销。MLA Absorb 将 KV 缓存从 5 MB/token 降到 70 KB/token，是支撑长上下文解码的关键；连续批处理（continuous batching）和 CUDA Graph 则缓解小 batch 调度开销。</div>
 
 <h2 id="infer-mla">05-推理场景执行流程 / MLA 缓存优化</h2>
 
@@ -2138,32 +2322,34 @@ Result: 128K context window with maintained quality</div>
 <p>Absorb 模式是推理时的默认模式，通过将 wkv_b 矩阵"吸收"到注意力计算中，大幅减少 KV 缓存大小。</p>
 
 <div class="frame-diagram">MLA Absorb Mode: KV Cache Memory Analysis:
+MLA 吸收模式：KV 缓存内存分析
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+标准 MHA 的 KV 缓存（128 头，128K 上下文）：
+  每层：128 × (192 + 128) × 2 字节 = 81,920 字节/token
+  61 层：81,920 × 61 = 4,997,120 字节/token ≈ 5 MB/token
+  128K 上下文：5 MB × 131,072 = 约 655 GB/请求！
+  => 对大批量并发完全不现实
 
-Standard MHA KV cache (128 heads, 128K context):
-  Per layer:  128 * (192 + 128) * 2 bytes = 81,920 bytes/token
-  61 layers:  81,920 * 61 = 4,997,120 bytes/token = ~5MB/token
-  128K context: 5MB * 131072 = ~655 GB per request!
-  => INFEASIBLE for large batch sizes
+MLA 吸收缓存（压缩后）：
+  每层：(512 + 64) × 2 字节 = 1,152 字节/token
+  61 层：1,152 × 61 = 70,272 字节/token ≈ 70 KB/token
+  128K 上下文：70 KB × 131,072 = 约 9.2 GB/请求
+  => 可行！支持大量并发请求
 
-MLA Absorb cache (compressed):
-  Per layer:  (512 + 64) * 2 bytes = 1,152 bytes/token
-  61 layers:  1,152 * 61 = 70,272 bytes/token = ~70KB/token
-  128K context: 70KB * 131072 = ~9.2 GB per request
-  => FEASIBLE! Supports many concurrent requests
+内存缩减：655 GB → 9.2 GB = 71 倍缩减！
+每 token KV 缓存：5 MB → 70 KB（论文报告数据）
 
-Memory Reduction: 655GB --> 9.2GB = 71x reduction!
-Per-token KV cache: 5MB --> 70KB (as reported in DeepSeek paper)
+吸收模式计算（解码步）：
+  1. q_nope_c = q_nope @ wkv_b_K    # 把 Q 投影到潜空间
+  2. 分数 = q_nope_c @ kv_cache^T   # 在潜空间做注意力
+          + q_pe @ pe_cache^T       # 位置注意力
+  3. x = 分数 @ kv_cache            # 潜空间加权求和
+  4. 输出 = x @ wkv_b_V             # 投影回头空间
 
-Absorb Mode Computation (decode step):
-  1. q_nope_c = q_nope @ wkv_b_K    # project Q to latent space
-  2. scores = q_nope_c @ kv_cache^T # attention in latent space
-           + q_pe @ pe_cache^T      # positional attention
-  3. x = scores @ kv_cache          # weighted sum in latent space
-  4. output = x @ wkv_b_V           # project back to head space
-
-  Extra computation: 2 small matmuls (wkv_b absorption)
-  Saved memory: 71x reduction in KV cache
-  Trade-off: slightly more compute per decode step (worth it!)</div>
+  额外计算：2 个小矩阵乘（wkv_b 吸收）
+  节省内存：KV 缓存减少 71 倍
+  权衡：解码每步略多计算（值得！）
+</div>
 
 <h3>推理框架优化</h3>
 <p>主流推理框架（SGLang、vLLM 等）针对 DeepSeek-V3 的 MLA 做了大量优化：</p>
@@ -2178,43 +2364,71 @@ Absorb Mode Computation (decode step):
 <tr><td>数据并行注意力</td><td>DP 维度切分 KV 缓存</td><td>支持更大批量</td></tr>
 </table>
 
+<h3>Absorb 模式矩阵重排推导</h3>
+<p>Naive 模式需要先把压缩 KV 通过 <code>wkv_b</code> 上投影成完整 K/V 再缓存。Absorb 模式则把 <code>wkv_b</code> “吸收”进 attention 计算，避免缓存完整 K/V。</p>
+
+<h4>Naive 模式</h4>
+<pre><code>kv = wkv_a(x)                        # (B, S, 576)
+kv, k_pe = split(kv, [512, 64])
+kv = kv_norm(kv)
+k = wkv_b(kv)  -> split -> k_nope, v # (B, S, 128, 128) 每个头
+k = cat(k_nope, k_pe_expanded)       # (B, S, 128, 192)</code></pre>
+<p>缓存 <code>k</code> 和 <code>v</code>，每 token 40,960 维。</p>
+
+<h4>Absorb 模式</h4>
+<p>将 <code>wkv_b</code> 拆分为 K 部分和 V 部分：</p>
+<pre><code>wkv_b.weight 形状 = (128 × 256, 512)
+reshape -> (128, 256, 512)
+K 部分 = wkv_b[:, :128, :]  # (128, 128, 512)
+V 部分 = wkv_b[:, 128:, :]  # (128, 128, 512)</code></pre>
+
+<p>注意力分数原本是 <code>q @ k^T</code>，代入 <code>k = K_part @ kv</code>：</p>
+<pre><code>scores = q_nope @ k_nope^T + q_pe @ k_pe^T
+       = q_nope @ (K_part @ kv)^T + q_pe @ k_pe^T
+       = (q_nope @ K_part) @ kv^T + q_pe @ k_pe^T
+       = q_nope_c @ kv^T + q_pe @ k_pe^T</code></pre>
+<p>其中 <code>q_nope_c = q_nope @ K_part</code> 把 query 投影到 512 维潜空间。</p>
+
+<p>注意力输出原本是 <code>softmax(scores) @ v</code>，而 <code>v = V_part @ kv</code>：</p>
+<pre><code>output = softmax(scores) @ (V_part @ kv)
+       = (softmax(scores) @ kv) @ V_part</code></pre>
+
+<p>因此只需缓存 512 维 <code>kv</code> 和 64 维 <code>k_pe</code>，共 576 维。</p>
+
+<div class="note"><strong>权衡</strong>：Absorb 模式每解码步多了两个小矩阵乘（q_nope @ K_part 和 attn_out @ V_part），但这两个矩阵乘的规模远小于加载 40,960 维 KV 缓存的内存开销，因此整体速度更快、显存占用更低。</div>
+
 <h2 id="infer-dist">05-推理场景执行流程 / 分布式推理</h2>
 
 <div class="frame-diagram">Distributed Inference Architecture:
+多 GPU 分布式推理架构（模型并行）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+部署：每节点 8 张 GPU（H800/H100）
 
-+=====================================================================+
-|           Multi-GPU Inference (Model Parallel)                      |
-+=====================================================================+
-|                                                                       |
-|  Deployment: 8 GPUs per node (H800/H100)                             |
-|                                                                       |
-|  GPU 0 (rank 0)          GPU 1 (rank 1)        ... GPU 7 (rank 7)  |
-|  +-----------------+     +-----------------+        +-----------------+|
-|  | Embedding       |     | Embedding       |   ...  | Embedding       ||
-|  | (vocab/N)       |     | (vocab/N)       |        | (vocab/N)       ||
-|  +-----------------+     +-----------------+        +-----------------+|
-|  | MLA heads 0-15  |     | MLA heads 16-31 |   ...  | MLA heads 112-127||
-|  | (n_local=16)    |     |                 |        |                 ||
-|  +-----------------+     +-----------------+        +-----------------+|
-|  | Experts 0-31    |     | Experts 32-63   |   ...  | Experts 224-255 ||
-|  | (n_local=32)    |     |                 |        |                 ||
-|  +-----------------+     +-----------------+        +-----------------+|
-|  | KV cache (absorb|     | KV cache (absorb|   ...  | KV cache (absorb||
-|  |  512+64 per tok)|     |  512+64 per tok)|        |  512+64 per tok)||
-|  +-----------------+     +-----------------+        +-----------------+|
-|                                                                       |
-|  Communication Points:                                               |
-|  1. Embedding all_reduce (after ParallelEmbedding)                   |
-|  2. MLA wo all_reduce (after RowParallelLinear)                      |
-|  3. MoE all_reduce (after expert computation)                        |
-|  4. Head all_gather (final logits)                                   |
-|                                                                       |
-|  Multi-Node Extension:                                               |
-|  - Use torchrun for multi-node (e.g., 2 x 8 GPU = 16 GPU)          |
-|  - EP extends across nodes (experts distributed)                    |
-|  - Larger models or more concurrent requests                        |
-|                                                                       |
-+=====================================================================+</div>
+GPU 0（rank 0）        GPU 1（rank 1）       ...  GPU 7（rank 7）
++------------------+  +------------------+      +------------------+
+| 嵌入层（词表/N）  |  | 嵌入层（词表/N）  |  ... | 嵌入层（词表/N）  |
++------------------+  +------------------+      +------------------+
+| MLA 头 0-15      |  | MLA 头 16-31     |  ... | MLA 头 112-127   |
+| (n_local=16)     |  |                  |      |                  |
++------------------+  +------------------+      +------------------+
+| 专家 0-31        |  | 专家 32-63       |  ... | 专家 224-255     |
+| (n_local=32)     |  |                  |      |                  |
++------------------+  +------------------+      +------------------+
+| KV 缓存（吸收）  |  | KV 缓存（吸收）  |  ... | KV 缓存（吸收）  |
+| 512+64/token    |  | 512+64/token    |      | 512+64/token    |
++------------------+  +------------------+      +------------------+
+
+通信点：
+  1. 嵌入层之后 all_reduce（词表并行聚合）
+  2. MLA 的 wo 之后 all_reduce（行并行聚合）
+  3. MoE 之后 all_reduce（专家输出聚合）
+  4. 输出头之后 all_gather（最终 logits）
+
+多节点扩展：
+  - 用 torchrun 多节点（如 2×8 GPU = 16 GPU）
+  - EP 跨节点扩展（专家分布到更多 GPU）
+  - 支持更大模型或更多并发请求
+</div>
 
 <h3>generate.py 分布式执行</h3>
 <pre><code><span class="cm"># 启动命令 (单节点 8 GPU)</span>
@@ -2242,35 +2456,102 @@ torchrun --nnodes=2 --node_rank=0 --nproc_per_node=8 \
 logits = model.<span class="fn">forward</span>(tokens, start_pos)
 next_token = <span class="fn">sample</span>(logits[:, <span class="op">-</span><span class="num">1</span>], temperature)</code></pre>
 
+<h3>8 GPU 分布式推理通信量估算</h3>
+<p>在单节点 8 GPU 推理中，模型被按词表并行、MLA 头并行、专家并行切分。下面估算 batch=1、序列长度=1 的解码步通信量。</p>
+
+<h4>1. 嵌入层 all_reduce</h4>
+<pre><code>每个 rank 只查自己负责的一部分词表，得到部分嵌入向量
+all_reduce 聚合完整嵌入
+通信量 = 1 × 7168 × 2 B = 14.3 KB</code></pre>
+
+<h4>2. MLA wo 的 all_reduce</h4>
+<pre><code>wo 是 RowParallelLinear，输入按头维度切分到 8 个 rank
+每个 rank 计算部分输出后 all_reduce
+通信量 ≈ 1 × 7168 × 2 B = 14.3 KB/层
+61 层合计 ≈ 873 KB</code></pre>
+
+<h4>3. MoE all_reduce</h4>
+<pre><code>每个 rank 只计算本地专家，结果需要 all_reduce 聚合
+通信量 ≈ 1 × 7168 × 2 B = 14.3 KB/层（MoE 层共 58 层）
+58 层合计 ≈ 830 KB</code></pre>
+
+<h4>4. 输出头 all_gather</h4>
+<pre><code>head 是 ColumnParallelLinear，输出按词表切分
+需要 all_gather 得到完整 logits
+通信量 = 1 × 129280 × 2 B = 258.6 KB</code></pre>
+
+<h4>每解码步总通信量</h4>
+<pre><code>约 14.3 + 873 + 830 + 258.6 ≈ 1.98 MB</code></pre>
+<p>通过 NVLink（160 GB/s）传输，耗时约 12 μs，远小于计算时间，因此分布式推理扩展性良好。</p>
+
+<div class="note"><strong>对比训练</strong>：训练时还有 EP=64 的 All-to-All（MoE token 分发），通信量大得多，因此训练高度依赖 DualPipe 重叠；推理时 batch 小、All-to-All 轻量，通信不是主要瓶颈。</div>
+
 <h2 id="infer-opt">05-推理场景执行流程 / 推理优化技术</h2>
 
 <h3>MTP 投机解码</h3>
 <p>MTP 模块在推理时可用于投机解码（Speculative Decoding），加速 token 生成：</p>
 <div class="frame-diagram">Speculative Decoding with MTP:
+MTP 投机解码
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+传统解码：
+  Token: [1] → [2] → [3] → [4] → [5]  （串行，5 步）
 
-  Traditional Decoding:
-  Token: [1] -> [2] -> [3] -> [4] -> [5]   (sequential, 5 steps)
+MTP 投机解码（D=1）：
+  第 1 步：主模型从 [1] 生成 [2]
+           MTP 模块用 [1] 的隐藏状态预测候选 [3]
+  第 2 步：主模型【一次前向】验证 [2, 3]
+           → [2] 确认，[3] 确认
+           主模型同时从 [1,2,3] 生成 [4]
+           MTP 预测候选 [5]
+  第 3 步：验证 [4, 5]
 
-  Speculative Decoding with MTP (D=1):
-  Step 1: Main model generates token [2] from [1]
-          MTP module predicts candidate [3] from [1]'s hidden state
-  Step 2: Main model verifies [2, 3] in ONE forward pass
-          -> [2] confirmed, [3] confirmed
-          Main model also generates [4] from [1,2,3]
-          MTP predicts candidate [5]
-  Step 3: Verify [4, 5]
+  加速：约 2 倍（如果接受率高）
+  代价：额外的 MTP 模块前向（很小，14B vs 671B）
 
-  Speedup: ~2x (if acceptance rate is high)
-  Cost: extra MTP module forward (small, ~14B vs 671B)
+  流程：
+  +---------+      +---------+      +---------+
+  | 主模型   |────▶| MTP 1   |────▶| 验证    |
+  | (671B)  |      | (候选)  |      |         |
+  +---------+      +---------+      +---------+
+       ▲                │
+       │    候选 token   │
+       └────────────────┘
+</div>
 
-  Flow:
-  +-------+     +-------+     +-------+
-  | Main  |---->| MTP 1 |---->| Verify|
-  | Model |     | (cand)|     |       |
-  +-------+     +-------+     +-------+
-       ^              |
-       |   candidate   |
-       +--------------+</div>
+<h3>MTP 投机解码接受率分析</h3>
+<p>MTP 投机解码的加速比取决于主模型对 MTP 候选 token 的接受率。下面给出定量分析。</p>
+
+<h4>设定</h4>
+<ul>
+  <li>主模型每次前向可验证 D 个候选 token</li>
+  <li>MTP 对每个位置生成 1 个候选</li>
+  <li>单个候选被接受概率为 p</li>
+</ul>
+
+<h4>接受长度期望</h4>
+<p>若 D=1，每步最多接受 1 个候选：</p>
+<pre><code>E[接受长度] = p</code></pre>
+<p>若 D=k，连续接受 k 个候选的概率为 p^k，则每步平均接受长度：</p>
+<pre><code>E[L] = p + p² + ... + p^k = p(1 - p^k)/(1 - p)</code></pre>
+
+<h4>加速比估算</h4>
+<p>设主模型前向耗时 T_main，MTP 前向耗时 T_mtp（约 T_main/50，因为 14B vs 671B）：</p>
+<pre><code>传统解码每 token 成本 = T_main
+投机解码每步成本     = T_main + T_mtp
+每步平均生成 token 数 = 1 + E[L]
+
+加速比 ≈ (1 + E[L]) × T_main / (T_main + T_mtp)
+       ≈ (1 + E[L]) / (1 + T_mtp/T_main)</code></pre>
+
+<h4>数值示例</h4>
+<p>假设 p=0.8，D=1，T_mtp/T_main≈0.02：</p>
+<pre><code>E[L] = 0.8
+加速比 ≈ 1.8 / 1.02 ≈ 1.76 倍</code></pre>
+<p>若 D=2，p=0.8：</p>
+<pre><code>E[L] = 0.8 + 0.64 = 1.44
+加速比 ≈ 2.44 / 1.02 ≈ 2.39 倍</code></pre>
+
+<div class="note"><strong>实际取舍</strong>：DeepSeek-V3 训练时使用 D=1，因为 D=1 已显著提升性能；推理投机解码可以根据硬件和接受率灵活选择 D。当 p 较低时，投机解码反而可能因为验证失败而增加开销。</div>
 
 <h3>预填充/解码分离优化</h3>
 <table>
