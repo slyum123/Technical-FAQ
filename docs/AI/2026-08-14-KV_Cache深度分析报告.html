@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推理场景 KV Cache 优化方案深度分析</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+h5, h6 { color: #8b949e; margin: 16px 0 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../index.html">&larr; 返回索引</a>
+<h1 id="kv-cache">推理场景 KV Cache 优化方案深度分析</h1>
+<blockquote>
+<p>以存代算时代，业界主流厂商 KV Cache 全栈优化方案全景解析</p>
+<p>覆盖厂商：NVIDIA、华为、Mooncake（月之暗面）、DeepSeek、阿里、浪潮、CXL 交换设备等</p>
+</blockquote>
+<hr />
+<h2 id="_1">目录</h2>
+<ul>
+<li><a href="#%E4%B8%80%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81-kv-cache">一、为什么要 KV Cache？</a></li>
+<li>
+<p><a href="#%E4%BA%8C%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3-kv-cache-%E5%AE%B9%E9%87%8F%E8%B6%8A%E6%9D%A5%E8%B6%8A%E5%A4%A7%E5%8D%A0%E6%8D%AE%E7%A9%BA%E9%97%B4%E8%B6%8A%E6%9D%A5%E8%B6%8A%E5%A4%9A%E7%9A%84%E9%97%AE%E9%A2%98">二、如何解决 KV Cache 容量越来越大、占据空间越来越多的问题</a></p>
+<ul>
+<li>
+<p><a href="#21-kv-cache-%E5%88%86%E7%BA%A7%E7%BC%93%E5%AD%98%E6%96%B9%E6%A1%88">2.1 KV Cache 分级缓存方案</a></p>
+<ul>
+<li><a href="#211-%E4%B8%BB%E6%B5%81%E5%88%86%E7%BA%A7%E7%BC%93%E5%AD%98%E6%96%B9%E6%A1%88%E5%85%A8%E6%99%AF">2.1.1 主流分级缓存方案全景</a></li>
+<li><a href="#212-%E5%90%8C%E4%B8%80%E5%B1%82%E7%BA%A7%E5%86%85%E5%A6%82%E4%BD%95%E5%A2%9E%E5%8A%A0-kv-cache-%E7%A9%BA%E9%97%B4">2.1.2 同一层级内如何增加 KV Cache 空间</a></li>
+<li><a href="#213-%E5%88%86%E7%BA%A7%E7%BC%93%E5%AD%98%E4%B8%AD%E7%9A%84-kv-cache-%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E7%AE%A1%E7%90%86%E4%B8%8E%E8%B0%83%E5%BA%A6%E6%96%B9%E6%A1%88">2.1.3 分级缓存中的 KV Cache 生命周期管理与调度方案</a></li>
+</ul>
+</li>
+<li>
+<p><a href="#22-%E5%87%8F%E5%B0%8F-kv-%E5%AE%B9%E9%87%8F%E7%9A%84%E6%96%B9%E6%A1%88mqa--gqa--mla--lsa-%E7%AD%89">2.2 减小 KV 容量的方案（MQA / GQA / MLA / LSA 等）</a></p>
+</li>
+</ul>
+</li>
+<li>
+<p><a href="#%E4%B8%89kv-cache-%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%91%BD%E4%B8%AD%E7%8E%87%E9%97%AE%E9%A2%98">三、KV Cache 如何解决命中率问题</a></p>
+</li>
+<li><a href="#%E5%9B%9Bkv-cache-%E5%88%86%E7%BA%A7%E7%BC%93%E5%AD%98%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E4%B8%8D%E5%90%8C%E9%80%9F%E7%8E%87%E5%B1%82%E7%BA%A7%E4%B9%8B%E9%97%B4%E6%95%B0%E6%8D%AE%E9%AB%98%E6%95%88%E4%BC%A0%E9%80%92%E7%9A%84%E9%97%AE%E9%A2%98">四、KV Cache 分级缓存如何解决不同速率层级之间数据高效传递的问题</a></li>
+<li><a href="#%E9%99%84%E5%BD%95%E5%8E%82%E5%95%86%E6%96%B9%E6%A1%88%E9%80%9F%E6%9F%A5%E8%A1%A8">附录：厂商方案速查表</a></li>
+</ul>
+<hr />
+<h2 id="kv-cache_1">一、为什么要 KV Cache？</h2>
+<h3 id="11">1.1 自回归推理的重复计算困境</h3>
+<p>大语言模型采用自回归（Autoregressive）方式逐 Token 生成文本。在标准 Transformer 架构中，每生成一个新 Token，注意力机制需要访问<strong>之前所有 Token 的 Key 和 Value 向量</strong>。如果不做缓存，每生成一个 Token 都要重新计算前面所有 Token 的 K/V，计算量随序列长度呈<strong>平方级增长</strong>（O(n²)）。</p>
+<p>以 LLaMA-70B 为例，生成第 1000 个 Token 时，若不缓存，需要重新计算前 999 个 Token 的 K/V，这几乎等于把整个序列的 Prefill 重新做一遍。</p>
+<h3 id="12-kv-cache">1.2 KV Cache 的核心思想：以存代算</h3>
+<p><strong>KV Cache 的本质是"以空间换时间"</strong>：将每个 Token 在每一层注意力中计算得到的 Key 和 Value 向量缓存下来，后续生成时直接读取，避免重复计算。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>无 KV Cache</th>
+<th>有 KV Cache</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每步计算复杂度</td>
+<td>O(n²)（需重算所有历史 Token）</td>
+<td>O(n)（仅算新 Token，读取缓存）</td>
+</tr>
+<tr>
+<td>内存需求</td>
+<td>仅模型权重 + 激活值</td>
+<td>模型权重 + <strong>线性增长的 KV Cache</strong></td>
+</tr>
+<tr>
+<td>生成第 n 个 Token</td>
+<td>需重算前 n-1 个 Token 的 K/V</td>
+<td>仅计算第 n 个 Token 的 K/V，其余从缓存读取</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-kv-cache">1.3 KV Cache 带来的新矛盾</h3>
+<p>KV Cache 解决了重复计算问题，但引入了新挑战——<strong>KV Cache 随上下文长度线性增长，最终成为显存的主要消耗者</strong>：</p>
+<p>以 LLaMA-70B 为例（64 层 × 64 头 × 128 维 × 2 字节）：</p>
+<table>
+<thead>
+<tr>
+<th>上下文长度</th>
+<th>KV Cache 大小（单请求）</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2K Token</td>
+<td>~2 GB</td>
+<td>常规对话</td>
+</tr>
+<tr>
+<td>8K Token</td>
+<td>~8 GB</td>
+<td>长文档分析</td>
+</tr>
+<tr>
+<td>32K Token</td>
+<td>~32 GB</td>
+<td>代码仓库分析</td>
+</tr>
+<tr>
+<td>128K Token</td>
+<td>~128 GB</td>
+<td>超出单卡 H100 80GB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心矛盾</strong>：模型权重是固定常数（选定模型后不变），而 KV Cache 是<strong>动态增长</strong>的，当上下文足够长时，KV Cache 占用会远超模型权重本身，成为制约并发和长上下文的核心瓶颈。</p>
+<p>业界因此从两个正交方向进行优化：</p>
+<ul>
+<li><strong>方向一：增加 KV 存储空间</strong> —— 多级缓存扩展容量，Prefill-Decode 分离，跨节点共享</li>
+<li><strong>方向二：减小 KV 大小/数量</strong> —— 注意力机制压缩（MQA/GQA/MLA）、稀疏注意力、量化</li>
+</ul>
+<hr />
+<h2 id="kv-cache_2">二、如何解决 KV Cache 容量越来越大、占据空间越来越多的问题</h2>
+<h3 id="21-kv-cache">2.1 KV Cache 分级缓存方案</h3>
+<h4 id="211">2.1.1 主流分级缓存方案全景</h4>
+<p>KV Cache 分级缓存借鉴了 CPU 多级缓存（L1/L2/L3）的设计思想，将不同热度的 KV Cache 放置在不同速度和容量的存储介质上，在延迟和容量之间取得平衡。</p>
+<p><strong>通用架构：HBM → DRAM → SSD → 分布式存储</strong></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>典型延迟</th>
+<th>典型容量</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>GPU HBM（显存）</td>
+<td>纳秒~微秒级</td>
+<td>数十~数百 GB</td>
+<td>当前活跃推理的 KV Cache</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>CPU DRAM（主机内存）</td>
+<td>微秒~毫秒级</td>
+<td>数百 GB ~ TB 级</td>
+<td>近期完成的请求、热前缀缓存</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>SSD（本地或共享）</td>
+<td>百微秒~毫秒级</td>
+<td>TB 级</td>
+<td>冷 KV Cache、历史对话</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>分布式存储 / 对象存储</td>
+<td>毫秒~秒级</td>
+<td>PB 级</td>
+<td>跨节点共享、归档</td>
+</tr>
+</tbody>
+</table>
+<p><strong>各厂商分级缓存方案详解：</strong></p>
+<hr />
+<h5 id="nvidiatensorrt-llm-dynamo">■ NVIDIA：TensorRT-LLM + Dynamo 三级方案</h5>
+<p><strong>引擎层（TensorRT-LLM）：</strong></p>
+<ul>
+<li><strong>Paged KV Cache</strong>：借鉴 OS 虚拟内存分页机制，将 KV Cache 切分为固定大小 page（如 16 tokens/page），非连续物理存储，消除内存碎片，利用率从 20-40% 提升至近 100%</li>
+<li><strong>量化 KV Cache</strong>：支持 FP8/INT8 量化，直接将 KV Cache 大小减半或降至 1/4</li>
+<li><strong>KV Cache Reuse（Prefix Caching）</strong>：自动识别公共前缀并共享 page，多轮对话场景节省 50%+ 显存</li>
+</ul>
+<p><strong>集群层（Dynamo 框架，2025 GTC 发布）：</strong></p>
+<ul>
+<li><strong>三级 KV Cache 层级</strong>：L1 GPU HBM → L2 CPU Host Memory → L3 SSD/对象存储</li>
+<li><strong>KV Cache Manager</strong>：自动将低频访问的 KV Cache 卸载到更经济的存储层，支持 PB 级 KV Cache 存储</li>
+<li><strong>Prefill-Decode 分离</strong>：Prefill 节点（计算密集）和 Decode 节点（内存密集）分离部署，各自独立扩展</li>
+<li><strong>NIXL（NVIDIA Inference Transfer Library）</strong>：统一抽象 NVLink、InfiniBand、PCIe、SSD fabric，实现跨内存/存储层级的高速异步数据传输</li>
+</ul>
+<p><strong>vAttention（学术研究，ASPLOS 2025，NVIDIA/微软联合提出）：</strong></p>
+<ul>
+<li><strong>用 CUDA 虚拟内存 API 替代 PagedAttention，在虚拟地址空间中保持 KV Cache 连续，物理内存按需分配</strong></li>
+<li>修改 CUDA 驱动支持 <strong>64KB-256KB</strong> 细粒度物理页分配（原生最小 2MB）</li>
+<li><strong>无需重写 attention kernel，直接复用 FlashAttention/FlashInfer</strong>，吞吐提升最高 1.23x，TTFT 降低 1.45x</li>
+</ul>
+<hr />
+<h5 id="ucm-hbmdramssd">■ 华为：UCM 统一缓存管理（HBM→DRAM→SSD 三级）</h5>
+<p><strong>UCM（Unified Cache Manager，2025年8月发布，9月开源）构建三级缓存架构：</strong></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>角色</th>
+<th>延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>HBM（昇腾 NPU 显存）</td>
+<td>当前活跃对话的 KV Cache</td>
+<td>毫秒级</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>DRAM（CPU 内存）</td>
+<td>近期完成的请求、热前缀</td>
+<td>十毫秒级</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>高性能 SSD（外置共享存储）</td>
+<td>历史对话、RAG 知识库缓存</td>
+<td>百毫秒级</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三大核心组件：</strong></p>
+<ol>
+<li><strong>Connector（推理引擎插件）</strong>：对接 MindIE、vLLM-Ascend 等不同推理引擎</li>
+<li><strong>Accelerator（功能库）</strong>：包含多种 KV Cache 加速算法</li>
+<li><strong>Adapter（适配器）</strong>：高性能 KV Cache 存取，对接专业存储系统</li>
+</ol>
+<p><strong>昇腾芯片层协同优化：</strong></p>
+<ul>
+<li><strong>AMLA（Ascend MLA）算子</strong>：针对 DeepSeek <strong>MLA 的 FlashAttention 算子</strong>重构，直接在 Global Memory 上更新 O，无需进入 Vector core</li>
+<li><strong>权重预取</strong>：通信算子进行过程中预取后续 MLA 权重矩阵和 KV cache 到缓存</li>
+<li><strong>MLA 前序算子融合</strong>：Decode 阶段采用权重吸收，深度融合为 MLAProlog 算子</li>
+</ul>
+<p><strong>效果指标</strong>：首 Token 时延最高降低 90%，长序列 TPS 提升 2-22 倍</p>
+<hr />
+<h5 id="mooncake-kvcache">■ Mooncake（月之暗面）：四级 KVCache 为中心的分离式架构</h5>
+<p>Mooncake 是 Kimi 的推理服务平台（FAST 2025 最佳论文），采用<strong>以 KVCache 为中心的分离式架构</strong>：</p>
+<p><strong>四级 KV Cache 层级：</strong></p>
+<ol>
+<li><strong>GPU VRAM</strong>：当前活跃 Decode 的 KV Cache</li>
+<li><strong>CPU DRAM</strong>（节点本地）：Prefill 产出的 KV Cache，分页存储（paged blocks）</li>
+<li><strong>SSD</strong>（节点本地）：DRAM 溢出的冷 KV Cache</li>
+<li><strong>分布式 KVCache 池</strong>：跨节点共享，利用集群中未被充分利用的 CPU/DRAM/SSD 资源</li>
+</ol>
+<p><strong>Prefill-Decode 分离架构：</strong></p>
+<ul>
+<li>Prefill 集群（计算密集）和 Decode 集群（内存密集）物理分离</li>
+<li>Prefill 阶段采用 Chunked Pipeline Parallelism（CPP）跨多节点处理单个长请求，减少 TTFT</li>
+<li>KV Cache 通过 <strong>Transfer Engine</strong> 从 Prefill 节点流式传输到 Decode 节点</li>
+</ul>
+<p><strong>效果</strong>：Kimi 处理量提升 75%（A800 集群 115%，H800 集群 107%），长上下文场景吞吐提升最高 525%</p>
+<hr />
+<h5 id="tair-kvcache-polarkvcache-flashkv">■ 阿里：Tair KVCache + PolarKVCache + FlashKV 多产品矩阵</h5>
+<p>阿里在 KV Cache 分级缓存领域形成了多层次产品矩阵：</p>
+<p><strong>(1) Tair KVCache（独立缓存服务）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>GPU 显存</td>
+<td>活跃推理 KV Cache</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>CPU 内存</td>
+<td>温热 KV Cache，毫秒级响应</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>SSD（基于 3FS 存储系统）</td>
+<td>冷 KV Cache，大容量存储</td>
+</tr>
+</tbody>
+</table>
+<p><strong>(2) PolarKVCache（PolarDB 集成方案，四级架构）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>性能</th>
+<th>容量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>本地 GPU 显存（VRAM）</td>
+<td>最高</td>
+<td>最小</td>
+<td>当前计算的 KVCache Page</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>本地主机内存（DRAM）</td>
+<td>较高</td>
+<td>较大</td>
+<td>VRAM 扩展，换入/换出不活跃 Page</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>分布式内存池（DMP）</td>
+<td>居中</td>
+<td>巨大</td>
+<td>核心存储层，PB 级扩展，跨节点共享</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>分布式磁盘池</td>
+<td>最低</td>
+<td>海量</td>
+<td>冷 KVCache 持久化归档</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>容量从单节点 512GB 扩展到 10TB 级别</li>
+<li>聊天场景 TTFT 降低 26.8 倍，吞吐提升 62%</li>
+</ul>
+<p><strong>(3) FlashKV（PAI TokenWorks 2025 新发布）：</strong></p>
+<ul>
+<li>分布式 KV-Cache 缓存服务，将 KV 张量分层持久化至内存、磁盘和远端</li>
+<li>实现集群级跨实例共享，后续相同前缀的请求直接复用</li>
+<li>热点前缀驻留内存保障低延迟，冷门数据自动下沉至磁盘或远端</li>
+</ul>
+<p><strong>调度层（Llumnix + TokenWorks）：</strong></p>
+<ul>
+<li><strong>Llumnix 调度引擎</strong>（OSDI 2024 论文）：支持请求在推理实例间实时迁移</li>
+<li><strong>KV Cache 感知路由</strong>：感知推理引擎内部 Cache 分布，而非简单 Round Robin</li>
+<li>千万级活跃用户场景下 KV Cache 命中率提升 10 倍以上</li>
+</ul>
+<hr />
+<h5 id="incloud-aios-gpu-direct-storage">■ 浪潮：InCloud AIOS 三级存储 + GPU Direct Storage</h5>
+<p>浪潮云海 InCloud AIOS 采用三级存储架构：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>时延</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>GPU 本地显存（HBM）</td>
+<td>毫秒级</td>
+<td>当前活跃对话</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>CPU DRAM + NVMe SSD</td>
+<td>容量放大 3-5 倍</td>
+<td>近期完成的请求</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>分布式存储</td>
+<td>近乎无限容量</td>
+<td>跨机房/跨节点共享</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心技术特点：</strong></p>
+<ul>
+<li><strong>GPU Direct Storage</strong>：L2 到 L1 采用 PCIe DMA，L3 到 L2 采用 RDMA，实现"内存-显存"零拷贝直接传输</li>
+<li><strong>数据按热度自动迁徙</strong>：新生成内容先落 L1，请求结束后按频率下沉到 L2、L3</li>
+<li><strong>实测效果</strong>（DeepSeek-8B，10K tokens）：TTFT 从 1.94s 降至 0.136s，时延下降 93%</li>
+</ul>
+<hr />
+<h5 id="cxl-xconn-memverge-beluga">■ CXL 交换设备：XConn / MemVerge / Beluga 方案</h5>
+<p>CXL（Compute Express Link）技术为 KV Cache 提供了全新的<strong>共享内存池</strong>层级：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>介质</th>
+<th>访问方式</th>
+<th>延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>GPU HBM</td>
+<td>本地访问</td>
+<td>纳秒级</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>CPU DRAM</td>
+<td>本地内存访问</td>
+<td>~100ns</td>
+</tr>
+<tr>
+<td>L3</td>
+<td><strong>CXL 内存池</strong>（共享）</td>
+<td>CXL load/store 语义</td>
+<td>200-500ns</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>SSD / 网络存储</td>
+<td>NVMe / RDMA</td>
+<td>~100μs / &gt;10ms</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心优势</strong>：CXL 内存池以 200-500ns 的延迟填补 HBM 与 SSD 之间的巨大鸿沟，支持 100TiB 级共享池化，提供硬件管理的缓存一致性。</p>
+<ul>
+<li><strong>XConn Apollo</strong>：混合 CXL/PCIe 交换方案，Ultra IO Transformer 使 PCIe GPU 也能访问 CXL 内存池</li>
+<li><strong>MemVerge GISMO</strong>：软件定义弹性 CXL 内存</li>
+<li><strong>Beluga</strong>（学术，arXiv 2025）：相比 RDMA 方案 TTFT 降低 89.6%，吞吐提升 7.35 倍</li>
+</ul>
+<hr />
+<h4 id="212-kv-cache">2.1.2 同一层级内如何增加 KV Cache 空间</h4>
+<p>在同一物理层级内扩展 KV Cache 容量是各厂商的核心竞争点，主要有以下技术路径：</p>
+<h5 id="1-pagedattention-vattention">(1) 内存碎片消除：PagedAttention / vAttention</h5>
+<p><strong>问题</strong>：传统连续分配方式下，不同长度请求的 KV Cache 产生大量内存碎片，利用率仅 20-40%。</p>
+<p><strong>NVIDIA PagedAttention（vLLM 实现）</strong>：</p>
+<ul>
+<li>将 KV Cache 切分为固定大小 page（如 16 tokens/page）</li>
+<li>非连续物理存储，通过页表映射</li>
+<li>利用率从 20-40% 提升至近 100%，<strong>等效于同层级容量提升 2.5-5 倍</strong></li>
+</ul>
+<p><strong>NVIDIA vAttention（ASPLOS 2025）</strong>：</p>
+<ul>
+<li>用 CUDA 虚拟内存 API（<code>cuMemAddressReserve</code> / <code>cuMemCreate</code> / <code>cuMemMap</code>）实现更底层的管理</li>
+<li>虚拟地址连续 + 物理内存按需分配，支持 64KB-256KB 细粒度物理页</li>
+<li>无需修改 attention kernel，比 PagedAttention 吞吐提升 1.23x</li>
+</ul>
+<h5 id="2-fp8int8int4">(2) 量化压缩：FP8/INT8/INT4</h5>
+<p>在相同显存内存储更多 KV Cache：</p>
+<ul>
+<li><strong>FP16 → INT8</strong>：容量翻倍（2x），精度损失极小</li>
+<li><strong>FP16 → FP8</strong>：容量翻倍（2x），NVIDIA TensorRT-LLM 原生支持</li>
+<li><strong>INT4 / 2-bit 量化</strong>：KIVI 等方案实现 4-8x 压缩，需针对性校准</li>
+</ul>
+<p><strong>厂商案例</strong>：</p>
+<ul>
+<li>NVIDIA TensorRT-LLM：原生支持 FP8/INT8 KV Cache 量化</li>
+<li>华为昇腾：配合 UCM 进行 KV Cache 量化</li>
+<li>阿里 BladeLLM：内置混合精度量化</li>
+</ul>
+<h5 id="3">(3) 跨节点共享同一层级空间</h5>
+<p>将多个节点的同层级资源聚合为共享池：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>共享层级</th>
+<th>机制</th>
+<th>厂商</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>共享 DDR</td>
+<td>L2（DRAM）</td>
+<td>RDMA / CXL 内存池</td>
+<td>CXL（XConn 100TiB 池）、Mooncake（分布式 DRAM 池）</td>
+</tr>
+<tr>
+<td>共享 SSD</td>
+<td>L3（SSD）</td>
+<td>NVMe-oF / 分布式存储</td>
+<td>阿里（3FS 存储系统）、浪潮（分布式存储）、Mooncake（P2P Store）</td>
+</tr>
+<tr>
+<td>共享 HBM</td>
+<td>L1（显存）</td>
+<td>NVLink / GPUDirect RDMA</td>
+<td>NVIDIA（NIXL 跨 GPU 传输）、Mooncake（Transfer Engine GPUDirect）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>CXL 共享内存池</strong>是同一层级扩展的最新突破：</p>
+<ul>
+<li>XConn Apollo 支持 100TiB 级 CXL 内存池，多 GPU 节点共享同一物理内存池</li>
+<li>通过 CXL load/store 语义直接访问，延迟 200-500ns，比 RDMA 低一个数量级</li>
+<li>相当于在不增加单节点 DRAM 的情况下，将 L2 层容量扩展 10-100 倍</li>
+</ul>
+<h5 id="4-prefill-decode">(4) Prefill-Decode 分离释放显存</h5>
+<p>将 Prefill 和 Decode 部署在不同节点，Decode 节点不需要存储 Prefill 产生的完整 KV Cache，而是按需从 Prefill 节点拉取：</p>
+<ul>
+<li><strong>NVIDIA Dynamo</strong>：Prefill 节点产出 KV Cache 后，通过 NIXL 传输到 Decode 节点</li>
+<li><strong>Mooncake</strong>：Prefill 集群和 Decode 集群物理分离，KV Cache 通过 Transfer Engine 流式传输</li>
+<li><strong>阿里 PAI-EAS</strong>：负载感知的 PD 分离，首 Token 响应时间降低 92%，吞吐提升 91%</li>
+<li><strong>效果</strong>：Decode 节点显存完全用于活跃请求，不再被 Prefill 阶段的长序列 KV Cache 占据</li>
+</ul>
+<hr />
+<h4 id="213-kv-cache">2.1.3 分级缓存中的 KV Cache 生命周期管理与调度方案</h4>
+<p>KV Cache 的生命周期从生成到销毁经历四个阶段：<strong>生成 → 存储分配 → 迁移/驱逐 → 复用/删除</strong>。各厂商在每个阶段都有精细化的管理策略。</p>
+<h5 id="1-kv-cache">(1) 生成阶段：KV Cache 感知调度</h5>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>调度策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>Smart Router（Radix Tree）</td>
+<td>追踪全集群 GPU 上 KV Cache 位置，计算请求与已有 KV Cache 的重叠分数，路由到命中率最高的 worker</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>Conductor 全局调度器</td>
+<td>统一调度 Prefill/Decode 实例对，最大化复用已有 KV Cache</td>
+</tr>
+<tr>
+<td><strong>阿里</strong></td>
+<td>KV Cache 感知路由</td>
+<td>感知推理引擎内部 Cache 分布，而非简单 Round Robin；千万级用户命中率提升 10x</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>负载感知弹性调度</td>
+<td>实时对话高峰优先保障 L1，长文档分析高峰扩容 L2 至 100GB+</td>
+</tr>
+</tbody>
+</table>
+<h5 id="2">(2) 存储分配阶段：分层放置策略</h5>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>放置策略</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>优先级驱逐（0-100）</td>
+<td>系统提示词设最高优先级长期保留，一次性请求设最低优先级优先驱逐；命中率提升约 20%</td>
+</tr>
+<tr>
+<td><strong>华为 UCM</strong></td>
+<td>热度自动迁徙</td>
+<td>新生成内容先落 L1，请求结束后按频率下沉到 L2、L3</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>块级哈希去重</td>
+<td>每个 KV Cache Block 附带哈希值（自身哈希 + 前缀哈希），支持去重和前缀匹配</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>元数据三重标签</td>
+<td>文本指纹（token序列哈希）+ 存储位置（层级/节点IP/路径/偏移）+ 生命周期（生成时间/访问时间/访问次数）</td>
+</tr>
+</tbody>
+</table>
+<h5 id="3_1">(3) 迁移与驱逐阶段：淘汰算法</h5>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>淘汰策略</th>
+<th>核心创新</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>优先级 + 时长</td>
+<td>用户为不同 token 范围设置优先级（0-100）和持续时间</td>
+</tr>
+<tr>
+<td><strong>华为 UCM</strong></td>
+<td>热度排序 + 稀疏注意力</td>
+<td>识别 KV Cache 数据的重要程度、相关性和热度，推理时只提取关键向量</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>LRU/LFU/请求特征</td>
+<td>热点 KV Cache 块复制到多个节点避免获取拥塞，冷块换出减少预留成本</td>
+</tr>
+<tr>
+<td><strong>阿里 PolarKVCache</strong></td>
+<td>CacheBlend 选择性重计算</td>
+<td>动态决定哪些页面保留在高速缓存，哪些驱逐到下一级（可从 DMP 提取或直接重计算）</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>热度排序 + 异步预加载</td>
+<td>模型计算第 i 层注意力时，提前触发第 i+1 层所需 KVCache 的加载请求</td>
+</tr>
+<tr>
+<td><strong>CXL</strong></td>
+<td>OS NUMA 策略</td>
+<td>CXL 内存暴露为 NUMA 节点，OS 和框架透明放置冷数据到 CXL 层</td>
+</tr>
+</tbody>
+</table>
+<p><strong>预测式管理</strong>：</p>
+<ul>
+<li><strong>Mooncake 预测式早拒绝</strong>：在过载场景下，预测请求能否在 SLO 内完成，尽早拒绝无法完成的请求</li>
+<li><strong>NVIDIA GPU Planner</strong>：持续 profiling GPU 容量，根据 ISL/OSL 动态分配 Prefill/Decode GPU 资源</li>
+<li><strong>HotPrefix 热度追踪</strong>（SIGMOD 2025）：使用增强型布谷鸟过滤器动态追踪前缀树节点热度，仅将高热度 KV Cache 从 GPU 卸载到主机内存，减少数据传输成本</li>
+</ul>
+<h5 id="4">(4) 复用阶段：前缀/片段复用机制</h5>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>复用机制</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>Prefix Caching + Radix Tree</td>
+<td>自动识别公共前缀并共享 page；Radix Tree 追踪全集群 KV Cache 位置</td>
+</tr>
+<tr>
+<td><strong>华为 UCM</strong></td>
+<td>全局前缀缓存</td>
+<td>智能识别并复用公共前缀，<strong>无论存储在哪个物理位置</strong>，支持任意输入组合</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>块级哈希去重 + 前缀匹配</td>
+<td>Context Caching API 让用户显式复用 KV Cache</td>
+</tr>
+<tr>
+<td><strong>阿里</strong></td>
+<td>Prompt Cache + Session ID</td>
+<td>利用 Hash 结构按 Session ID 快速检索完整对话历史</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>任意片段精准复用</td>
+<td>突破"仅前缀复用"局限，Block 级拆分，即使中间某段匹配也能调取，复用率提升 3-5 倍</td>
+</tr>
+</tbody>
+</table>
+<p><strong>浪潮片段复用详解</strong>：<br />
+传统方案仅支持从输入序列开头进行前缀匹配。浪潮为每个 KVCache Block 生成唯一文本指纹（token 序列哈希），即使文档中间某段重复出现（如合同条款），也能精准匹配并复用对应 Block，复用率比传统前缀方案提升 3-5 倍。</p>
+<hr />
+<h3 id="22-kv-mqa-gqa-mla-lsa">2.2 减小 KV 容量的方案（MQA / GQA / MLA / LSA 等）</h3>
+<p>分级缓存从"增加空间"角度解决问题，而注意力机制压缩则从"减小 KV 本身"角度切入。两者正交互补。</p>
+<h4 id="221">2.2.1 注意力机制演进谱系</h4>
+<p>从 MHA 到 MLA，KV Cache 压缩经历了从"暴力共享"到"智能压缩"的演进：</p>
+<pre class="highlight"><code>MHA（基准）→ MQA（极端共享）→ GQA（折中共享）→ MLA（低秩压缩）→ LSA/SLA（稀疏选择）</code></pre>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MHA</th>
+<th>MQA</th>
+<th>GQA</th>
+<th>MLA</th>
+<th>LSA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>策略</strong></td>
+<td>每头独立 K/V</td>
+<td>全头共享单组 K/V</td>
+<td>组内共享 K/V</td>
+<td>压缩到低秩隐空间</td>
+<td>预测式稀疏选择</td>
+</tr>
+<tr>
+<td><strong>KV Cache 压缩</strong></td>
+<td>基准（1x）</td>
+<td>H 倍（~32x）</td>
+<td>H/G 倍（4-8x）</td>
+<td>任意倍（57x）</td>
+<td>缓存仅 13.5%</td>
+</tr>
+<tr>
+<td><strong>逐头多样性</strong></td>
+<td>完全</td>
+<td>无（全头相同）</td>
+<td>部分（组内共享）</td>
+<td>完全（上投影重建）</td>
+<td>选择性保留</td>
+</tr>
+<tr>
+<td><strong>质量</strong></td>
+<td>基准</td>
+<td>略有下降</td>
+<td>接近 MHA</td>
+<td>接近或超过 MHA</td>
+<td>+0.6% 提升</td>
+</tr>
+<tr>
+<td><strong>代表模型</strong></td>
+<td>GPT-3</td>
+<td>PaLM/Gemini</td>
+<td>LLaMA-2/3</td>
+<td>DeepSeek-V2/V3</td>
+<td>FlashMemory-DeepSeek-V4</td>
+</tr>
+<tr>
+<td><strong>需重新训练</strong></td>
+<td>-</td>
+<td>是</td>
+<td>可 uptraining</td>
+<td>是</td>
+<td>是（indexer 独立训练）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h4 id="222-mqamulti-query-attention">2.2.2 MQA（Multi-Query Attention，多查询注意力）</h4>
+<p><strong>提出</strong>：Noam Shazeer, 2019, <em>Fast Transformer Decoding: One Write-Head is All You Need</em></p>
+<p><strong>核心机制</strong>：</p>
+<ul>
+<li>标准 MHA 中，每个注意力头都有独立的 K 和 V 投影矩阵，产生 H 组不同的 K/V</li>
+<li>MQA 让<strong>所有注意力头共享同一组 K/V</strong>，即只有 1 个 K 头和 1 个 V 头</li>
+<li>KV Cache 从 H 组降为 1 组，压缩比 = H 倍（如 32 头模型压缩 32x）</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>KV Cache 存储<strong>减少 10-100 倍</strong></li>
+<li>解码推理速度<strong>提升 12 倍</strong></li>
+<li>质量有一定下降，但大部分任务损失有限</li>
+</ul>
+<p><strong>代表模型</strong>：PaLM、StarCoder、Gemini、Falcon</p>
+<p><strong>局限</strong>：</p>
+<ul>
+<li>所有头共享相同 K/V，丧失逐头多样性，复杂上下文建模能力下降</li>
+<li>必须从头训练，无法从 MHA 模型直接转换</li>
+<li>张量并行时 K/V 必须在每个节点复制</li>
+</ul>
+<hr />
+<h4 id="223-gqagrouped-query-attention">2.2.3 GQA（Grouped-Query Attention，分组查询注意力）</h4>
+<p><strong>提出</strong>：Ainslie et al., 2023, <em>GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</em></p>
+<p><strong>核心机制</strong>：</p>
+<ul>
+<li>将 H 个注意力头分为 G 个组，每组共享一对 K/V</li>
+<li>G=H 时退化为 MHA，G=1 时退化为 MQA</li>
+<li>GQA 提供了 MHA 和 MQA 之间的平滑过渡</li>
+</ul>
+<p><strong>关键创新——Uptraining</strong>：</p>
+<ul>
+<li>已有的 MHA 模型可通过"uptraining"转换为 GQA：对组内的 K/V 头做 mean-pooling 合并，然后继续预训练约 5% 原始计算量</li>
+<li>无需从头训练，可直接优化现有模型</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>KV Cache 压缩 H/G 倍（如 LLaMA-2-70B: 64 头 / 8 组 = 8x 压缩）</li>
+<li>质量接近 MHA，速度接近 MQA</li>
+<li>天然适配张量并行：G 组数设为张量并行度，每卡恰好 1 个 K/V 头</li>
+</ul>
+<p><strong>代表模型</strong>：LLaMA-2-70B、LLaMA-3 全系列、Mistral 7B、IBM Granite 3.0、ChatGLM2/3、Yi</p>
+<p><strong>LLaMA-2-70B 的 G=8 选择</strong>：70B 模型需 8 卡部署，G=8 恰好每卡负责一组 K/V，在保证 K/V 多样性的同时最大化减少卡间通信。</p>
+<hr />
+<h4 id="224-mlamulti-head-latent-attention">2.2.4 MLA（Multi-Head Latent Attention，多头潜在注意力）</h4>
+<p><strong>提出</strong>：DeepSeek, 2024, DeepSeek-V2 技术报告</p>
+<p><strong>核心思想</strong>：不通过共享 K/V 头来减少 KV Cache，而是通过<strong>低秩压缩</strong>将 K/V 联合压缩为一个极小的共享隐向量。</p>
+<p><strong>三层创新机制：</strong></p>
+<p><strong>第一层：低秩联合压缩</strong></p>
+<ul>
+<li>用下投影矩阵 $W^{DKV}$ 将输入压缩为极小的共享隐向量 $c_{KV} \in \mathbb{R}^{d_c}$（$d_c \ll 2 \cdot H \cdot d_{head}$）</li>
+<li>仅缓存隐向量（每位置仅 $2d_c$ 个标量）</li>
+<li>DeepSeek-V2 中 $d_c = 512$，相比原始 KV（8头 × 128维 = 1024），压缩约 57 倍</li>
+<li><strong>KV Cache 减少 93.3%</strong></li>
+</ul>
+<p><strong>第二层：权重吸收（Absorption）</strong></p>
+<ul>
+<li>利用矩阵乘法结合律：$q^{(s)}_t {k^{(s)}_i}^\top = (x_t W^{(s)}_q)(c_i W^{(s)}_k)^\top = x_t (W^{(s)}_q {W^{(s)}_k}^\top) c_i^\top$</li>
+<li>在模型加载时提前合并上投影权重到注意力权重矩阵</li>
+<li>推理全程<strong>不需要显式解压高维 KV</strong>，抵消全部额外算力开销</li>
+<li>推理速度与 GQA 持平</li>
+</ul>
+<p><strong>第三层：解耦 RoPE</strong></p>
+<ul>
+<li>RoPE（旋转位置编码）与低秩压缩天生冲突（RoPE 是位置相关的分块对角矩阵，无法折叠到隐空间）</li>
+<li>将向量拆为"内容"（存入隐向量 $c_{KV}$）和"位置"（单独的小旋转键 $k^R$）两部分</li>
+<li>分开压缩、分开计算，保留 RoPE 位置区分能力</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>KV Cache 压缩 <strong>93.3%</strong>，57 倍压缩比</li>
+<li>推理速度提升 <strong>2.3 倍</strong>，推理成本降低 <strong>5 倍</strong></li>
+<li>质量接近或超过 MHA（DeepSeek 报告 MLA 略优于 MHA）</li>
+<li>相同显存可支持<strong>更大 batch size</strong> 和<strong>更长上下文</strong>（1.7 倍）</li>
+</ul>
+<p><strong>华为昇腾对 MLA 的硬件适配</strong>：</p>
+<ul>
+<li>AMLA 算子针对 DeepSeek MLA 重构 FlashAttention，通过浮点二进制编码解析及原子累加实现乘性计算的加性等价转换</li>
+<li>直接在 Global Memory 上更新 O，无需进入 Vector core</li>
+<li>Decode 阶段深度融合为 MLAProlog 算子，进一步降低延迟</li>
+</ul>
+<p><strong>DeepSeek-V3.2-Exp 的进一步优化——DSA（DeepSeek Sparse Attention）</strong>：</p>
+<ul>
+<li>在 MLA 基础上引入稀疏方案，结合轻量级"indexer"进行细粒度 token 选择</li>
+<li>注意力集中在最相关的 token/block 上，进一步降低 KV-cache 压力</li>
+<li>长上下文场景获益最大</li>
+</ul>
+<hr />
+<h4 id="225-lsalookahead-sparse-attention">2.2.5 LSA（Lookahead Sparse Attention，前瞻稀疏注意力）</h4>
+<p><strong>提出</strong>：Tencent/FlashMemory 团队, 2026, FlashMemory-DeepSeek-V4（arXiv 2606.09079）</p>
+<p><strong>核心机制</strong>：</p>
+<ul>
+<li>训练一个小型 <strong>Neural Memory Indexer</strong>（神经记忆索引器），预测当前 Token 实际需要哪些历史 KV chunk</li>
+<li>推理时只加载预测相关的 KV 条目，大部分 KV Cache 从不进入显存</li>
+<li>与 MiniMax MSA 等块稀疏方案不同：MSA 仍保留全量缓存但只计算部分，LSA 直接<strong>避免持有大部分缓存</strong>，节省的是物理显存占用</li>
+</ul>
+<p><strong>关键创新——Backbone-free 解耦训练</strong>：</p>
+<ul>
+<li>索引器的训练不需要加载万亿参数的基座模型</li>
+<li>独立训练索引器，大幅降低训练成本</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>KV Cache 物理占用降至全量的 <strong>13.5%</strong>（500K 上下文从 ~40GB 降至 ~5.4GB）</li>
+<li>精度反而提升 <strong>+0.6%</strong></li>
+</ul>
+<p><strong>对比 MLA vs LSA</strong>：</p>
+<ul>
+<li>MLA 从"压缩每个 KV 的大小"入手（低秩压缩）</li>
+<li>LSA 从"减少加载的 KV 数量"入手（稀疏选择）</li>
+<li>两者可叠加使用</li>
+</ul>
+<hr />
+<h4 id="226-kv">2.2.6 其他 KV 容量压缩方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>核心思路</th>
+<th>压缩效果</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>KV Cache 量化</strong></td>
+<td>FP16→INT8/FP8/INT4</td>
+<td>2-8x</td>
+<td>NVIDIA TensorRT-LLM、vLLM 原生支持；动态 per-channel 量化</td>
+</tr>
+<tr>
+<td><strong>SALS</strong></td>
+<td>潜在空间稀疏注意力 + 低秩压缩</td>
+<td>6.4x</td>
+<td>后训练校准即可部署，5.7x 注意力算子加速</td>
+</tr>
+<tr>
+<td><strong>CacheBlend</strong></td>
+<td>选择性重计算，复用非前缀片段</td>
+<td>减少冗余计算 51%</td>
+<td>阿里 PolarKVCache 核心技术</td>
+</tr>
+<tr>
+<td><strong>注意力 Sink</strong></td>
+<td>保留前几个 Token 的 KV（注意力汇聚点）</td>
+<td>可丢弃中间 Token</td>
+<td>StreamingLLM 等方案</td>
+</tr>
+<tr>
+<td><strong>滑动窗口注意力</strong></td>
+<td>只保留最近 W 个 Token 的 KV</td>
+<td>固定 O(W) 缓存</td>
+<td>Mistral 采用，适合长文本流式处理</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="kv-cache_3">三、KV Cache 如何解决命中率问题</h2>
+<p>KV Cache 分级缓存的核心价值在于"命中即省算"，命中率每提升 1% 都意味着可观的计算节省。但高命中率面临三大挑战：</p>
+<ol>
+<li><strong>容量有限</strong>：热数据无法全部放入高速层</li>
+<li><strong>前缀匹配局限</strong>：传统方案仅支持从头开始的前缀匹配</li>
+<li><strong>跨节点缓存分散</strong>：多副本部署时缓存被分散，命中率随扩容下降</li>
+</ol>
+<p>各厂商从多个维度解决命中率问题：</p>
+<h3 id="31">3.1 前缀树/基数树索引：从精确前缀到任意子序列匹配</h3>
+<h4 id="sglang-radixattention">SGLang RadixAttention（基数树）</h4>
+<p><strong>问题</strong>：传统前缀缓存只能共享从输入开头的完全相同前缀。但在 RAG 场景中，不同请求可能共享中间的文档片段：</p>
+<pre class="highlight"><code>请求1: [system_prompt] [doc_A] [question_1]
+请求2: [system_prompt] [doc_A] [question_2]  ← 共享 system_prompt + doc_A
+请求3: [system_prompt] [doc_B] [question_3]  ← 仅共享 system_prompt</code></pre>
+<p><strong>RadixAttention 方案</strong>：</p>
+<ul>
+<li>维护一棵基数树（Radix Tree），每个节点存储：token 序列、KV Cache 指针、引用计数、LRU 时间戳</li>
+<li>查找复杂度 O(L)（L 为序列长度）</li>
+<li>驱逐策略：LRU + 引用计数保护（使用中的节点不可驱逐）</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>RAG 工作负载（固定文档库）：KV Cache 命中率 <strong>40-70%</strong></li>
+<li>多轮对话（持久会话）：命中率 <strong>20-40%</strong></li>
+<li>代码补全（独特文件上下文）：命中率 &lt;10%</li>
+<li>相比 vLLM 基础前缀缓存，SGLang RadixAttention 在多级共享结构下命中率高 <strong>2-4 倍</strong></li>
+</ul>
+<h4 id="nvidia-radix-tree-smart-router">NVIDIA Radix Tree Smart Router</h4>
+<p>NVIDIA Dynamo 框架的 Smart Router 基于 Radix Tree 追踪全集群 GPU 上的 KV Cache 位置：</p>
+<ul>
+<li>计算请求与已有 KV Cache 的<strong>重叠分数</strong>（overlap score）</li>
+<li>智能路由到缓存命中率最高的 worker</li>
+<li>内部基准显示缓存命中率提升约 <strong>20%</strong></li>
+</ul>
+<hr />
+<h3 id="32-hotprefix">3.2 热度感知调度：HotPrefix</h3>
+<p><strong>SIGMOD 2025</strong> 提出的 HotPrefix 方案解决了"哪些前缀应该被缓存"的问题：</p>
+<p><strong>三大创新：</strong></p>
+<ol>
+<li>
+<p><strong>动态热度追踪（Dynamic Hotness Tracking）</strong>：</p>
+<ul>
+<li>使用增强型布谷鸟过滤器（Cuckoo Filter）记录前缀树节点的热度信息</li>
+<li>低存储开销 + 高搜索效率</li>
+<li>动态更新机制持续追踪节点热度变化</li>
+</ul>
+</li>
+<li>
+<p><strong>选择性 KV Cache 准入（Selective KV Cache Admission）</strong>：</p>
+<ul>
+<li>GPU 显存驱逐的 KV Cache <strong>并非全部</strong>进入主机内存</li>
+<li>仅保留高热度 KV Cache 到 CPU 内存，丢弃低热度的</li>
+<li>减少数据传输成本</li>
+</ul>
+</li>
+<li>
+<p><strong>热度提升（Hotness Promotion）</strong>：</p>
+<ul>
+<li>周期性将高热度前缀从 CPU 内存提升到 GPU 显存</li>
+<li>优先提升<strong>深度更浅</strong>（更通用）的高热度缓存</li>
+<li>配合 I/O-计算流水线策略掩盖传输延迟</li>
+</ul>
+</li>
+</ol>
+<p><strong>效果</strong>：相比 vLLM（开启前缀共享）延迟降低、吞吐提升 <strong>2.25x</strong>；相比 SGLang 提升 <strong>2x</strong></p>
+<hr />
+<h3 id="33-lmcache">3.3 跨副本/跨节点缓存共享：LMCache 与集群级共享</h3>
+<p><strong>问题</strong>：多副本部署时，每个副本独立缓存相同的前缀，造成 8 倍冗余。请求落在没有缓存的副本上就完全 miss。</p>
+<h4 id="lmcacheosdi-2024">LMCache（OSDI 2024）</h4>
+<p>三层分离式 KV Cache：</p>
+<ul>
+<li><strong>GPU HBM（热层）</strong>：KV blocks 活跃使用中，亚毫秒访问</li>
+<li><strong>CPU RAM（温层）</strong>：最近驱逐的 KV blocks，~1-2ms 传输延迟，容量比 HBM 大 6-8x</li>
+<li><strong>持久存储（冷层）</strong>：S3 兼容对象存储，100ms-1s 加载时间</li>
+</ul>
+<p><strong>缓存局部性路由（Cache-locality Routing）</strong>：</p>
+<ul>
+<li>负载均衡器维护哈希表：哪些前缀哈希在哪个副本的 HBM 中</li>
+<li>请求优先路由到已有 HBM 命中的副本，其次 CPU RAM 命中的副本</li>
+<li>10+ 副本时，Prefill 计算减少 <strong>40-65%</strong>；RAG 场景 TTFT 降低 <strong>2-3x</strong></li>
+</ul>
+<h4 id="flashkv">阿里 FlashKV 集群级共享</h4>
+<ul>
+<li>所有推理副本共享同一份缓存，无论请求被路由到哪个副本均可命中</li>
+<li><strong>扩容不降命中率</strong>：单副本扩展到多副本时命中率不下降</li>
+<li>千万级活跃用户场景命中率提升 <strong>10 倍</strong></li>
+</ul>
+<h4 id="polarkvcache">阿里 PolarKVCache 分布式内存池</h4>
+<ul>
+<li>L3 层分布式内存池（DMP）提供 PB 级共享存储</li>
+<li>跨节点、跨会话共享 KVCache</li>
+<li>聊天场景 TTFT 降低 26.8 倍</li>
+</ul>
+<hr />
+<h3 id="34">3.4 非前缀片段复用：突破"从头匹配"限制</h3>
+<h4 id="_2">浪潮任意片段精准复用</h4>
+<p>传统前缀缓存只能匹配输入序列开头的相同部分。浪潮为每个 KVCache Block 构建三重标签元数据：</p>
+<ol>
+<li><strong>文本指纹</strong>：token 序列哈希生成唯一标识</li>
+<li><strong>存储位置</strong>：层级/节点IP/路径/偏移量</li>
+<li><strong>生命周期</strong>：生成时间/访问时间/访问次数</li>
+</ol>
+<p>即使文档中间某段重复出现（如合同标准条款），也能通过文本指纹精准匹配，复用率比传统前缀方案提升 <strong>3-5 倍</strong>。</p>
+<h4 id="cacheblendlmcache-polarkvcache">CacheBlend（LMCache / PolarKVCache）</h4>
+<p>选择性重计算策略：</p>
+<ul>
+<li>复用提示词中间任意位置的匹配块</li>
+<li>即使前后文略有不同，也能通过选择性重计算保证输出质量</li>
+<li>RAG 场景冗余计算减少 <strong>51%</strong></li>
+</ul>
+<hr />
+<h3 id="35-kv-cache">3.5 KV Cache 事件追踪与一致性管理</h3>
+<h4 id="nvidia-kv-cache-api">NVIDIA KV Cache 事件 API</h4>
+<ul>
+<li>实时追踪 KV Cache 块的<strong>创建、存储、删除、更新</strong>事件</li>
+<li>提供最终一致性视图</li>
+<li>支撑 KV-aware 路由决策——路由器实时知道哪些 KV Cache 在哪里</li>
+</ul>
+<h4 id="mooncake">Mooncake 块级哈希去重</h4>
+<ul>
+<li>每个 KV Cache Block 附带哈希值（自身哈希 + 前缀哈希）</li>
+<li>哈希值相同即去重</li>
+<li>前缀哈希支持快速前缀匹配</li>
+</ul>
+<hr />
+<h3 id="36">3.6 各厂商命中率优化效果汇总</h3>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>命中率优化手段</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>Radix Tree Smart Router + 优先级驱逐 + 事件 API</td>
+<td>命中率提升 ~20%</td>
+</tr>
+<tr>
+<td><strong>华为 UCM</strong></td>
+<td>全局前缀缓存（任意位置）</td>
+<td>首 Token 时延降 90%</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>块级哈希去重 + Conductor 全局调度 + 热点复制迁移</td>
+<td>处理量提升 75%</td>
+</tr>
+<tr>
+<td><strong>阿里 FlashKV</strong></td>
+<td>集群级共享 + 扩容不降命中率</td>
+<td>命中率提升 10x</td>
+</tr>
+<tr>
+<td><strong>阿里 PolarKVCache</strong></td>
+<td>分布式内存池 + CacheBlend 选择性重计算</td>
+<td>TTFT 降 26.8x</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>任意片段复用 + 元数据三重标签</td>
+<td>复用率提升 3-5x</td>
+</tr>
+<tr>
+<td><strong>SGLang</strong></td>
+<td>RadixAttention 基数树</td>
+<td>命中率比 vLLM 高 2-4x</td>
+</tr>
+<tr>
+<td><strong>HotPrefix</strong></td>
+<td>热度感知调度 + 选择性准入</td>
+<td>吞吐提升 2.25x</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="kv-cache_4">四、KV Cache 分级缓存如何解决不同速率层级之间数据高效传递的问题</h2>
+<p>KV Cache 分级缓存的核心工程挑战是<strong>层级间巨大的速度差异</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>层级跳跃</th>
+<th>延迟差距</th>
+<th>数据量</th>
+<th>挑战</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1→L2（HBM→DRAM）</td>
+<td>100x</td>
+<td>GB 级</td>
+<td>PCIe 带宽瓶颈、CPU 拷贝开销</td>
+</tr>
+<tr>
+<td>L2→L3（DRAM→SSD）</td>
+<td>1000x</td>
+<td>TB 级</td>
+<td>SSD IOPS 限制、网络延迟</td>
+</tr>
+<tr>
+<td>L1→L3（HBM→SSD/远端）</td>
+<td>10000x</td>
+<td>跨节点</td>
+<td>网络带宽、协议开销</td>
+</tr>
+</tbody>
+</table>
+<p>各厂商通过以下技术路径解决层级间数据高效传递问题：</p>
+<h3 id="41-cpu">4.1 零拷贝传输：绕过 CPU 的直接数据通路</h3>
+<h4 id="nvidia-nixl">NVIDIA NIXL（统一传输抽象层）</h4>
+<p>NIXL 是 NVIDIA Dynamo 的核心传输库，统一抽象多种硬件链路：</p>
+<pre class="highlight"><code>应用层：KV Cache Manager
+    ↓
+NIXL 统一 API
+    ↓
+后端选择：UCX | GPUDirect Storage | S3 | 自定义插件
+    ↓
+物理链路：NVLink | InfiniBand | PCIe | SSD Fabric</code></pre>
+<p><strong>核心能力</strong>：</p>
+<ul>
+<li><strong>动态后端选择</strong>：根据数据位置和目标层级，自动选择最优传输后端（UCX/GDS/S3/自定义插件）</li>
+<li><strong>跨层级优化</strong>：统一 GPU HBM、CPU DRAM、本地 SSD、网络存储之间的数据传输</li>
+<li><strong>支持多种网络</strong>：NVLink、NVLink Switch、Quantum InfiniBand、Spectrum-X Ethernet</li>
+</ul>
+<p><strong>WEKA + NIXL 实测</strong>（DGX 8×H100）：</p>
+<ul>
+<li>零拷贝 RDMA 管道，数据从 NIC 直接 DMA 到 GPU 显存，绕过 CPU</li>
+<li>读吞吐最高 <strong>269.72 GB/s</strong>，写吞吐最高 <strong>123.44 GB/s</strong></li>
+<li>KV cache 以近内存速度传输（最高 252 GB/s/节点）</li>
+</ul>
+<h4 id="mooncake-transfer-engine">Mooncake Transfer Engine</h4>
+<p>Mooncake 自研的高性能数据传输库：</p>
+<p><strong>统一接口支持多种协议</strong>：</p>
+<ul>
+<li>TCP（基础）</li>
+<li>RDMA（InfiniBand/RoCEv2/eRDMA/NVIDIA GPUDirect）</li>
+<li>NVMe over Fabric (NVMe-oF)</li>
+</ul>
+<p><strong>核心优化</strong>：</p>
+<ul>
+<li><strong>多 RDMA NIC 设备聚合带宽</strong>：支持使用多块 RDMA 网卡聚合传输带宽</li>
+<li><strong>拓扑感知路径选择</strong>：基于 NUMA 亲和性选择最优设备和路径</li>
+<li><strong>容错重传</strong>：传输失败时自动尝试替代路径</li>
+</ul>
+<p><strong>实测性能</strong>：</p>
+<ul>
+<li>4×200Gbps RoCE：<strong>87 GB/s</strong>（比 TCP 快 2.4x）</li>
+<li>8×400Gbps RoCE：<strong>190 GB/s</strong>（比 TCP 快 4.6x）</li>
+<li>40GB 数据（128K Token 的 LLaMA-70B KVCache）可秒级传输</li>
+</ul>
+<h4 id="polarkvcache-gpu-direct-rdma">阿里 PolarKVCache GPU Direct RDMA</h4>
+<ul>
+<li>GPU 绕过 CPU，直接通过 RDMA 网卡读写远程分布式内存池</li>
+<li>数据传输延迟降至<strong>微秒级</strong>，性能接近访问本地内存</li>
+<li>消除 CPU 参与数据拷贝的开销</li>
+</ul>
+<h4 id="gpu-direct-storage">浪潮 GPU Direct Storage</h4>
+<ul>
+<li>L2→L1 采用 PCIe DMA，L3→L2 采用 RDMA</li>
+<li>实现"内存-显存"零拷贝直接传输</li>
+<li>避免 CPU 二次拷贝，减少 PCIe 带宽占用</li>
+</ul>
+<hr />
+<h3 id="42">4.2 分层流水线传输：计算与传输重叠</h3>
+<h4 id="polarkvcache-layer-wise">阿里 PolarKVCache Layer-wise 流水线</h4>
+<p><strong>核心思想</strong>：KV Cache 不是整体传输，而是按 Transformer 的**层（Layer）**粒度流水线传输。</p>
+<pre class="highlight"><code>时间线：
+Layer 0 KV传输: ████
+Layer 0 计算:       ████
+Layer 1 KV传输:     ████
+Layer 1 计算:           ████
+Layer 2 KV传输:         ████
+Layer 2 计算:               ████
+...</code></pre>
+<p><strong>Scatter/Gather 流水线操作</strong>：</p>
+<ul>
+<li>当第 N 层的 KV Cache 正在通过 RDMA 网络传输时</li>
+<li>计算单元可以<strong>同时开始计算</strong>第 N 层（用已到达的数据）</li>
+<li>网络延迟被计算时间<strong>掩盖</strong>（overlapped）</li>
+<li>端到端效率大幅提升</li>
+</ul>
+<h4 id="_3">浪潮异步预加载与跨层同步</h4>
+<p><strong>预加载触发</strong>：</p>
+<ul>
+<li>模型计算第 i 层注意力时，<strong>提前触发</strong>第 i+1 层所需 KVCache 的加载请求</li>
+<li>利用计算时间掩盖下一层 KV Cache 的加载延迟</li>
+</ul>
+<p><strong>跨层同步点</strong>：</p>
+<ul>
+<li>注意力层插入"同步点"，仅等待<strong>当前层</strong>缓存加载完成</li>
+<li>不需要等待所有层加载完毕才开始计算</li>
+</ul>
+<p><strong>零开销调度</strong>：</p>
+<ul>
+<li>CPU 的调度决策逻辑与 GPU 上一个 batch 的执行重叠</li>
+<li>避免因调度引入额外的流水线停顿</li>
+</ul>
+<h4 id="tair-kvcache">阿里 Tair KVCache 异步缓存预取</h4>
+<p><strong>两阶段预取</strong>：</p>
+<ol>
+<li><strong>第一阶段（L3→L2）</strong>：请求进入等待队列后，立即启动异步 I/O，将命中的 KV Cache 从 SSD 迁移至 Host DRAM。此过程在 CPU 后台进行，不影响 GPU 推理</li>
+<li><strong>第二阶段（L2→L1）</strong>：当调度器将该请求纳入下一批次时，检查 L2 缓存是否就绪。若就绪，启动从 Host DRAM 到 GPU HBM 的缓存加载</li>
+</ol>
+<hr />
+<h3 id="43-cxl">4.3 CXL 共享内存语义：消除数据拷贝</h3>
+<p>CXL 提供了不同于 RDMA 的范式——<strong>不需要"传输"，而是"共享访问"</strong>：</p>
+<pre class="highlight"><code>传统 RDMA 路径：
+GPU → 本地 DRAM → NIC → 网络 → NIC → 远端 DRAM → GPU
+（多跳拷贝，协议开销，微秒级延迟）
+
+CXL 路径：
+GPU/CPU → CXL 内存池（直接 load/store 访问）
+（零拷贝，硬件一致性，200-500ns 延迟）</code></pre>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RDMA</th>
+<th>CXL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>访问语义</td>
+<td>消息传递（Send/Recv）</td>
+<td>共享内存（Load/Store）</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>微秒级（~1-10μs）</td>
+<td>纳秒级（200-500ns）</td>
+</tr>
+<tr>
+<td>CPU 参与</td>
+<td>需要协议栈处理</td>
+<td>硬件透明</td>
+</tr>
+<tr>
+<td>缓存一致性</td>
+<td>软件维护</td>
+<td>硬件管理（CXL.cache）</td>
+</tr>
+<tr>
+<td>容量扩展</td>
+<td>网络存储池</td>
+<td>CXL 内存池（100TiB 级）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>XConn Apollo 方案</strong>：</p>
+<ul>
+<li>Ultra IO Transformer 使 PCIe GPU（不原生支持 CXL）通过混合交换直接访问 CXL 内存池</li>
+<li>多 GPU 节点共享同一 CXL 内存池，KV Cache 天然共享，无需传输</li>
+</ul>
+<p><strong>Beluga 方案</strong>（学术验证）：</p>
+<ul>
+<li>相比 RDMA：TTFT 降低 89.6%，吞吐提升 7.35 倍</li>
+<li>相比 SSD 缓存：性能提升 5 倍以上</li>
+</ul>
+<p><strong>MemVerge GISMO</strong>：</p>
+<ul>
+<li>Global IO-free Shared Memory Objects</li>
+<li>软件定义弹性 CXL 内存，支持动态扩缩容</li>
+</ul>
+<hr />
+<h3 id="44-s3-over-rdma-api">4.4 S3 over RDMA：保持 API 兼容的高速数据面</h3>
+<p><strong>问题</strong>：S3/HTTP 对象存储是业界标准接口，但基于 TCP 协议栈，在高并发推理场景下存在 CPU 税、尾延迟和抖动问题。</p>
+<p><strong>VAST + NVIDIA 方案——S3 over RDMA</strong>：</p>
+<ul>
+<li>保留 S3 API 作为"句柄"（身份认证、多租户、运维工具链）</li>
+<li>将传输"平面"从 TCP 替换为 RDMA</li>
+<li>GPUDirect RDMA 使 KV blocks 直接在 NIC 和 GPU 显存之间 DMA，绕过主机内存</li>
+</ul>
+<p><strong>效果</strong>：</p>
+<ul>
+<li>KV 传输被视为基础设施而非临时管道问题</li>
+<li>与 NFS/RDMA 在训练中的演进路径一致</li>
+</ul>
+<hr />
+<h3 id="45-pd-kv-cache">4.5 PD 分离场景的 KV Cache 传输优化</h3>
+<p>Prefill-Decode 分离架构中，KV Cache 必须从 Prefill 节点传输到 Decode 节点，这是最关键的层级间传递场景：</p>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>传输方案</th>
+<th>带宽/延迟</th>
+<th>核心优化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>NVIDIA</strong></td>
+<td>NIXL + GPUDirect RDMA</td>
+<td>NVLink/IB 级别</td>
+<td>动态后端选择 + 零拷贝</td>
+</tr>
+<tr>
+<td><strong>Mooncake</strong></td>
+<td>Transfer Engine + GPUDirect</td>
+<td>190 GB/s（8×400G）</td>
+<td>多 NIC 聚合 + 拓扑感知 + 容错重传</td>
+</tr>
+<tr>
+<td><strong>阿里</strong></td>
+<td>GPU Direct RDMA</td>
+<td>微秒级</td>
+<td>GPU 绕过 CPU 直接读写远端内存</td>
+</tr>
+<tr>
+<td><strong>浪潮</strong></td>
+<td>PCIe DMA + RDMA</td>
+<td>零拷贝</td>
+<td>GPU Direct Storage</td>
+</tr>
+<tr>
+<td><strong>CXL</strong></td>
+<td>load/store 共享</td>
+<td>200-500ns</td>
+<td>无需传输，直接共享访问</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键设计原则</strong>：</p>
+<ol>
+<li><strong>流式传输</strong>：KV Cache 不等全部生成完再传输，而是边生成边传输（Mooncake CPP）</li>
+<li><strong>提前卸载</strong>：Prefill 产出的 KV 可立即从 GPU 撤离，不必等待 Decode 节点就绪，释放 GPU 开始新 Prefill</li>
+<li><strong>按层流水线</strong>：按 Transformer 层粒度传输+计算重叠（PolarKVCache Layer-wise）</li>
+<li><strong>预取重叠</strong>：计算当前层时预取下一层 KV（浪潮异步预加载）</li>
+</ol>
+<hr />
+<h2 id="_4">附录：厂商方案速查表</h2>
+<h3 id="_5">分级缓存架构对比</h3>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>L1</th>
+<th>L2</th>
+<th>L3</th>
+<th>L4</th>
+<th>核心特色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NVIDIA</td>
+<td>HBM</td>
+<td>CPU DRAM</td>
+<td>SSD/对象存储</td>
+<td>-</td>
+<td>Paged KV + Dynamo Smart Router + NIXL 统一传输 + vAttention</td>
+</tr>
+<tr>
+<td>华为 UCM</td>
+<td>HBM</td>
+<td>DRAM</td>
+<td>高性能 SSD</td>
+<td>-</td>
+<td>存算协同 + 稀疏注意力 + 全局前缀缓存</td>
+</tr>
+<tr>
+<td>Mooncake</td>
+<td>VRAM</td>
+<td>CPU DRAM</td>
+<td>SSD</td>
+<td>分布式 KVCache 池</td>
+<td>Transfer Engine + Conductor 全局调度</td>
+</tr>
+<tr>
+<td>阿里 Tair</td>
+<td>GPU 显存</td>
+<td>CPU 内存</td>
+<td>SSD(3FS)</td>
+<td>-</td>
+<td>Tair KVCache 服务化 + Llumnix 动态迁移</td>
+</tr>
+<tr>
+<td>阿里 PolarKVCache</td>
+<td>VRAM</td>
+<td>DRAM</td>
+<td>分布式内存池</td>
+<td>分布式磁盘池</td>
+<td>GPU Direct RDMA + Layer-wise 流水线 + CacheBlend</td>
+</tr>
+<tr>
+<td>阿里 FlashKV</td>
+<td>GPU 显存</td>
+<td>内存</td>
+<td>磁盘</td>
+<td>远端</td>
+<td>集群级共享 + 扩容不降命中率</td>
+</tr>
+<tr>
+<td>浪潮</td>
+<td>HBM</td>
+<td>DRAM+NVMe</td>
+<td>分布式存储</td>
+<td>-</td>
+<td>GPU Direct Storage 零拷贝 + 任意片段复用</td>
+</tr>
+<tr>
+<td>CXL</td>
+<td>HBM</td>
+<td>CPU DRAM</td>
+<td>CXL 内存池</td>
+<td>SSD/网络存储</td>
+<td>200-500ns 低延迟共享内存语义</td>
+</tr>
+</tbody>
+</table>
+<h3 id="kv">KV 容量压缩方案对比</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>压缩比</th>
+<th>质量影响</th>
+<th>需重训</th>
+<th>代表厂商/模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MHA（基准）</td>
+<td>1x</td>
+<td>基准</td>
+<td>-</td>
+<td>GPT-3</td>
+</tr>
+<tr>
+<td>MQA</td>
+<td>~32x</td>
+<td>略有下降</td>
+<td>是</td>
+<td>PaLM/Gemini/Falcon</td>
+</tr>
+<tr>
+<td>GQA</td>
+<td>4-8x</td>
+<td>接近 MHA</td>
+<td>可 uptraining</td>
+<td>LLaMA-2/3/Mistral</td>
+</tr>
+<tr>
+<td>MLA</td>
+<td>57x（93.3%↓）</td>
+<td>接近或超过 MHA</td>
+<td>是</td>
+<td>DeepSeek-V2/V3</td>
+</tr>
+<tr>
+<td>LSA</td>
+<td>降至 13.5%</td>
+<td>+0.6% 提升</td>
+<td>indexer 独立训练</td>
+<td>FlashMemory-DeepSeek-V4</td>
+</tr>
+<tr>
+<td>INT8 量化</td>
+<td>2x</td>
+<td>极小</td>
+<td>否</td>
+<td>TensorRT-LLM/vLLM</td>
+</tr>
+<tr>
+<td>FP8 量化</td>
+<td>2x</td>
+<td>极小</td>
+<td>否</td>
+<td>TensorRT-LLM</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_6">层级间数据传输方案对比</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>传输机制</th>
+<th>峰值带宽</th>
+<th>延迟</th>
+<th>核心优势</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NVIDIA NIXL</td>
+<td>统一抽象多后端</td>
+<td>269 GB/s</td>
+<td>NVLink/IB 级</td>
+<td>动态后端选择 + 零拷贝</td>
+</tr>
+<tr>
+<td>Mooncake Transfer Engine</td>
+<td>RDMA + GPUDirect</td>
+<td>190 GB/s</td>
+<td>RDMA 级</td>
+<td>多 NIC 聚合 + 拓扑感知</td>
+</tr>
+<tr>
+<td>阿里 PolarKVCache</td>
+<td>GPU Direct RDMA</td>
+<td>-</td>
+<td>微秒级</td>
+<td>GPU 绕 CPU 直接读写</td>
+</tr>
+<tr>
+<td>浪潮</td>
+<td>PCIe DMA + RDMA</td>
+<td>-</td>
+<td>零拷贝</td>
+<td>GPU Direct Storage</td>
+</tr>
+<tr>
+<td>CXL 共享内存</td>
+<td>Load/Store</td>
+<td>-</td>
+<td>200-500ns</td>
+<td>无需传输，硬件一致性</td>
+</tr>
+<tr>
+<td>S3 over RDMA</td>
+<td>RDMA + S3 API</td>
+<td>-</td>
+<td>RDMA 级</td>
+<td>兼容 S3 生态</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>报告编制时间：2026 年 8 月</em><br />
+<em>信息来源：各厂商官方文档、学术论文（FAST 2025、OSDI 2024、ASPLOS 2025、SIGMOD 2025）、技术博客</em></p>
+</div>
+</body>
+</html>

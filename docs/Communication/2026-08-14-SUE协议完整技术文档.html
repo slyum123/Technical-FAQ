@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUE (Scale-Up Ethernet) 协议完整技术文档</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+h5, h6 { color: #8b949e; margin: 16px 0 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../index.html">&larr; 返回索引</a>
+<h1 id="sue-scale-up-ethernet">SUE (Scale-Up Ethernet) 协议完整技术文档</h1>
+<p>博通（Broadcom）AI Scale-Up 互连框架 — 分层架构、报文处理流程与软件框架</p>
+<p>基于 Broadcom SUE Framework Specification RM103 &amp; 相关技术白皮书整理</p>
+<h2 id="_1">目 录</h2>
+<ul>
+<li>1. SUE 协议概述</li>
+<li>2. 物理层 (Physical Layer)</li>
+<li>3. 链路层 (Link Layer)</li>
+<li>4. 网络层 (Network Layer)</li>
+<li>5. 传输层 (Transport Layer)</li>
+<li>6. 打包层 (Mapping &amp; Packing Layer)</li>
+<li>7. 事务层 / 应用层 (Transaction &amp; Application Layer)</li>
+<li>8. 报文处理流程</li>
+<li>9. SUE 软件整体框架</li>
+<li>10. 总结与附录</li>
+</ul>
+<h2 id="1-sue">1. SUE 协议概述</h2>
+<h3 id="11">1.1 背景与定位</h3>
+<p>SUE（Scale-Up Ethernet）是博通（Broadcom）于 2025 年 OCP 全球峰会上发布的 AI Scale-Up 互连开放框架。其核心目标是在保持以太网生态兼容性的前提下，为 XPU（GPU/NPU/ML 加速器）集群提供超高带宽、超低延迟、无损传输的高性能通信能力。</p>
+<p>SUE 专为 AI 超大模型训练、推理等场景设计，将传统以太网的优势（高速链路、大容量交换、成熟生态）引入 AI 系统内部的 Scale-Up 域，使得 XPU 之间的内存事务可以直接通过以太网高效搬运。</p>
+<h3 id="12">1.2 核心设计指标</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>规格</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>最大 XPU 数量</td>
+<td>≤ 1024</td>
+<td>单跳交换拓扑</td>
+</tr>
+<tr>
+<td>端到端 RTT</td>
+<td>&lt; 2 μs</td>
+<td>往返延迟</td>
+</tr>
+<tr>
+<td>单 SUE 带宽</td>
+<td>800 Gbps</td>
+<td>可扩展至 1.6 Tbps</td>
+</tr>
+<tr>
+<td>SerDes 速率</td>
+<td>200 Gbps / lane</td>
+<td>兼容 100G、50G</td>
+</tr>
+<tr>
+<td>端口配置</td>
+<td>1/2/4 端口</td>
+<td>800G 可拆分为 1×800G / 2×400G / 4×200G</td>
+</tr>
+<tr>
+<td>单 XPU SUE 实例</td>
+<td>8 ~ 16 个</td>
+<td>多实例叠加，XPU 对间带宽可达 9.6 Tbps</td>
+</tr>
+<tr>
+<td>虚拟通道 (VC)</td>
+<td>≤ 4 个</td>
+<td>独立流量类别，避免死锁</td>
+</tr>
+<tr>
+<td>电缆长度</td>
+<td>≤ 10m</td>
+<td>使用空心光纤可低于 520ns 单向延迟</td>
+</tr>
+<tr>
+<td>事务语义</td>
+<td>单边操作</td>
+<td>Load / Store / Atomics</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13">1.3 部署模型</h3>
+<p>SUE 支持两种典型部署拓扑：</p>
+<ul>
+<li><strong>单跳交换拓扑（Single-Hop Switch）</strong> ：每个 XPU 通过多个 SUE 实例连接到以太网交换机，所有 XPU 间最多一跳可达。典型配置：64 XPU × 12 SUE 实例 × 800G = 任意 XPU 对间 <strong>9.6 Tbps</strong> 。</li>
+<li><strong>直接 Mesh 拓扑</strong> ：XPU 之间直接通过 SUE 端口互联，无交换机参与，适用于小规模紧耦合系统。</li>
+</ul>
+<h3 id="14">1.4 六层协议栈总览</h3>
+<p>以下为本协议文档采用的分层体系——在 SUE 官方规范的三层（映射打包层 / 传输层 / 网络层）基础上，将物理层、链路层、事务层独立展开：</p>
+<p>6 事务层 / 应用层 (Transaction / Application Layer) XPU 命令接口 · AXI4 · Load/Store/Atomics · 流量生成与消费</p>
+<p>5 打包层 (Mapping &amp; Packing Layer) 事务聚合 · PDU 封装 · SUE Header · 按目标 XPU+VC 组织</p>
+<p>4 传输层 (Transport Layer) 可靠性头部 RH · PSN/RPSN · Go-Back-N 重传 · 32-bit CRC</p>
+<p>3 网络层 (Network Layer) AFH Gen1/Gen2 · 标准 Eth/IP/UDP · SLAP 寻址 · ECN</p>
+<p>2 链路层 (Link Layer) MAC · LLR 链路重传 · CBFC 信用流控 · PFC · 帧定界</p>
+<p>1 物理层 (Physical Layer) SerDes 112G/224G · PAM4 · FEC RS(544,514) · PMA/PCS</p>
+<h3 id="15-sue-vs-sue-lite">1.5 SUE 完整版 vs SUE Lite</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>完整版 SUE</th>
+<th>SUE Lite</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>链路层可靠性 (LLR)</td>
+<td>✅ 支持</td>
+<td>✅ 支持</td>
+</tr>
+<tr>
+<td>信用流控 (CBFC)</td>
+<td>✅ 支持</td>
+<td>✅ 支持</td>
+</tr>
+<tr>
+<td>传输层端到端可靠性 (RH)</td>
+<td>✅ 支持</td>
+<td>❌ 不支持</td>
+</tr>
+<tr>
+<td>多层拓扑</td>
+<td>✅ 支持</td>
+<td>❌ 仅单层</td>
+</tr>
+<tr>
+<td>闪断恢复</td>
+<td>E2E PSN 恢复 ≤ 1μs</td>
+<td>依赖 LLR</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-physical-layer">2. 物理层 (Physical Layer)</h2>
+<h3 id="21">2.1 定位与职责</h3>
+<p>物理层负责在物理介质上实现比特流的透明传输，将链路层的帧转换为电信号/光信号进行发送，在接收端完成相反的转换。SUE 的物理层完全基于 IEEE 802.3 以太网标准，确保了与现有以太网生态的完全兼容。</p>
+<h3 id="22">2.2 核心组件</h3>
+<h4 id="221-serdes">2.2.1 SerDes（串行器/解串器）</h4>
+<h4 id="serdes">SerDes 规格</h4>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单 Lane 速率</td>
+<td>112 Gbps（当前主流）/ 224 Gbps（下一代）</td>
+</tr>
+<tr>
+<td>单口 Lane 数</td>
+<td>x1 / x2 / x4 / x8</td>
+</tr>
+<tr>
+<td>单口带宽</td>
+<td>112G × 8 = ~800Gbps；或 224G × 4 = ~800Gbps</td>
+</tr>
+<tr>
+<td>调制方式</td>
+<td>PAM4（4 电平脉冲幅度调制）</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>向下兼容 100G、50G 速率</td>
+</tr>
+</tbody>
+</table>
+<h4 id="222-fec">2.2.2 FEC（前向纠错）</h4>
+<p>在 100G+ 速率下，信号完整性面临严峻挑战，FEC 是保证链路可靠性的第一道防线。SUE 物理层采用 IEEE 802.3 标准 FEC 方案：</p>
+<table>
+<thead>
+<tr>
+<th>FEC 方案</th>
+<th>编码</th>
+<th>适用速率</th>
+<th>纠错能力</th>
+<th>延迟</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FEC RS(544,514)</td>
+<td>Reed-Solomon</td>
+<td>100G / 200G / 400G</td>
+<td>最多纠正 15 个符号错误</td>
+<td>~100 ns</td>
+</tr>
+<tr>
+<td>FEC RS(272,258)</td>
+<td>Reed-Solomon（轻量版）</td>
+<td>短距离低损耗链路</td>
+<td>最多纠正 7 个符号错误</td>
+<td>~50 ns</td>
+</tr>
+</tbody>
+</table>
+<p>FEC 的目标是将链路误码率（BER）从 1e-5 级别降低到 1e-15 以下，足以支撑 AI Scale-Up 的可靠性需求。在无 FEC 的情况下，100G 链路上 1e-15 的 BER 意味着每 2.78 小时发生一次错误，这对 XPU 间通信是不可接受的。</p>
+<h4 id="223-pma-pcs">2.2.3 PMA / PCS 子层</h4>
+<ul>
+<li><strong>PCS（物理编码子层）</strong> ：负责 64B/66B 编码、加扰、AM（对齐标记）插入、FEC 编解码。将 MAC 层的以太网帧映射为适合物理传输的编码块。</li>
+<li><strong>PMA（物理介质连接子层）</strong> ：负责多 Lane 的对齐、交叉（striping/de-striping）、SerDes 接口适配。</li>
+<li><strong>PMD（物理介质相关子层）</strong> ：负责电/光信号转换，定义连接器、电缆规格。</li>
+</ul>
+<h4 id="224">2.2.4 传输介质</h4>
+<table>
+<thead>
+<tr>
+<th>介质类型</th>
+<th>最大距离</th>
+<th>典型延迟</th>
+<th>应用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>铜缆 DAC</td>
+<td>~3m</td>
+<td>~5 ns/m</td>
+<td>机架内同一 tray</td>
+</tr>
+<tr>
+<td>有源光缆 AOC</td>
+<td>~30m</td>
+<td>~5 ns/m</td>
+<td>跨 tray / 跨机架</td>
+</tr>
+<tr>
+<td>空心光纤 (HCF)</td>
+<td>~10m</td>
+<td>~3.3 ns/m</td>
+<td>极致低延迟场景（~520ns/10m 单向）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23">2.3 物理层功��总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>比特传输</td>
+<td>在物理介质上以 PAM4 调制的 112G/224G PAM4 信号传输原始比特</td>
+</tr>
+<tr>
+<td>编码/解码</td>
+<td>64B/66B 行码编码，确保足够的边沿密度用于时钟恢复</td>
+</tr>
+<tr>
+<td>前向纠错</td>
+<td>RS-FEC 在物理层纠正传输错误，将 BER 降至 1e-15 以下</td>
+</tr>
+<tr>
+<td>链路训练</td>
+<td>自动协商速率、自适应均衡器调整、Lane 极性检测</td>
+</tr>
+<tr>
+<td>Link 状态监测</td>
+<td>实时误码率监测、信号质量检测、Link Down/Up 上报</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-link-layer">3. 链路层 (Link Layer)</h2>
+<h3 id="31">3.1 定位与职责</h3>
+<p>链路层在物理层提供的不可靠比特管道之上，构建逐跳（hop-by-hop）的可靠帧传输服务。SUE 的链路层在标准以太网 MAC 层基础上，增加了 LLR（链路层重传）、CBFC（基于信用的流控）、PFC（优先级流控）等关键增强功能，是实现无损网络的核心所在。</p>
+<h3 id="32">3.2 核心机制</h3>
+<h4 id="321-mac">3.2.1 MAC 层（介质访问控制）</h4>
+<p>遵循 IEEE 802.3 标准，负责帧定界、MAC 地址解析、FCS（帧校验序列，32-bit CRC）生成与校验。SUE 中，MAC 层处理可变长度的以太网帧（64 字节 ~ 4KB），与标准以太网完全兼容。</p>
+<p>在 AFH Gen2 模式下，SUE 使用 SLAP（Structured Local Address Plan）机制对 MAC 地址进行压缩，但仍保持 IEEE 802 框架兼容。SLAP 在 M/X/Y/Z 四个比特位上编码地址模式：</p>
+<table>
+<thead>
+<tr>
+<th>M</th>
+<th>X</th>
+<th>Y</th>
+<th>Z</th>
+<th>模式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>*</td>
+<td>*</td>
+<td>0</td>
+<td>0</td>
+<td>AA（管理分配）</td>
+<td>SUE Gen2 采用，X=1 表示本地管理</td>
+</tr>
+<tr>
+<td>*</td>
+<td>*</td>
+<td>0</td>
+<td>1</td>
+<td>SA（标准分配）</td>
+<td>IEEE 注册 MAC</td>
+</tr>
+<tr>
+<td>*</td>
+<td>*</td>
+<td>1</td>
+<td>0</td>
+<td>EL（扩展本地）</td>
+<td>扩展本地地址</td>
+</tr>
+<tr>
+<td>*</td>
+<td>*</td>
+<td>1</td>
+<td>1</td>
+<td>预留</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h4 id="322-llrlink-level-retry">3.2.2 LLR（Link-Level Retry，链路层重传）</h4>
+<h4 id="llr">LLR 工作机制</h4>
+<p>LLR 在链路层提供逐跳的无损传输保障，其核心思想是在物理层 FEC 失效后，由链路层进行快速重传，无需端到端超时。</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>检测机制</td>
+<td>接收端通过 CRC-32（FCS）校验检测帧损坏</td>
+</tr>
+<tr>
+<td>反馈机制</td>
+<td>通过特殊的控制有序集（Control Ordered Sets）注入 64B/66B 数据流，同步携带 ACK/NACK</td>
+</tr>
+<tr>
+<td>重传缓冲区</td>
+<td>发送端维护每个帧的副本，直到收到 ACK</td>
+</tr>
+<tr>
+<td>重传粒度</td>
+<td>单个损坏帧级别，不影响其他帧</td>
+</tr>
+<tr>
+<td>恢复延迟</td>
+<td>典型 &lt; 100ns（单跳链路往返 + 处理）</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>遵循 UEC（Ultra Ethernet Consortium）LLR 规范草案</td>
+</tr>
+</tbody>
+</table>
+<h4 id="323-cbfccredit-based-flow-control">3.2.3 CBFC（Credit-Based Flow Control，基于信用的流控）</h4>
+<p>CBFC 是 SUE 实现无损传输的关键流控机制，替代了传统以太网的 PFC（Priority Flow Control），消除了 PFC 的队头阻塞（HOL Blocking）和死锁问题。</p>
+<p><strong>工作原理：</strong></p>
+<ol>
+<li><strong>信用初始化</strong> ：接收端为每个虚拟通道（VC）通告其可用缓冲区大小（初始信用值）。</li>
+<li><strong>信用消耗</strong> ：发送端每发送一帧数据，消耗对应 VC 的信用值（消耗量 = 帧大小）。</li>
+<li><strong>信用返还</strong> ：接收端处理完帧、释放缓冲区后，通过控制有序集向发送端发送信用返还消息。</li>
+<li><strong>流控阻塞</strong> ：当某 VC 的信用值为 0 时，发送端暂停该 VC 的数据发送，但不影响其他 VC。</li>
+</ol>
+<p><strong>CBFC vs PFC：</strong> CBFC 是预防性流控——发送端在信用耗尽时提前停止发送，保证接收端缓冲区永不溢出。PFC 是反应性流控——接收端缓冲区快满时才发送 PAUSE 帧。CBFC 在两个关键指标上优于 PFC：消除队头阻塞（按 VC 独立控制）、减少缓冲区需求（约 PFC 的一半）。</p>
+<h4 id="324-pfcpriority-flow-control">3.2.4 PFC（Priority Flow Control）</h4>
+<p>在 CBFC 不可用或兼容模式下，SUE 也支持标准 PFC（IEEE 802.1Qbb）。PFC 按优先级独立进行 PAUSE/UNPAUSE 控制，但在 Clos 拓扑中已知存在队头阻塞问题。在 SUE 单跳交换拓扑中，PFC 性能尚可接受。</p>
+<h4 id="325-vc-virtual-channels">3.2.5 虚拟通道 (VC, Virtual Channels)</h4>
+<p>SUE 支持最多 4 个独立的虚拟通道（VC），每个 VC 映射到一个流量类别（Traffic Class）。VC 用于：</p>
+<ul>
+<li><strong>避免协议级死锁</strong> ：将请求（Request）和响应（Response）分配到不同 VC，防止请求-响应循环死锁。</li>
+<li><strong>QoS 隔离</strong> ：高优先级控制消息与大数据传输隔离，保证控制面的低延迟。</li>
+<li><strong>消除队头阻塞</strong> ：每个 VC 拥有独立的缓冲区队列和 CBFC 信用管理。</li>
+</ul>
+<h3 id="33-ethernet">3.3 Ethernet 接口</h3>
+<p>SUE 的以太网接口支持灵活的端口拆分和故障切换：</p>
+<ul>
+<li><strong>端口配置</strong> ：1x800G / 2x400G / 4x200G，灵活匹配交换机端口密度。</li>
+<li><strong>动态故障链路切换</strong> ：检测到某 Lane 故障时自动屏蔽并使用剩余 Lane 降速运行。</li>
+<li><strong>冗余设计</strong> ：多端口模式天然支持端口级冗余。</li>
+</ul>
+<h3 id="34">3.4 链路层功能总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>机制</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>帧定界</td>
+<td>MAC + PPP Header</td>
+<td>以太网帧起始/结束标记，前导码 + SFD</td>
+</tr>
+<tr>
+<td>帧校验</td>
+<td>CRC-32 (FCS)</td>
+<td>帧尾 32 位循环冗余校验，检测传输错误</td>
+</tr>
+<tr>
+<td>链路可靠性</td>
+<td>LLR</td>
+<td>逐跳 ACK/NACK + 缓冲区重传，恢复延迟 &lt;100ns</td>
+</tr>
+<tr>
+<td>无损流控</td>
+<td>CBFC / PFC</td>
+<td>基于信用的预防性流控，按 VC 独立管理</td>
+</tr>
+<tr>
+<td>虚拟通道</td>
+<td>VC (≤4)</td>
+<td>独立流量类别隔离，消除队头阻塞和协议死锁</td>
+</tr>
+<tr>
+<td>链路管理</td>
+<td>Auto-Negotiation</td>
+<td>速率协商、FEC 协商、链路训练</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-network-layer">4. 网络层 (Network Layer)</h2>
+<h3 id="41">4.1 定位与职责</h3>
+<p>网络层负责将传输层的 SUE PDU 封装为可路由的网络数据包，并在 Scale-Up 交换网络中将其从源 XPU 转发到目的 XPU。SUE 的网络层支持多种封装格式，从标准以太网到极致压缩的 AI 转发头，在不同场景间灵活选择。</p>
+<h3 id="42">4.2 三种封装模式</h3>
+<h4 id="421-ipudp">4.2.1 模式一：标准以太网/IP/UDP 封装</h4>
+<p>完全兼容标准网络协议栈，适用于需要与现有基础设施互通的场景。开销较大（约 46 字节头部），但在非极致性能场景下提供了最大的灵活性。</p>
+<p>┌────────────────────────────────────────────────────────────┐ │ 标准以太网/IP/UDP 封装（总开销 ~46 字节） │ ├──────────┬──────────┬──────────┬──────────┬────────────────┤ │ Eth Hdr │ IP Hdr │ UDP Hdr │ SUE Payload │ │ 14 Bytes │ 20 Bytes │ 8 Bytes │ (PDU) │ ├──────────┴──────────┴──────────┴──────────────────────────┤ │ DMAC(6) + SMAC(6) + EtherType(2) │ │ + IP Header (Ver/IHL/TOS/Len/ID/Flags/Offset/TTL/ │ │ Proto/Checksum/SIP/DIP) │ │ + UDP Header (SPort/DPort/Len/Checksum) │ └────────────────────────────────────────────────────────────┘</p>
+<h4 id="422-afh-gen1-ai">4.2.2 模式二：AFH Gen1（优化 AI 转发头）</h4>
+<p>AFH（AI Forwarding Header）Gen1 在标准以太网帧头基础上添加 Shim Header，保留 L2 兼容性同时压缩了 L3/L4 信息。与 ESUN v1.0 技术路线一致。</p>
+<p>┌────────────────────────────────────────────────────────────┐ │ AFH Gen1 封装（总开销 16~17 字节） │ ├─��────────────────────────┬──────────┬──────────────────────┤ │ 标准以太网头 (14 Bytes) │ Shim Hdr │ SUE Payload (PDU) │ │ DMAC(6)+SMAC(6)+ET(2) │ 2~3 Bytes│ │ ├──────────────────────────┴──────────┴──────────────────────┤ │ Shim Header 字段（F=1 完整格式）： │ │ · Flow Label (8 bits) — 流标签 │ │ · F (1 bit) — Flow Label 有效标志 │ │ · CMN — 拥塞管理通知 │ │ · 其他控制/QoS 字段 │ │ │ │ Shim Header 字段（F=0 精简格式）： │ │ · 仅保留最简控制字段（2 字节） │ └────────────────────────────────────────────────────────────┘</p>
+<h4 id="423-afh-gen2-ai">4.2.3 模式三：AFH Gen2（极致压缩 AI 转发头）</h4>
+<p>AFH Gen2 是 SUE 协议的显著技术亮点——将 L2/L3/L4 多层信息融合压缩到 12 字节的单一头部，通过 SLAP 机制实现灵活寻址。在 128 字节 cacheline 传输场景下，载荷比可达 84.2%（含前导码和 FCS）。</p>
+<p>┌────────────────────────────────────────────────────────────┐ │ AFH Gen2 封装（总开销 12 Bytes） │ ├──────────────────────────┬─────────────────────────────────┤ │ 融合压缩头 (12 Bytes) │ SUE Payload (PDU) │ │ L2/L3/L4 信息融合 │ │ ├──────────────────────────┴─────────────────────────────────┤ │ 双模式寻址空间： │ │ │ │ 模式 A — 压缩地址 (2 Bytes 寻址): │ │ ┌──────────────────────┬──────┬──────┬─────────────────┐ │ │ │ 融合控制字段 (10B) │ DA │ SA │ SUE Payload │ │ │ │ │ (1B) │ (1B) │ │ │ │ └──────────────────────┴──────┴──────┴─────────────────┘ │ │ │ │ 模式 B — 常规地址 (4 Bytes 寻址): │ │ ┌──────────────────────┬──────┬──────┬─────────────────┐ │ │ │ 融合控制字段 (8B) │ DA │ SA │ SUE Payload │ │ │ │ │ (2B) │ (2B) │ │ │ │ └──────────────────────┴──────┴──────┴─────────────────┘ │ │ │ │ 核心功能字段： │ │ · 压缩寻址（DA/SA）— 基于 SLAP 的 16/32 bit 地址 │ │ · Flow Label — 流标签，用于负载均衡 │ │ · ECN / CMN — 显式拥塞通知 / 拥塞管理通知 │ │ · TTL — 防环路 │ │ · QoS / CoS — 服务等级 │ │ · F (Flow Label Valid) — 流标签有效位 │ └────────────────────────────────────────────────────────────┘</p>
+<h3 id="43-afh-gen1-vs-gen2">4.3 AFH Gen1 vs Gen2 对比</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>AFH Gen1</th>
+<th>AFH Gen2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>设计理念</td>
+<td>兼容优先（堆叠式）</td>
+<td>性能优先（融合式）</td>
+</tr>
+<tr>
+<td>头部开销</td>
+<td>16 ~ 17 字节</td>
+<td>12 字节</td>
+</tr>
+<tr>
+<td>寻址方式</td>
+<td>标准 48-bit MAC</td>
+<td>SLAP 压缩 (16/32 bit)</td>
+</tr>
+<tr>
+<td>载荷比（128B）</td>
+<td>~81%</td>
+<td>~84.2%</td>
+</tr>
+<tr>
+<td>兼容性</td>
+<td>原生兼容标准以太网</td>
+<td>需要交换芯片支持 SLAP</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>快速部署、混合环境</td>
+<td>极致性能、封闭 Scale-Up 域</td>
+</tr>
+</tbody>
+</table>
+<h3 id="44">4.4 交换转发</h3>
+<p>在 SUE 单跳交换拓扑中，以太网交换机基于目的 MAC 地址（或 AFH Gen2 压缩地址）进行静态转发：</p>
+<ul>
+<li><strong>静态转发</strong> ：无 MAC 学习/老化，基于预配置的转发表进行确定性转发。</li>
+<li><strong>禁止广播</strong> ：未知目的地址不出端口广播，直接丢弃（避免 Scale-Up 域的广播风暴）。</li>
+<li><strong>Cut-Through 转发</strong> ：交换机在接收到足够转发的头部后即可开始转发，无需等待整个帧接收完毕，典型交换延迟 250~300ns。</li>
+<li><strong>ECN 标记</strong> ：当交换机队列拥塞时，在 AFH 头部标记 ECN 位，通知发送端降速。</li>
+</ul>
+<h3 id="45">4.5 网络层功能总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多模式封装</td>
+<td>标准 Eth/IP/UDP / AFH Gen1 / AFH Gen2 三种封装可选</td>
+</tr>
+<tr>
+<td>寻址</td>
+<td>标准 48-bit MAC 或 SLAP 压缩 16/32-bit 地址</td>
+</tr>
+<tr>
+<td>转发</td>
+<td>基于目的地址的静态转发，Cut-Through 低延迟</td>
+</tr>
+<tr>
+<td>拥塞管理</td>
+<td>ECN + CMN 拥塞通知机制</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td>Flow Label 哈希，多路径自适应路由</td>
+</tr>
+<tr>
+<td>防环路</td>
+<td>TTL 递减，TTL=0 时丢弃</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>CoS / EH-QoS 服务等级区分</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-transport-layer">5. 传输层 (Transport Layer)</h2>
+<h3 id="51">5.1 定位与职责</h3>
+<p>传输层在链路层的逐跳可靠性和网络层的报文转发之上，提供<strong>端到端（End-to-End）的可靠传输服务</strong> 。它通过可靠性头部（RH）、序列号（PSN）、确认机制（RPSN）和简化的 Go-Back-N 重传协议，确保在发生链路闪断、交换机缓冲区溢出等不可恢复错误时，数据仍能从源 XPU 完整地传递到目的 XPU。</p>
+<p><strong>注意：</strong> SUE Lite 版本去除了传输层 RH 和端到端重传，将可靠性完全交给链路层的 LLR + CBFC。完整版 SUE 才包含传输层端到端可靠性保障。</p>
+<h3 id="52-rh-reliability-header">5.2 可靠性头部 (RH, Reliability Header)</h3>
+<p>RH 是 SUE 传输层的核心数据结构，附加在每个 SUE PDU 的前部：</p>
+<p>┌────────────────────────────────────────────────────────────┐ │ SUE 传输层 RH（Reliability Header） │ ├──────────┬──────────┬──────────┬──────────┬────────────────┤ │ PSN │ VC │ RPSN │ Flags │ R-CRC (32b) │ │ (16 bit) │ (3 bit) │ (16 bit) │ (5 bit) │ │ ├──────────┴──────────┴──────────┴──────────┴────────────────┤ │ │ │ PSN (Packet Sequence Number, 16 bits): │ │ 发送序列号，每个 SUE PDU 递增，用于检测丢失和重排序 │ │ │ │ VC (Virtual Channel, 3 bits): │ │ 虚拟通道标识，0~7（SUE 最多 4 个 VC） │ │ │ │ RPSN (Received PSN, 16 bits): │ │ 累积确认号——确认已成功收到的最后一个连续 PDU 的 PSN │ │ (Go-Back-N 机制的累积 ACK) │ │ │ │ Flags (5 bits): │ │ · ACK/NACK 标志位 │ │ · E2E 拥塞通知标志 │ │ · 保留位 │ │ │ │ R-CRC (Reliability CRC, 32 bits): │ │ 对 RH + Payload 的独立 CRC-32 校验，与链路层 FCS 互补 │ └────────────────────────────────────────────────────────────┘</p>
+<h3 id="53-go-back-n">5.3 Go-Back-N 重传机制</h3>
+<p>SUE 传输层采用<strong>简化的 Go-Back-N</strong> 协议，这是一种为 Scale-Up 低延迟、低复杂度场景优化的方案：</p>
+<h4 id="531-go-back-n">5.3.1 为什么选择 Go-Back-N？</h4>
+<ul>
+<li><strong>硬件简洁性</strong> ：Go-Back-N 的接收端只需维护一个期望的 PSN，无需乱序缓冲区，非常适合 XPU 的硬件实现。</li>
+<li><strong>低延迟环境</strong> ：Scale-Up 网络 RTT &lt; 2μs，Go-Back-N 的 "重传窗口内所有包" 策略代价可控。</li>
+<li><strong>罕见触发</strong> ：在大部情况下，LLR + CBFC 已经实现了无损传输，传输层重传仅在链路闪断等极端场景才被触发。</li>
+</ul>
+<h4 id="532">5.3.2 工作流程</h4>
+<h4 id="go-back-n">Go-Back-N 发送端流程</h4>
+<ol>
+<li>为每个 PDU 分配递增的 PSN（16-bit 回绕）。</li>
+<li>发送 PDU 后保留副本在重传缓冲区中。</li>
+<li>维护发送窗口：<code>base</code>（最早未确认 PSN）和 <code>next_seq</code>（下一个待分配 PSN）。</li>
+<li>收到带有 RPSN 的 ACK 帧时，将 base 滑动到 RPSN+1，释放已确认 PDU 的缓冲区。</li>
+<li>超时（典型 ~1μs）未收到 ACK 时，从 base 开始重传窗口内所有未确认 PDU。</li>
+</ol>
+<h4 id="go-back-n_1">Go-Back-N 接收端流程</h4>
+<ol>
+<li>维护 <code>expected_seq</code>（期望的下一个 PSN）。</li>
+<li>收到 PDU，检查 PSN：<ul>
+<li>若 PSN == expected_seq → 接受，递交给上层，expected_seq++，发送 ACK(RPSN=PSN)。</li>
+<li>若 PSN != expected_seq → 丢弃（乱序或重复），发送 ACK(RPSN=expected_seq-1)。</li>
+</ul>
+</li>
+<li>检测到 PDU 损坏（R-CRC 校验失败）→ 发送 NACK。</li>
+</ol>
+<h4 id="533">5.3.3 闪断恢复</h4>
+<p>SUE 传输层的一个关键能力是利用 RH 中的 PSN 在 1μs 内从链路闪断中恢复。当链路短暂中断后恢复时：</p>
+<ol>
+<li>接收端发现 PSN 不连续，发送 ACK(RPSN=最后连续 PSN)。</li>
+<li>发送端收到 ACK 后，从断点开始 Go-Back-N 重传。</li>
+<li>由于 RTT 极低（&lt;2μs），整个恢复过程在 1μs 级别完成。</li>
+</ol>
+<h3 id="54">5.4 排序模式</h3>
+<p>SUE 传输层支持两种排序模式，由 XPU 根据业务需求选择：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>说明</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>严格有序 (Strict Ordering)</strong></td>
+<td>源和目标之间特定 VC 上的所有事务按发送顺序依次递交。Go-Back-N 接收端自然保证有序。</td>
+<td>需要严格保序的内存操作（如原子操作序列）</td>
+</tr>
+<tr>
+<td><strong>无序 (Unordered)</strong></td>
+<td>多端口模式下，事务在端口间负载均衡，不保持全局顺序。不保证多平面保序，需端侧将保序 stream 放在同一 port。</td>
+<td>大量独立的内存读写（最大化带宽利用率）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="55">5.5 传输层功能总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>机制</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>序列号管理</td>
+<td>PSN (16-bit)</td>
+<td>每个 PDU 的唯一单调递增标识，检测丢失和重复</td>
+</tr>
+<tr>
+<td>确认机制</td>
+<td>RPSN (累积 ACK)</td>
+<td>Go-Back-N 累积确认，减少 ACK 报文数量</td>
+</tr>
+<tr>
+<td>端到端重传</td>
+<td>Go-Back-N</td>
+<td>超时后重传窗口内所有未确认 PDU</td>
+</tr>
+<tr>
+<td>端到端校验</td>
+<td>R-CRC (32-bit)</td>
+<td>独立于链路层 FCS 的端到端完整性校验</td>
+</tr>
+<tr>
+<td>排序保证</td>
+<td>Strict / Unordered</td>
+<td>严格有序模式和无序模式可选</td>
+</tr>
+<tr>
+<td>拥塞通知</td>
+<td>RH Flags</td>
+<td>端到端拥塞状态传递</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-mapping-packing-layer">6. 打包层 (Mapping &amp; Packing Layer)</h2>
+<h3 id="61">6.1 定位与职责</h3>
+<p>打包层（亦称为映射打包层）位于事务层和传输层之间，是 SUE 协议栈中的关键效率优化层。它负责将上层事务层下发的小粒度事务命令，按目的地和虚拟通道组织聚合，形成更大粒度的 SUE PDU（Protocol Data Unit），从而提升链路利用率和有效载荷比。</p>
+<p><strong>核心思想：</strong> AI Scale-Up 场景中，XPU 之间的内存事务通常为小粒度传输（如 128 字节的 cacheline）。如果每个事务都独立封装为以太网帧，网络头部开销将极为显著。打包层通过将多个小事务聚合为一个大 PDU，分摊头部开销，显著提升有效带宽。</p>
+<h3 id="62-pdu">6.2 事务到 PDU 的映射流程</h3>
+<h4 id="621">6.2.1 事务队列组织</h4>
+<p>SUE 维护一个二维队列矩阵，按 <strong>(目标 XPU, VC)</strong> 组织：</p>
+<p>┌──────────────────────────────────────────────────────────┐ │ SUE 打包层事务队列矩阵 │ │ │ │ ┌──────────┬──────────┬──────────┬──────────┐ │ │ │ VC0 │ VC1 │ VC2 │ VC3 │ │ │ ┌───────┼──────────┼──────────┼──────────┼──────────┤ │ │ │XPU_0 │ Queue[0] │ Queue[4] │ Queue[8] │ Queue[C] │ │ │ │XPU_1 │ Queue[1] │ Queue[5] │ Queue[9] │ Queue[D] │ │ │ │ ... │ ... │ ... │ ... │ ... │ │ │ │XPU_N │ Queue[N] │ Queue[...]│Queue[...]│Queue[...]│ │ │ └───────┴──────────┴──────────┴──────────┴──────────┘ │ │ │ │ 每个队列中的事务按到达顺序排列，等待打包 │ └──────────────────────────────────────────────────────────┘</p>
+<h4 id="622">6.2.2 打包策略</h4>
+<h4 id="opportunistic-packing">机会性打包（Opportunistic Packing）</h4>
+<p>SUE 持续监控每个 (XPU, VC) 队列的深度。当某队列中累积了多个事务时，打包器在<strong>不引入额外延迟</strong> 的前提下，将队列中的待发送事务拼接为单个 PDU：</p>
+<ol>
+<li>从队列头部开始取事务。</li>
+<li>将事务的 Command 字段 + Data（若有）连续拼接。</li>
+<li>当总长度达到 <strong>4096 字节上限</strong> 或 队列为空时停止。</li>
+<li>为聚合后的数据块添加 SUE Header，形成 PDU。</li>
+</ol>
+<p><strong>零延迟承诺</strong> ：打包器在每个调度周期检查队列——如果队列中只有一个事务，则直接发送单个事务的 PDU，不会等待更多事务到来而引入打包延迟。这保证了低负载下的低延迟。</p>
+<h4 id="623-sue-pdu">6.2.3 SUE PDU 格式</h4>
+<p>┌──────────────────────────────────────────────────────────┐ │ SUE PDU (Protocol Data Unit) 格式 │ │ 最大长度: 4096 Bytes │ ├───────────┬──────────────────────────────────────────────┤ │ SUE Hdr │ Payload（1~N 个事务拼接） │ ├───────────┼──────────────────────────────────────────────┤ │ │ ┌──────────────┬─────────────────────────┐ │ │ │ │ Transaction 1 │ Cmd + Data (optional) │ │ │ │ ├──────────────┼─────────────────────────┤ │ │ │ │ Transaction 2 │ Cmd + Data (optional) │ │ │ │ ├──────────────┼─────────────────────────┤ │ │ │ │ ... │ ... │ │ │ │ ├──────────────┼─────────────────────────┤ │ │ │ │ Transaction N │ Cmd + Data (optional) │ │ │ │ └──────────────┴─────────────────────────┘ │ ├───────────┴──────────────────────────────────────────────┤ │ SUE Header 字段: │ │ · Src_XPU_ID — 源 XPU 标识 │ │ · Dst_XPU_ID — 目标 XPU 标识 │ │ · VC — 虚拟通道 │ │ · Tx_Count — PDU 中包含的事务数量 │ │ · PDU_Length — PDU 总长度 │ │ · Flags — 事务边界标志、控制标志 │ └──────────────────────────────────────────────────────────┘</p>
+<h3 id="63">6.3 接收端解包流程</h3>
+<p>接收端的解包过程是发送端的逆过程：</p>
+<ol>
+<li>传输层验证 PSN 顺序和 R-CRC 完整性后，将完整 PDU 递交给打包层。</li>
+<li>打包层解析 SUE Header，获取事务数量（Tx_Count）。</li>
+<li>逐个提取每个事务的 Command 和 Data，递交给事务层。</li>
+<li>事务层按操作码、目标地址等字段路由到 XPU 内部对应的处理单元。</li>
+</ol>
+<h3 id="64">6.4 打包效率分析</h3>
+<p>打包层的存在对 SUE 的整体效率至关重要。下表展示了不同事务大小和打包策略下的有效载荷比：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>单事务大小</th>
+<th>PDU 内事务数</th>
+<th>PDU 总长</th>
+<th>头部开销</th>
+<th>载荷比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>零散小事务（无打包）</td>
+<td>128 B</td>
+<td>1</td>
+<td>~140 B</td>
+<td>SUE Hdr + AFH Gen2 = ~20 B</td>
+<td>~85.7%</td>
+</tr>
+<tr>
+<td>满载打包</td>
+<td>128 B</td>
+<td>32</td>
+<td>4096 B</td>
+<td>SUE Hdr + AFH Gen2 = ~20 B</td>
+<td>~99.5%</td>
+</tr>
+<tr>
+<td>满载打包</td>
+<td>64 B</td>
+<td>64</td>
+<td>4096 B</td>
+<td>SUE Hdr + AFH Gen2 = ~20 B</td>
+<td>~99.5%</td>
+</tr>
+<tr>
+<td>中等打包</td>
+<td>256 B</td>
+<td>16</td>
+<td>4096 B</td>
+<td>SUE Hdr + AFH Gen2 = ~20 B</td>
+<td>~99.5%</td>
+</tr>
+</tbody>
+</table>
+<p>可以看出，打包层在高负载场景下将头部开销几乎完全摊薄，是实现超高带宽利用率的关键设计。</p>
+<h3 id="65">6.5 打包层功能总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>事务分类</td>
+<td>按 (目标 XPU, VC) 将事务分发到对应队列</td>
+</tr>
+<tr>
+<td>机会性聚合</td>
+<td>将同队列的多个事务拼接为单个 PDU，最大 4096 字节</td>
+</tr>
+<tr>
+<td>零延迟打包</td>
+<td>低负载时不做等待，直接发送单事务 PDU</td>
+</tr>
+<tr>
+<td>PDU 封装</td>
+<td>添加 SUE Header（源/目标 XPU、VC、事务数等）</td>
+</tr>
+<tr>
+<td>PDU 解包</td>
+<td>接收端解析 SUE Header，逐个提取事务递交给事务层</td>
+</tr>
+<tr>
+<td>负载均衡准备</td>
+<td>按目标组织后，便于传输层在多端口间负载均衡</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-transaction-application-layer">7. 事务层 / 应用层 (Transaction &amp; Application Layer)</h2>
+<h3 id="71">7.1 定位与职责</h3>
+<p>事务层是 SUE 协议栈的最顶层，直接与 XPU 的内部片上网络（NoC）或内存子系统交互。事务层负责生成和消费 SUE 事务命令，将 XPU 的内存操作（Load/Store/Atomics）转化为 SUE 协议栈可处理的标准化命令格式。</p>
+<h3 id="72-xpu">7.2 XPU 命令接口</h3>
+<h4 id="721">7.2.1 接口类型</h4>
+<h4 id="command-interface">命令接口 (Command Interface)</h4>
+<p>SUE 提供类 AXI 或 AXI4 接口的信号全双工（Signal Duplex）数据接口，是 XPU 与 SUE 之间的主要事务通道。</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FIFO 信用模式</td>
+<td>基于信用的流控，硬件实现简单，适合高吞吐场景</td>
+</tr>
+<tr>
+<td>AXI4 总线模式</td>
+<td>标准 AMBA AXI4 接口，支持 outstanding transaction，兼容现有 XPU 设计</td>
+</tr>
+</tbody>
+</table>
+<p><strong>控制字段（144 bits 典型）：</strong></p>
+<ul>
+<li>Opcode（操作码）— 读/写/原子操作/读响应/写响应</li>
+<li>Length — 数据长度</li>
+<li>Dst_XPU_ID — 目标 XPU 标识符</li>
+<li>VC — 虚拟通道选择</li>
+<li>Address — 目标内存地址（若适用）</li>
+<li>其他 — 事务 ID、Flags 等</li>
+</ul>
+<h4 id="722-management-interface">7.2.2 管理接口 (Management Interface)</h4>
+<p>基于 AXI 的寄存器配置通道（AXI-Lite 或 AXI4），用于：</p>
+<ul>
+<li>SUE 实例配置（端口数、速率、FEC 模式、LLR 开关等）</li>
+<li>状态寄存器读取（链路状态、错误计数器、性能统计）</li>
+<li>中断管理和错误上报</li>
+</ul>
+<h3 id="73">7.3 事务语义</h3>
+<p>SUE 将所有 XPU 间交互视为<strong>命令/响应事务</strong> 。命令的具体操作集和结构是 XPU 特定的，对 SUE 是透明的（opaque），这使得 SUE 可以适配不同厂商的 XPU：</p>
+<table>
+<thead>
+<tr>
+<th>事务类型</th>
+<th>方向</th>
+<th>携带数据</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Put (Write)</strong></td>
+<td>源 → 目标</td>
+<td>是（数据）</td>
+<td>将数据写入目标 XPU 内存</td>
+</tr>
+<tr>
+<td><strong>Get (Read Request)</strong></td>
+<td>源 → 目标</td>
+<td>否（仅地址）</td>
+<td>请求读取目标 XPU 内存</td>
+</tr>
+<tr>
+<td><strong>Read Response</strong></td>
+<td>目标 → 源</td>
+<td>是（数据）</td>
+<td>返回读取的数据</td>
+</tr>
+<tr>
+<td><strong>Atomic</strong></td>
+<td>源 → 目标</td>
+<td>是（操作数）</td>
+<td>原子操作（CAS、FADD 等）</td>
+</tr>
+<tr>
+<td><strong>Atomic Response</strong></td>
+<td>目标 → 源</td>
+<td>是（结果）</td>
+<td>返回原子操作结果</td>
+</tr>
+<tr>
+<td><strong>Write Ack</strong></td>
+<td>目标 → 源</td>
+<td>否</td>
+<td>写操作完成确认</td>
+</tr>
+</tbody>
+</table>
+<h3 id="74-vc">7.4 VC 映射与死锁避免</h3>
+<p>事务层的一个关键职责是将不同的事务类型映射到不同的虚拟通道，以避免协议级死锁：</p>
+<p>┌──────────────────────────────────────────────────────────┐ │ SUE VC 映射策略（典型配置） │ │ │ │ VC0 — 请求通道 (Request) │ │ · Put (Write) Request │ │ · Get (Read) Request │ │ · Atomic Request │ │ │ │ VC1 — 响应通道 (Response) │ │ · Read Response │ │ · Atomic Response │ │ · Write Ack │ │ │ │ VC2 / VC3 — 预留 │ │ · 高优先级控制消息 │ │ · 系统管理消息 │ │ · 集合通信（可选） │ └──────────────────────────────────────────────────────────┘</p>
+<p>将请求和响应分离到不同的 VC 是避免请求-响应循环死锁的经典方案，这也被 PCIe、NVLink 等协议广泛采用。</p>
+<h3 id="75">7.5 应用层：流量生成与消费</h3>
+<p>在 SUE 的软件仿真和实际部署中，应用层负责根据工作负载配置生成流量模式：</p>
+<ul>
+<li><strong>流量生成器 (Traffic Generator)</strong> ：按指定速率、事务大小分布、目标 XPU 分布生成合成流量或重放 Trace。</li>
+<li><strong>负载均衡器 (Load Balancer)</strong> ：在 XPU 的多个 SUE 实例之间分发事务，避免热点。</li>
+<li><strong>性能监控 (Performance Monitor)</strong> ：记录端到端延迟、吞吐量、重传率等指标。</li>
+</ul>
+<h3 id="76">7.6 事务层功能总结</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>命令生成</td>
+<td>将 XPU 内存操作转化为 SUE 标准命令格式（Opcode + 地址 + 数据 + 控制）</td>
+</tr>
+<tr>
+<td>命令解析</td>
+<td>接收端解析命令，路由到 XPU 内存子系统对应单元</td>
+</tr>
+<tr>
+<td>VC 映射</td>
+<td>按事务类型映射到不同 VC，避免死锁</td>
+</tr>
+<tr>
+<td>流量控制</td>
+<td>FIFO 信用 / AXI4 反压，防止 XPU 溢出 SUE 缓冲区</td>
+</tr>
+<tr>
+<td>管理配置</td>
+<td>通过管理接口配置 SUE 实例参数、读取状态</td>
+</tr>
+<tr>
+<td>负载均衡</td>
+<td>跨 SUE 实例分发事务</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8">8. 报文处理流程</h2>
+<h3 id="81">8.1 完整发送流程（自上而下）</h3>
+<p>以下追踪一个 XPU 内存写入事务从产生到物理发送的完整路径：</p>
+<p>Step 1<br />
+事务层</p>
+<p>XPU NoC 发起 Put 命令<br />
+→ SUE 命令接口<br />
+(AXI4, 144-bit Cmd)</p>
+<p>→</p>
+<p>Step 2<br />
+打包层</p>
+<p>按(Dst_XPU, VC)入队<br />
+机会性拼接多个事务<br />
+→ SUE PDU<br />
+(≤ 4096B)</p>
+<p>→</p>
+<p>Step 3<br />
+传输层</p>
+<p>添加 RH<br />
+(PSN+VC+RPSN)<br />
+→ 添加 R-CRC<br />
+→ 写入重传Buf</p>
+<p>→</p>
+<p>Step 4<br />
+网络层</p>
+<p>选择封装模式<br />
+(AFH Gen1/Gen2)<br />
+→ 添加网络头<br />
+→ 确定出端口</p>
+<p>→</p>
+<p>Step 5<br />
+链路层</p>
+<p>CBFC 信用检查<br />
+→ 添加前导码+FCS<br />
+→ LLR 重传Buf<br />
+→ 帧定界</p>
+<p>→</p>
+<p>Step 6<br />
+物理层</p>
+<p>64B/66B 编码<br />
+→ FEC 编码<br />
+→ PAM4 调制<br />
+→ SerDes 发送</p>
+<h3 id="82">8.2 完整接收流程（自下而上）</h3>
+<p>Step 1<br />
+物理层</p>
+<p>SerDes 接收<br />
+→ PAM4 解调<br />
+→ FEC 解码+纠错<br />
+→ 64B/66B 解码</p>
+<p>→</p>
+<p>Step 2<br />
+链路层</p>
+<p>MAC 帧定界<br />
+→ CRC-32 校验<br />
+→ 错误? LLR重传<br />
+→ CBFC 返还信用</p>
+<p>→</p>
+<p>Step 3<br />
+网络层</p>
+<p>解析网络头<br />
+→ 查 Dst_XPU<br />
+→ 本地交付<br />
+→ 剥离网络头</p>
+<p>→</p>
+<p>Step 4<br />
+传输层</p>
+<p>检查 PSN 顺序<br />
+→ R-CRC 校验<br />
+→ 发送 ACK/NACK<br />
+→ 乱序? 触发重传</p>
+<p>→</p>
+<p>Step 5<br />
+打包层</p>
+<p>解析 SUE Header<br />
+→ 逐个拆解事务<br />
+→ 按 Cmd 字段路由</p>
+<p>→</p>
+<p>Step 6<br />
+事务层</p>
+<p>解析 Opcode<br />
+→ 执行内存操作<br />
+→ 返回 Ack/Rsp<br />
+→ XPU NoC 完成</p>
+<h3 id="83">8.3 关键场景流程详解</h3>
+<h4 id="831">8.3.1 场景一：正常数据传输</h4>
+<p>┌─ 源 XPU ─────────────────────────────────────────────────┐ │ 事务层: 生成 Put(Addr=0x1000, Data=128B, Dst=XPU_5, VC0) │ │ 打包层: 与其他 Put 拼接 → PDU(2KB, 16 txns) │ │ 传输层: +RH(PSN=42, VC0, RPSN=18, CRC_OK) │ │ 网络层: +AFH Gen2(Dst=XPU_5, 12B) │ │ 链路层: CBFC credit-=2KB, LLR Buf[42], +FCS │ │ 物理层: FEC Encode → PAM4 → TX │ ├──────────────────── 交换机 ───────────────────────────────┤ │ 物理层: RX → FEC Decode OK │ │ 链路层: CRC OK, CBFC 返还 credit │ │ 网络层: 解析 AFH Gen2 → Dst=XPU_5 → 查转发表 → Port_N │ │ 链路层: Cut-Through 转发, CBFC credit-=2KB, LLR Buf │ │ 物理层: FEC Encode → PAM4 → TX │ ├─ 目标 XPU_5 ──────────────────────────────────────────────┤ │ 物理层: RX → FEC Decode OK │ │ 链路层: CRC OK, CBFC 返还 credit │ │ 网络层: Dst=XPU_5 本地交付, 剥离 AFH Gen2 │ │ 传输层: PSN=42==expected(42) ✓, R-CRC OK → ACK(RPSN=42) │ │ 打包层: Tx_Count=16, 逐个拆解 → 事务层 │ │ 事务层: Opcode=Put, Addr=0x1000 → 写入内存 → 完成 │ └────────────────────────────────────────────────────────────┘</p>
+<h4 id="832-llr">8.3.2 场景二：链路错误恢复（LLR）</h4>
+<p>┌─ 发送端 ──────────────────────────────────────────────────┐ │ 链路层发送 Frame #42 → LLR Buf[42] │ │ 物理层: FEC Encode → TX │ ├─ 接收端 ──────────────────────────────────────────────────┤ │ 物理层: RX → FEC Decode → 不可纠正错误! │ │ 链路层: CRC 校验失败 → 发送 NACK(#42) 至发送端 │ ├─ 发送端 ──────────────────────────────────────────────────┤ │ 链路层: 收到 NACK(#42) → 从 LLR Buf[42] 取出原帧 │ │ 链路层: 重新发送 Frame #42 │ ├─ 接收端 ──────────────────────────────────────────────────┤ │ 物理层: RX → FEC Decode OK │ │ 链路层: CRC 校验通过 ✓ → 发送 ACK(#42) │ │ 继续向上递交... │ └────────────────────────────────────────────────────────────┘</p>
+<p><strong>延迟影响：</strong> LLR 重传的单次往返延迟约 100ns（链路往返 + 处理），远低于传输层 Go-Back-N 重传（~1μs），因此是首选恢复机制。</p>
+<h4 id="833-cbfc">8.3.3 场景三：CBFC 信用耗尽与恢复</h4>
+<p>┌─ CBFC 流控动态 ───────────────────────────────────────────┐ │ │ │ 初始状态: VC0 Credit = 64KB, VC1 Credit = 64KB │ │ │ │ T0: 发送端发送 48KB VC0 数据 │ │ → VC0 Credit = 16KB (正常) │ │ │ │ T1: 发送端发送 20KB VC0 数据 │ │ → VC0 Credit = -4KB → 信用不足，暂停 VC0 发送 │ │ → VC1 不受影响，继续发送 │ │ │ │ T2: 接收端处理完 32KB VC0 数据，返还 32KB 信用 │ │ → VC0 Credit = 28KB → 恢复 VC0 发送 │ │ │ │ 关键优势: VC 独立信用管理 → 一个 VC 阻塞不影响其他 VC │ └──────────────────────────────────────────────────────────┘</p>
+<h4 id="834-go-back-n">8.3.4 场景四：传输层闪断恢复（Go-Back-N）</h4>
+<p>┌─ 链路闪断恢复流程 ────────────────────────────────────────┐ │ │ │ 正常传输中: PSN 100, 101, 102, 103, 104... │ │ │ │ ▼ 链路闪断 (LLR 也失败) │ │ PSN 103, 104, 105 丢失 │ │ │ │ ▼ 链路恢复 │ │ 发送端继续: PSN 106 (发送窗口内) │ │ 接收端: expected=103, 收到 PSN=106 → 丢弃! │ │ 接收端: 发送 ACK(RPSN=102) │ │ │ │ ▼ 发送端收到 ACK(RPSN=102) │ │ 发现 base=103, 触发 Go-Back-N │ │ 从 PSN 103 开始重传: 103, 104, 105, 106... │ │ │ │ ▼ 接收端: │ │ PSN 103 ✓ → ACK(RPSN=103) │ │ PSN 104 ✓ → ACK(RPSN=104) │ │ ... │ │ │ │ 恢复延迟: ~1μs (取决于窗口大小和链路速率) │ └──────────────────────────────────────────────────────────┘</p>
+<h2 id="9-sue">9. SUE 软件整体框架</h2>
+<h3 id="91">9.1 系统级架构总览</h3>
+<p>SUE 软件框架不仅包含协议栈本身，还涵盖从 XPU 驱动到集群管理的完整生态系统：</p>
+<p>┌─────────────────────────────────────────────────────────────┐ │ SUE 软件框架全景 │ ├─────────────────────────────────────────────────────────────┤ │ │ │ ┌─────────────────────────────────────────────────────┐ │ │ │ 集群管理层 (Cluster Manager) │ │ │ │ · SONiC Scale-Up WG · 拓扑管理 · 故障管理 │ │ │ │ · 路由计算 · 负载均衡策略 · 配置下发 │ │ │ └──────────────────────┬──────────────────────────────┘ │ │ │ │ │ ┌──────────────────────┴──────────────────────────────┐ │ │ │ SUE 驱动层 (SUE Driver) │ │ │ │ · SUE 实例管理 (多实例注册/注销) │ │ │ │ · DMA 引擎接口 (地址映射、页面管理) │ │ │ │ · 中断处理 (完成通知、错误上报) │ │ │ │ · 性能监控 (延迟/吞吐量/重传统计) │ │ │ └──────────────────────┬──────────────────────────────┘ │ │ │ │ │ ┌──────────────────────┴──────────────────────────────┐ │ │ │ SUE 硬件抽象层 (HAL) │ │ │ │ · 寄存器读写接口 │ │ │ │ · 命令队列接口 (SQ/CQ) │ │ │ │ · 管理接口 (AXI-Lite) │ │ │ └──────────────────────┬──────────────────────────────┘ │ │ │ │ │ ┌──────────────────────┴──────────────────────────────┐ │ │ │ SUE 实例 × N (每个 XPU 8~16 个) │ │ │ │ ┌─────────────────────────────────────────────────┐ │ │ │ │ │ 事务层 │ 打包层 │ 传输层 │ 网络层 │ 链路层 │ │ │ │ │ │ (AXI4) │ (PDU) │ (RH) │ (AFH) │(LLR/CBFC)│ │ │ │ │ └─────────────────────────────────────────────────┘ │ │ │ │ │ 物理层 (SerDes + FEC) │ │ │ └──────────────────────┬──────────────────────────────┘ │ │ │ │ │ ┌──────────────────────┴──────────────────────────────┐ │ │ │ 以太网 Scale-Up 交换网络 │ │ │ │ · Tomahawk Ultra / 类似交换芯片 │ │ │ │ · LLR + CBFC + Cut-Through 转发 │ │ │ │ · 最多 1024 XPU 单跳可达 │ │ │ └─────────────────────────────────────────────────────┘ │ └─────────────────────────────────────────────────────────────┘</p>
+<h3 id="92">9.2 核心组件详解</h3>
+<h4 id="921-sue-sue-instance">9.2.1 SUE 实例 (SUE Instance)</h4>
+<p>SUE 实例是 SUE 协议栈的硬件/固件实现单元。每个 XPU 内部可集成 8~16 个 SUE 实例，每个实例：</p>
+<ul>
+<li>独立运行完整的六层协议栈</li>
+<li>可配置为 1/2/4 个物理端口</li>
+<li>拥有独立的 CBFC 信用管理、LLR 重传缓冲区</li>
+<li>通过负载均衡器与其他实例协同工作</li>
+</ul>
+<p>多实例叠加是实现超高带宽的关键——64 XPU × 12 SUE 实例 × 800G = 任意 XPU 对间 9.6 Tbps。</p>
+<h4 id="922-sue">9.2.2 SUE 驱动层</h4>
+<p>SUE 驱动是运行在 XPU 主机侧（或嵌入式管理核）的软件组件，提供以下核心服务：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>实例管理器</td>
+<td>多 SUE 实例的生命周期管理——初始化、配置、启动、停止、复位</td>
+</tr>
+<tr>
+<td>DMA 引擎接口</td>
+<td>建立 XPU 本地内存与 SUE 命令接口之间的 DMA 通道，支持零拷贝数据传输</td>
+</tr>
+<tr>
+<td>地址映射</td>
+<td>管理远程 XPU 的共享内存地址空间映射（PGAS 模型），将全局地址翻译为 (XPU_ID, Local_Addr)</td>
+</tr>
+<tr>
+<td>中断处理</td>
+<td>接收 SUE 的完成中断（事务完成、错误通知、链路状态变化），分发到上层处理函数</td>
+</tr>
+<tr>
+<td>性能监控</td>
+<td>采集延迟直方图、吞吐量时间序列、重传率、信用利用率等指标，上报到集群管理器</td>
+</tr>
+<tr>
+<td>错误处理</td>
+<td>链路故障检测、SUE 实例故障隔离、自动降级/恢复</td>
+</tr>
+</tbody>
+</table>
+<h4 id="923-hal">9.2.3 硬件抽象层 (HAL)</h4>
+<p>HAL 提供了 SUE 硬件寄存器的统一访问接口，屏蔽不同版本 SUE 硬件的差异：</p>
+<ul>
+<li><strong>寄存器读写</strong> ：通过 AXI-Lite 总线或 PCIe BAR 空间访问 SUE 配置和状态寄存器。</li>
+<li><strong>命令队列 (SQ/CQ)</strong> ：Submission Queue（提交队列）用于 XPU 向 SUE 提交事务命令；Completion Queue（完成队列）用于 SUE 向 XPU 通知事务完成。</li>
+<li><strong>管理接口</strong> ：用于配置 SUE 参数（端口模式、FEC 类型、LLR 开关、VC 数量等）。</li>
+</ul>
+<h4 id="924">9.2.4 集群管理器</h4>
+<p>集群管理器是 SUE 生态的顶层软件，负责整个 Scale-Up 集群的编排和运维。博通已推动将 SUE 集成到 <strong>SONiC (Software for Open Networking in the Cloud) Scale-Up WG</strong> 中：</p>
+<table>
+<thead>
+<tr>
+<th>功能域</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>拓扑发现</td>
+<td>自动发现所有 SUE 实例和交换机端口，构建 XPU 互联拓扑图</td>
+</tr>
+<tr>
+<td>路由管理</td>
+<td>计算并下发静态转发表，支持基于 Flow Label 的负载均衡</td>
+</tr>
+<tr>
+<td>故障管理</td>
+<td>链路 Down/Up 事件处理、故障域隔离、冗余路径切换</td>
+</tr>
+<tr>
+<td>配置管理</td>
+<td>批量配置下发（SUE 参数、交换机端口配置、QoS 策略）</td>
+</tr>
+<tr>
+<td>遥测采集</td>
+<td>实时采集延迟、带宽、错误率等指标，支持 AI 训练作业的性能调优</td>
+</tr>
+<tr>
+<td>固件升级</td>
+<td>SUE 固件和交换机固件的滚动升级</td>
+</tr>
+</tbody>
+</table>
+<h3 id="93">9.3 数据路径与控制路径分离</h3>
+<h4 id="_2">双路径架构</h4>
+<p>| 数据路径 (Data Path)| 控制路径 (Control Path)<br />
+---|---|---<br />
+功能| XPU 间内存事务的高速传输| SUE 配置、状态监测、错误处理<br />
+接口| 命令接口 (AXI4/FIFO)| 管理接口 (AXI-Lite)<br />
+延迟要求| <strong>极低延迟</strong> （亚微秒级）| 延迟不敏感（毫秒级可接受）<br />
+带宽要求| <strong>超高带宽</strong> （Tbps 级）| 低带宽（Mbps 级足够）<br />
+实现方式| 硬件加速（全流水线）| 固件 + 驱动软件</p>
+<p>这种分离设计确保了控制面操作不会干扰数据面的极致性能，是高性能互连协议的标准实践。</p>
+<h3 id="94-ai">9.4 与 AI 训练框架的集成</h3>
+<p>SUE 在 AI 软件栈中的位置以及与上层训练框架的关系：</p>
+<p>┌──────────────────────────────────────────────────────────┐ │ AI 软件栈与 SUE 集成 │ │ │ │ ┌────────────────────────────────────────────────────┐ │ │ │ AI 训练框架 (PyTorch / JAX / TensorFlow) │ │ │ │ · 模型定义 · 自动微分 · 优化器 │ │ │ └───────────────────┬────────────────────────────────┘ │ │ │ │ │ ┌───────────────────┴────────────────────────────────┐ │ │ │ 集合通信库 (NCCL / RCCL / OneCCL) │ │ │ │ · AllReduce / AllGather / ReduceScatter │ │ │ │ · 将集合操作映射为 SUE Put/Get 原语 │ │ │ └───────────────────┬────────────────────────────────┘ │ │ │ │ │ ┌───────────────────┴────────────────────────────────┐ │ │ │ SUE 通信原语 │ │ │ │ · sue_put(dst, addr, data, len) │ │ │ │ · sue_get(dst, addr, len) → data │ │ │ │ · sue_atomic(dst, addr, op, val) → result │ │ │ │ · sue_fence() / sue_flush() │ │ │ └───────────────────┬────────────────────────────────┘ │ │ │ │ │ ┌───────────────────┴────────────────────────────────┐ │ │ │ SUE 驱动 + SUE 硬件 │ │ │ │ (六层协议栈，低延迟高带宽传输) │ │ │ └────────────────────────────────────────────────────┘ │ └──────────────────────────────────────────────────────────┘</p>
+<p>当前主要的集合通信库（如 NCCL）通过插件或适配层将 AllReduce 等集合操作映射为 SUE 的 Put/Get 原语，从而利用 SUE 的高带宽和低延迟特性加速分布式训练。</p>
+<h2 id="10">10. 总结与附录</h2>
+<h3 id="101">10.1 六层协议栈汇总</h3>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>名称</th>
+<th>核心协议/机制</th>
+<th>关键数据结构</th>
+<th>主要职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>6</strong></td>
+<td>事务层/应用层</td>
+<td>AXI4 / FIFO / Load-Store-Atomics</td>
+<td>Command (144-bit)</td>
+<td>XPU 内存操作生成与消费、VC 映射、流量生成</td>
+</tr>
+<tr>
+<td><strong>5</strong></td>
+<td>打包层</td>
+<td>Opportunistic Packing</td>
+<td>SUE PDU (≤4096B)</td>
+<td>按 (XPU, VC) 聚合事务、零延迟打包、PDU 解包</td>
+</tr>
+<tr>
+<td><strong>4</strong></td>
+<td>传输层</td>
+<td>RH / Go-Back-N / PSN-RPSN</td>
+<td>RH (PSN+VC+RPSN+R-CRC)</td>
+<td>端到端可靠传输、序列号管理、闪断恢复</td>
+</tr>
+<tr>
+<td><strong>3</strong></td>
+<td>网络层</td>
+<td>AFH Gen1/Gen2 / Eth/IP/UDP</td>
+<td>AFH Gen2 (12B) / AFH Gen1 (17B)</td>
+<td>多模式封装寻址、静态转发、ECN 拥塞管理</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>链路层</td>
+<td>LLR / CBFC / PFC / MAC</td>
+<td>Ethernet Frame (64B~4KB)</td>
+<td>逐跳可靠传输、信用流控、虚拟通道隔离、帧校验</td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td>物理层</td>
+<td>IEEE 802.3 / PAM4 / RS-FEC</td>
+<td>64B/66B 编码块</td>
+<td>SerDes 112G/224G、前向纠错、信号完整性与链路训练</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102">10.2 可靠性分层保障体系</h3>
+<p>3 传输层 — 端到端可靠性 Go-Back-N 重传 · RH/PSN/R-CRC · 闪断恢复 ≤1μs · 多跳拓扑</p>
+<p>2 链路层 — 逐跳可靠性 LLR 链路重传 ~100ns · CBFC 无损流控 · CRC-32 帧校验</p>
+<p>1 物理层 — 信号级可靠性 RS-FEC · PAM4 均衡 · 链路训练 · BER 1e-15</p>
+<h3 id="103-sue">10.3 SUE 协议关键创新点</h3>
+<ol>
+<li><strong>融合式报文头压缩（AFH Gen2 + SLAP）</strong> ：将 L2/L3/L4 头部压缩至 12 字节，128 字节 payload 下载荷比 84.2%。</li>
+<li><strong>机会性零延迟打包</strong> ：在 MTU 限制内动态聚合事务，高负载下将头部开销几乎完全摊薄。</li>
+<li><strong>三层可靠性金字塔</strong> ：物理层 FEC → 链路层 LLR → 传输层 Go-Back-N，层层递进保障。</li>
+<li><strong>基于信用的流控（CBFC）</strong> ：按 VC 独立管理信用，彻底消除 PFC 的队头阻塞和死锁问题。</li>
+<li><strong>双版本策略（完整版 / Lite）</strong> ：根据网络规模和可靠性需求灵活选择，平衡复杂度与性能。</li>
+<li><strong>以太网生态兼容</strong> ：在物理层和链路层保持 IEEE 802.3 兼容，复用成熟的 SerDes、交换机芯片和运维工具链。</li>
+</ol>
+<h3 id="104-scale-up">10.4 与其他 Scale-Up 协议对比</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SUE (Broadcom)</th>
+<th>UALink</th>
+<th>ESUN</th>
+<th>ETH+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主导方</td>
+<td>博通</td>
+<td>AMD/Intel/Google 等</td>
+<td>OCP 工作组</td>
+<td>中科院+阿里</td>
+</tr>
+<tr>
+<td>物理层</td>
+<td>IEEE 802.3 以太</td>
+<td>IEEE 802.3 以太</td>
+<td>IEEE 802.3 以太</td>
+<td>ETH+ 高通量以太</td>
+</tr>
+<tr>
+<td>传输格式</td>
+<td>可变长度 (64B~4KB)</td>
+<td>固定 Flit (640B)</td>
+<td>可变长度</td>
+<td>可变长度</td>
+</tr>
+<tr>
+<td>链路可靠性</td>
+<td>LLR + CBFC</td>
+<td>CRC + LLR</td>
+<td>LLR + CBFC</td>
+<td>LLR + CBFC</td>
+</tr>
+<tr>
+<td>网络层压缩</td>
+<td>AFH Gen2 (12B)</td>
+<td>—</td>
+<td>EH (4B Shim)</td>
+<td>OEFH (6B)</td>
+</tr>
+<tr>
+<td>传输层可靠性</td>
+<td>Go-Back-N (PSN)</td>
+<td>Selective Repeat</td>
+<td>可选</td>
+<td>可选</td>
+</tr>
+<tr>
+<td>最大 XPU 数</td>
+<td>1024</td>
+<td>1024</td>
+<td>1024</td>
+<td>1024</td>
+</tr>
+<tr>
+<td>生态系统</td>
+<td>SONiC Scale-Up WG</td>
+<td>UALink 联盟</td>
+<td>OCP ESUN</td>
+<td>ETH+ 联盟</td>
+</tr>
+</tbody>
+</table>
+<h3 id="105">10.5 参考资料</h3>
+<ul>
+<li>Broadcom. <em>Scale-Up Ethernet Framework Specification (RM103)</em>. OCP Global Summit 2025.</li>
+<li>SUE-Sim: Open-source ns-3 based SUE network simulator. <em>github.com/kaima2022/SUE-Sim</em></li>
+<li>Deeplink. <em>SuperPod 白皮书 — 链路层与事务协议</em>. 2025.</li>
+<li>中兴通讯. <em>Scale-Up 互联技术综述</em>. ZTE Technologies 2026(3).</li>
+<li>SDNLAB. <em>Scale-up 网络协议群雄逐鹿：五大主流方案深度解析</em>. 2025.</li>
+<li>Yeluri, S. <em>Scale-Up Fabrics — SUE Technical Deep Dive</em>. LinkedIn Engineering Blog.</li>
+</ul>
+</div>
+</body>
+</html>

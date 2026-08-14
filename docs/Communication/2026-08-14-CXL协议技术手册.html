@@ -1,0 +1,3911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CXL 协议技术手册</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+h5, h6 { color: #8b949e; margin: 16px 0 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../index.html">&larr; 返回索引</a>
+<h1 id="cxl">CXL 协议技术手册</h1>
+<p>Compute Express Link — 从 1.0 到 4.0 全版本技术指南</p>
+<p>及当前各厂商主要产品介绍</p>
+<p>CXL 1.0 / 1.1 / 2.0 / 3.0 / 3.1 / 3.2 / 4.0</p>
+<p>编制日期：2026 年 8 月 · 基于公开资料整理</p>
+<h2 id="_1">目录</h2>
+<ol>
+<li>CXL 概述</li>
+<li>CXL 协议架构与分层详解</li>
+</ol>
+<p>2.5 协议分层详解 — 物理层 / 链路层 / ARB/MUX / 事务层 / 网络层</p>
+<p>2.6 Flit 格式演进与传输层</p>
+<ol start="3">
+<li>CXL 设备类型与一致性模型</li>
+<li>CXL 版本演进详解</li>
+</ol>
+<p>4.8 各版本协议层能力对比总表</p>
+<ol start="5">
+<li>CXL 拓扑架构演进</li>
+<li>CXL 核心应用场景</li>
+<li>CXL 内存池全局统一编址 — 软件架构与交互流程</li>
+</ol>
+<p>7.1-7.7 软件架构全景 · Linux 驱动栈 · FM · 地址映射 · 交互流程 · 内存分层 · 生态</p>
+<p>7.8 全局共享池统一编址深度解析 — HDM Decoder · 交织配置 · CFMWS · VCS-VH-FM 绑定 · DCD</p>
+<ol start="8">
+<li>各版本内存读写端到端流程详解</li>
+</ol>
+<p>CXL 1.1 直连读取 · CXL 2.0 MLD 交换写入 · CXL 3.0 P2P DMA+BI · CXL 4.0 捆绑端口喷射写入</p>
+<ol start="9">
+<li>各厂商主要产品介绍</li>
+<li>CXL 术语表</li>
+</ol>
+<h2 id="cxl_1">第一章 · CXL 概述</h2>
+<h3 id="11-cxl">1.1 什么是 CXL</h3>
+<p>Compute Express Link（CXL）是一种开放标准的互连技术，旨在为数据中心提供 CPU 与设备（加速器、内存扩展器、智能 I/O 设备等）之间<strong>高带宽、低延迟</strong> 的缓存一致性连接。CXL 构建于 PCI Express（PCIe）物理层和电气接口之上，在此基础之上增加了缓存一致性协议（CXL.cache）和内存语义协议（CXL.mem），使主机处理器和附加设备能够共享统一的内存空间。</p>
+<p><strong>核心价值</strong> CXL 使 CPU 和设备可以共享同一内存区域，在硬件层面维护缓存一致性，从而减少数据拷贝、降低软件栈复杂度、提高资源利用率，并最终降低系统总体拥有成本（TCO）。</p>
+<h3 id="12-cxl">1.2 为什么需要 CXL</h3>
+<p>数据中心面临三大内存挑战，CXL 正是为解决这些问题而生：</p>
+<ul>
+<li><strong>内存层级延迟鸿沟：</strong> 直接附加 DRAM 与 SSD 之间存在约三个数量级的延迟差距。当处理器耗尽本地内存容量时，必须降级到 SSD，性能急剧下降。</li>
+<li><strong>内存带宽增长滞后于核心数：</strong> 多核处理器的核心数量增长远快于内存通道数量，导致大量核心面临"内存带宽饥荒"。</li>
+<li><strong>加速器内存孤岛：</strong> GPU、FPGA 等加速器各自拥有专用内存（HBM/GDDR），这些内存资源彼此隔离、利用率低下，造成"搁浅内存"（Stranded Memory）。</li>
+</ul>
+<h3 id="13-cxl">1.3 CXL 联盟</h3>
+<p>CXL 技术最初由 Intel 开发。CXL 联盟于 2019 年 3 月由阿里巴巴、思科、Dell EMC、Meta、Google、HPE、华为、Intel 和微软等九家创始成员成立，并于 2019 年 9 月正式注册成立。截至 2022 年初，AMD、NVIDIA、三星电子和赛灵思加入董事会，ARM、博通、IBM、Marvell、Micron、Rambus、SK hynix 等超过 180 家企业成为贡献成员。</p>
+<p>CXL 联盟还整合了多个此前竞争的互连标准：</p>
+<ul>
+<li><strong>2021 年 11 月：</strong> Gen-Z 联盟将规范和资产转移至 CXL 联盟</li>
+<li><strong>2022 年 8 月：</strong> OpenCAPI 规范和资产转移至 CXL 联盟</li>
+</ul>
+<p>这意味着 CXL 如今整合了 Gen-Z（HPE）、OpenCAPI（IBM）、CCIX（Xilinx）等开放标准的资产，成为数据中心缓存一致性互连领域事实上的唯一开放标准。</p>
+<h2 id="cxl_2">第二章 · CXL 协议架构与分层详解</h2>
+<h3 id="21">2.1 三大子协议</h3>
+<p>CXL 的事务层由三个子协议组成，它们在单一物理链路上进行<strong>动态多路复用</strong> （根据需求按比例分配带宽）：</p>
+<table>
+<thead>
+<tr>
+<th>子协议</th>
+<th>功能</th>
+<th>详细说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CXL.io</strong></td>
+<td>I/O 语义</td>
+<td>功能上等价于 PCIe 协议，负责设备发现、枚举、配置、链路初始化、中断、DMA 和寄存器 I/O 访问。提供非一致性加载/存储接口。<strong>所有 CXL 设备必须支持 CXL.io</strong> ，确保与 PCIe 生态的即插即用兼容性。</td>
+</tr>
+<tr>
+<td><strong>CXL.cache</strong></td>
+<td>缓存一致性</td>
+<td>定义主机与设备之间的交互，允许设备（如加速器）以极低延迟高效地<strong>缓存主机 CPU 内存</strong> 中的数据。主机通过 snoop 消息管理设备端缓存的数据一致性。</td>
+</tr>
+<tr>
+<td><strong>CXL.mem</strong></td>
+<td>内存语义</td>
+<td>允许主机 CPU 使用加载/存储命令<strong>访问设备附加内存</strong> （Device-Attached Memory）。主机 CPU 为主设备，CXL 设备为从设备。支持易失性（DRAM）和持久性（非易失性）存储器。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22">2.2 协议栈结构</h3>
+<p>CXL 采用<strong>双栈架构</strong> ，这是其实现低延迟的关键设计决策：</p>
+<p>CXL 协议栈架构（双栈设计） CXL.cache / CXL.mem 事务层 专用链路层（低延迟优化） 基于固定大小 Flit 传输 68B（1.x/2.0）或 256B（3.0+） CXL.io 事务层（≈ PCIe TLP/DLLP） PCIe 链路层 TLP/DLLP 封装在 CXL Flit 中 ARB/MUX（仲裁与多路复用） — 加权轮询 CXL 逻辑 PHY（Flit 打包/解包、CRC、流控） PCIe PHY（物理层 &amp; 电气接口）</p>
+<p>这种双栈设计的核心优势在于：</p>
+<ul>
+<li><strong>低延迟路径：</strong> CXL.cache 和 CXL.mem 使用专用的、从底层优化的事务/链路层，使用固定大小的 Flit（流控单元），简化硬件解码逻辑，减少流水线停顿。CXL 1.0 规范定义了这些延迟敏感协议的引脚到引脚响应时间上限，确保平台性能不受设备实现差异影响。</li>
+<li><strong>PCIe 兼容性：</strong> CXL.io 流量使用与标准 PCIe 几乎相同的 TLP/DLLP，封装在 CXL Flit 的负载部分中传输，保持与 PCIe 生态的完全兼容。</li>
+<li><strong>动态带宽分配：</strong> ARB/MUX 块在 CXL.cache/mem 链路层和 CXL.io 链路层之间进行加权轮询仲裁，权重由主机设置，可按需动态调整。</li>
+</ul>
+<h3 id="23-flit">2.3 Flit 格式</h3>
+<h4 id="68-flitcxl-1x-20">68 字节 Flit（CXL 1.x / 2.0）</h4>
+<p>CXL 1.x 和 2.0 使用固定宽度的 <strong>528 位（66 字节）Flit</strong> 进行传输。每个 Flit 由 <strong>4 个 16 字节数据时隙 + 2 字节 CRC</strong> 组成（4×16 + 2 = 66 字节 = 528 位）。Flit 头部定义了时隙格式，携带将事务正确路由到目标协议的路由信息。实际实现中通常加上 2 字节前导码，总计 <strong>68 字节</strong> 。</p>
+<h4 id="256-flitcxl-30">256 字节 Flit（CXL 3.0+）</h4>
+<p>CXL 3.0 基于 PCIe 6.0 的 PAM-4 信令引入了 <strong>256 字节 Flit</strong> 格式，结合轻量级前向纠错（FEC）和强 CRC 实现无误传输。更大的 Flit 提供了更多协议头部空间，支持增强一致性、内存共享和 Fabric 功能。CXL 3.0 还引入了<strong>延迟优化 Flit 变体</strong> （Latency-Optimized Flit），将 CRC 分解为 128 字节子 Flit 粒度，减少物理层的存储转发开销，额外降低 2-5ns 延迟。</p>
+<p><strong>向后兼容性</strong> 256B Flit 格式完全向后兼容 8 GT/s、16 GT/s 和 32 GT/s 速率，简化了从 CXL 2.0 到 CXL 3.0 的过渡。</p>
+<h3 id="24">2.4 物理层与速率</h3>
+<p>CXL 复用 PCIe 物理层，各版本对应的 PCIe 代际和速率如下：</p>
+<table>
+<thead>
+<tr>
+<th>CXL 版本</th>
+<th>PCIe 代际</th>
+<th>编码方式</th>
+<th>单通道速率</th>
+<th>x1 带宽</th>
+<th>x16 带宽</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1.0 / 1.1 / 2.0</strong></td>
+<td>PCIe 5.0</td>
+<td>NRZ</td>
+<td>32 GT/s</td>
+<td>3.94 GB/s</td>
+<td>63.0 GB/s</td>
+</tr>
+<tr>
+<td><strong>3.0 / 3.1 / 3.2</strong></td>
+<td>PCIe 6.0</td>
+<td>PAM-4</td>
+<td>64 GT/s</td>
+<td>7.56 GB/s</td>
+<td>121.0 GB/s</td>
+</tr>
+<tr>
+<td><strong>4.0</strong></td>
+<td>PCIe 7.0</td>
+<td>PAM-4</td>
+<td>128 GT/s</td>
+<td>15.13 GB/s</td>
+<td>242.0 GB/s</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Flex Bus 技术</strong> CXL 使用 Flex Bus 端口技术，允许同一高速端口静态配置为支持 PCIe 或 CXL。当 CXL 设备插入 PCIe x16 插槽时，设备与主机处理器协商，将链路从 PCIe 模式切换到 CXL 模式。这使得 CXL 系统能够利用现有的 PCIe 重定时器（Retimer）基础设施。</p>
+<h2 id="25">2.5 协议分层详解</h2>
+<h3 id="251-physical-layer">2.5.1 物理层（Physical Layer）</h3>
+<p>CXL 的物理层直接复用 PCIe 物理层规范，这是 CXL 能够利用 PCIe 生态基础设施的基础。物理层负责以下核心功能：</p>
+<h4 id="electrical-sub-block">电气子层（Electrical Sub-block）</h4>
+<ul>
+<li><strong>信号编码：</strong> CXL 1.x/2.0 使用 NRZ（Non-Return-to-Zero）编码（PCIe 5.0，32 GT/s）；CXL 3.0+/4.0 使用 PAM-4（四电平脉冲幅度调制）编码（PCIe 6.0: 64 GT/s，PCIe 7.0: 128 GT/s）。PAM-4 每次传输 2 位数据，在相同波特率下实现带宽翻倍。</li>
+<li><strong>通道宽度：</strong> 支持 x1, x2, x4, x8, x16 通道配置。CXL 4.0 引入原生 x2 宽度以支持更大扇出。BNF（Bifurcation）可将 x16 分叉为多个独立通道。</li>
+<li><strong>链路训练与状态机（LTSSM）：</strong> 设备上电后首先进行标准的 PCIe 链路训练，协商速率、宽度和链路状态。训练成功后通过 CXL 协议协商（ALT Protocol Negotiation）进入 CXL 模式。</li>
+<li><strong>扩展能力：</strong> CXL 4.0 支持最多 4 个重定时器，信道损耗预算保持 -36dB @ 128 GT/s，显著增加传输距离（支持机架级部署）。</li>
+</ul>
+<h4 id="logical-sub-block">逻辑子层（Logical Sub-block）</h4>
+<ul>
+<li><strong>Flex Bus 逻辑：</strong> 同一高速 SerDes 端口可静态配置为 PCIe 模式或 CXL 模式。CXL 模式下，逻辑 PHY 完成 Flit 的成帧/去帧、字节条带化、加扰、极性反转和通道反转检测。</li>
+<li><strong>Flit 打包/解包：</strong> CXL.cache/mem 和 CXL.io 的链路层包被 ARB/MUX 汇聚后，由逻辑 PHY 打包为固定宽度的 Flit 发送。接收端反向操作。</li>
+<li><strong>NULL Flit 插入：</strong> 当无有效数据传输时，物理层自动插入 NULL Flit 以维持链路活动和时钟恢复。</li>
+<li><strong>ALMP (Arb/Mux Link Management Packet)：</strong> 物理层可区分 CXL.io、CXL.cache-mem、ALMP 和 NULL Flits 四种流量类型。</li>
+</ul>
+<h3 id="252-link-layer-data-link-layer">2.5.2 链路层（Link Layer / Data Link Layer）</h3>
+<p>链路层负责在物理层之上提供<strong>可靠的数据传输</strong> 。CXL 采用双链路层设计，分别服务于 CXL.cache/mem 和 CXL.io。</p>
+<h4 id="cxlcachemem">CXL.cache/mem 链路层（低延迟优化链路层）</h4>
+<p>这是 CXL 实现低延迟的关键。它使用专用的、从底层优化的链路层协议，处理 CXL.cache 和 CXL.mem 的 Flit：</p>
+<ul>
+<li><strong>Flit 格式与打包规则：</strong> 68B Flit 含 4 个 16B 数据时隙 + 2B CRC，256B Flit 含更大负载和更强 FEC。打包遵循六大规则：Rollover（超 Flit 数据延续到下一 Flit）、Tightly Packed（有效消息紧挨放置）、Empty Slots 可与其它类型混合、MDH BE=0 时用于全 Cacheline、Control flits 不与 All-Data 交错、每个方向的消息数受限（如 D2H Rsp ≤2，S2M NDR ≤2，M2S Req ≤2）。</li>
+<li><strong>链路信用机制（Credit）：</strong> 接收方向发送方通告可用缓冲区空间，防止溢出。每个通道（请求/响应/数据）独立维护信用计数。</li>
+<li><strong>链路层重传（LLR — Link Layer Retry）：</strong> 发送方将每个可重试 Flit 缓存到 LLRB（Link Layer Retry Buffer）。接收方使用 CRC-16 校验每个 Flit，每 8 个 Flit 通过 Ak（Acknowledge）位批量确认无错接收。Flit 通过序列号（ESeq）而非每 Flit 携带序列号来识别，减少协议开销。</li>
+<li><strong>链路层控制 Flit 类型：</strong><ul>
+<li>LLCRD — 携带 ACK 和 Credit 返回信息（可重试）</li>
+<li>RETRY — Idle/Req/Ack/Frame，控制重传过程</li>
+<li>IDE — Idle/Start/TMAC/Stop/MAC，完整性数据加密（CXL 2.0+）</li>
+<li>INIT.Param — 链路初始化参数交换（LLR Wrap Value、版本号）</li>
+</ul>
+</li>
+<li><strong>链路层初始化流程：</strong> 物理层链路 Up → 发送 Control-RETRY flits → 收到 CRC 干净的 flit → 发送 INIT.Param flit → 使用 LLCRD 格式交换 Credits → 收到第二个 INIT.Param → 初始化完成。</li>
+<li><strong>CRC 错误处理：</strong> 检测到 CRC 错误时立即标记病毒位（Viral）或毒化位（Poison），触发重传或错误传播。</li>
+</ul>
+<h4 id="cxlio-pcie">CXL.io 链路层（PCIe 兼容链路层）</h4>
+<p>功能上等同于 PCIe 数据链路层（Data Link Layer），处理 CXL.io 的 TLP/DLLP：</p>
+<ul>
+<li><strong>TLP 封装：</strong> 将 PCIe TLP（事务层包）封装在 CXL Flit 的负载时隙中传输。接收端解封装后按标准 PCIe TLP 处理。</li>
+<li><strong>ACK/NAK 协议：</strong> 对每条 TLP 使用序列号确认机制，与标准 PCIe 数据链路层的 ACK/NAK 行为一致。</li>
+<li><strong>DLLP 支持：</strong> 标准 PCIe DLLP（Data Link Layer Packet）的生成与处理，包括流控更新（InitFC/UpdateFC）、电源管理等。</li>
+<li><strong>与 CXL.cache/mem 链路层的区别：</strong> CXL.io 链路层不需要专用的 LLRB，因为它复用了 PCIe 的重传机制（Replay Buffer + ACK/NAK）。</li>
+</ul>
+<h3 id="253-arbmux">2.5.3 仲裁/多路复用层（ARB/MUX）</h3>
+<p>ARB/MUX 是 CXL 协议栈中<strong>独特的中间层</strong> ，位于链路层和物理层之间，负责将两个独立的链路层（CXL.cache/mem 和 CXL.io）的流量<strong>合并到单一物理链路上</strong> 。</p>
+<ul>
+<li><strong>加权轮询仲裁：</strong> ARB/MUX 使用可编程的加权轮询算法在两个链路层之间调度 Flit 传输。权重由主机通过配置寄存器动态设置，实现按需分配带宽。</li>
+<li><strong>优先级机制：</strong> CXL.cache 和 CXL.mem 流量通常被赋予更高优先级，以维持低延迟语义。CXL.io 流量（控制、枚举等管理操作）在低优先级通道传输。</li>
+<li><strong>ALMP（Arb/Mux Link Management Packet）：</strong> ARB/MUX 可以发送专用的链路管理包，用于链路状态同步、功耗管理和错误报告。ALMP 不携带用户数据，仅用于控制目的。</li>
+<li><strong>动态带宽分配：</strong> 系统管理员或 Fabric Manager 可以根据工作负载特征调整权重。例如，在大量 I/O 流量的场景下可以给 CXL.io 分配更多权重；在纯内存访问场景下给 CXL.mem 分配接近 100% 的带宽。</li>
+<li><strong>反压处理：</strong> 当某一链路层无法跟上传输速率时，ARB/MUX 将相应通道的反压信号传递给发送方，防止数据丢失。</li>
+</ul>
+<h3 id="254-transaction-layer">2.5.4 事务层（Transaction Layer）</h3>
+<p>事务层是 CXL 协议栈的<strong>最顶层</strong> ，定义了三种子协议的语义、事务类型、数据包格式和排序规则。</p>
+<h4 id="cxlio">CXL.io 事务层</h4>
+<p>完全基于 PCIe 事务层规范，负责所有非缓存/非内存语义的通信：</p>
+<ul>
+<li><strong>事务类型：</strong> 内存读写（Memory Read/Write）、I/O 读写、配置读写（Configuration Read/Write）、消息事务（Message）— 包括中断（MSI/MSI-X）、错误报告、电源管理。</li>
+<li><strong>CXL 特有增强：</strong><ul>
+<li>VDM（Vendor Defined Messages）用于 CXL 复位和电源管理</li>
+<li>修改 PCIe ATS（Address Translation Services）请求/完成格式以支持加速器</li>
+<li>Deferred Write 指令定义</li>
+<li>记忆体类型指示（Memory Type Indication on ATS）</li>
+</ul>
+</li>
+<li><strong>排序规则：</strong> 继承 PCIe 的生产者-消费者排序模型（PCIe Transaction Ordering），保证 I/O 操作的正确顺序。</li>
+<li><strong>信用管理：</strong> 继承 PCIe 的流控信用机制（Posted/Non-Posted/Completion），防止事务层缓冲区溢出。</li>
+</ul>
+<h4 id="cxlcache">CXL.cache 事务层</h4>
+<p>定义设备缓存主机内存的协议，主要面向 Type 1 和 Type 2 设备：</p>
+<ul>
+<li><strong>三通道架构：</strong> 方向分为 D2H（Device to Host）和 H2D（Host to Device），每个方向有三个独立通道：<ul>
+<li><strong>请求通道（Request — D2H_REQ / H2D_REQ）：</strong> 缓存行读取/写入请求、Snoop 请求</li>
+<li><strong>响应通道（Response — D2H_RSP / H2D_RSP）：</strong> 请求的完成响应，携带状态（命中/未命中）</li>
+<li><strong>数据通道（Data — D2H_DATA / H2D_DATA）：</strong> 实际缓存行数据传输</li>
+</ul>
+</li>
+<li><strong>缓存状态：</strong> 遵循 MESI/MESIF 协议变体，支持 Modified（已修改）、Exclusive（独占）、Shared（共享）、Invalid（无效）等缓存状态。</li>
+<li><strong>Snoop 机制：</strong> 主机 Home Agent 通过 H2D_REQ 通道向设备发送 Snoop 请求（SnpInv、SnpData 等），确保设备缓存与主机缓存一致。</li>
+<li><strong>信用管理：</strong> 每个通道独立维护信用计数。设备必须在初始化时向主机通告可接收的事务数上限。</li>
+</ul>
+<h4 id="cxlmem">CXL.mem 事务层</h4>
+<p>定义主机访问设备附加内存的协议，主要面向 Type 2 和 Type 3 设备：</p>
+<ul>
+<li><strong>消息类别：</strong> 方向分为 M2S（Master to Subordinate — 主机到设备）和 S2M（Subordinate to Master — 设备到主机）：<ul>
+<li><strong>M2S 请求（MemRd, MemWr, MemSpecRd, MemSpecWr）：</strong> 内存读（Read）、内存写（Write）、特殊读/写</li>
+<li><strong>S2M 响应（MemData, Cmp）：</strong> 读数据返回和写完成确认</li>
+<li><strong>S2M 无数据响应（NDR — No Data Response）：</strong> 写操作完成确认、错误报告</li>
+<li><strong>S2M 后向失效（Back-Invalidation，CXL 3.0+）：</strong> 设备通知主机使缓存行无效</li>
+</ul>
+</li>
+<li><strong>地址类型：</strong> 支持 HDM（Host-Managed Device Memory — 主机按字节寻址设备内存）和 HDM-DB（Host-Managed Device Memory with Device Bias — 设备偏置内存，CXL 3.1+）。64 位物理地址空间映射。</li>
+<li><strong>内存访问粒度：</strong> 缓存行粒度（64 字节），与 CPU 缓存体系一致，确保缓存一致性协议的精确工作。</li>
+<li><strong>持久性内存支持（CXL 2.0+）：</strong> 通过全局持久刷新（GPF — Global Persistent Flush）确保数据非易失性。CXL.mem 持久性写入语义确保数据在设备持久域中安全落地。</li>
+</ul>
+<h3 id="255-fabric-cxl-30">2.5.5 网络层 / Fabric 路由层（CXL 3.0+）</h3>
+<p>从 CXL 3.0 开始，由于引入了多级交换和 Fabric 概念，CXL 增加了<strong>等效于网络层的路由功能</strong> ：</p>
+<ul>
+<li><strong>HBR（Hierarchy-Based Routing — 层次化路由）：</strong> CXL 3.0 引入的传统树形路由。交换机基于目标设备在 CXL 层次结构中的位置转发包。类似于 PCIe 总线/设备/功能（BDF）层级路由，适用于主机-设备的主从架构。</li>
+<li><strong>PBR（Port-Based Routing — 基于端口的路由，CXL 3.1+）：</strong><ul>
+<li>交换机之间支持点对点连接，不再局限于树形拓扑</li>
+<li>支持胖树（Fat Tree）、CLOS 等非树形拓扑</li>
+<li>支持链路聚合（Link Aggregation），多条链路绑定为逻辑通道</li>
+<li>支持 P2P DMA 直接跨交换机传输，无需主机 CPU 介入</li>
+<li>HBR 和 PBR 交换机可混合使用，构建混合拓扑</li>
+</ul>
+</li>
+<li><strong>Fabric Manager（FM）路由表管理：</strong> FM 负责配置和维护所有交换机的路由表。Fabric Manager API（基于 MCTP 协议）实现路由的动态更新。</li>
+<li><strong>地址空间管理：</strong> Fabric 地址空间（Fabric Address Space）与主机物理地址空间通过 HDM 解码器（HDM Decoder）进行映射，实现全局统一地址视图。</li>
+</ul>
+<h2 id="26-flit">2.6 Flit 格式演进与传输层</h2>
+<h3 id="261-68b-flitcxl-1x-20">2.6.1 68B Flit（CXL 1.x / 2.0）</h3>
+<p>528 位（66 字节）固定宽度，这是 CXL 的原始传输格式：</p>
+<ul>
+<li><strong>4 个 16B 数据时隙：</strong> 每个时隙可承载 CXL.cache/mem 协议头、协议数据或 CXL.io TLP 片段</li>
+<li><strong>2B CRC（16 位 CRC-16）：</strong> 对整个 Flit 进行错误检测</li>
+<li><strong>实际封装：</strong> 通常加上 2B 前导码（Preamble），最终物理传输为 68B</li>
+<li><strong>时隙格式编码：</strong> Flit 头部（Header）使用 CTL_FMT 字段（Control Format）编码每个时隙的内容类型（协议头/数据/空），CXL 1.1 使用 000b</li>
+<li><strong>协议头开销：</strong> CXL.cache 协议头约 4B-16B，CXL.mem 协议头约 2B-8B</li>
+</ul>
+<h3 id="262-256b-flitcxl-30">2.6.2 256B Flit（CXL 3.0+）</h3>
+<p>基于 PCIe 6.0 Flit 模式，CXL 3.0 引入的 256B 超大 Flit：</p>
+<ul>
+<li><strong>内部结构：</strong> 256B Flit = 236B TLP/协议负载 + 6B DLP（Data Link Payload）+ 8B FEC CRC + 6B Flit 控制信息</li>
+<li><strong>协议头部空间扩大：</strong> 更大的负载空间支持 CXL 3.0 新增的增强一致性、内存共享、Fabric 路由等协议头部扩展</li>
+<li><strong>轻量级 FEC（前向纠错）：</strong> 结合 PAM-4 信令的 BER 特性，在 256B Flit 中嵌入 FEC，实现误码纠正而非仅检测，减少重传概率</li>
+<li><strong>Latency-Optimized Flit（延迟优化 Flit）：</strong> 将 CRC 检查分解为 128B 子 Flit 粒度，减少物理层的"存储转发"（Store-and-Forward）开销，额外降低 2-5ns 延迟</li>
+<li><strong>向后兼容：</strong> 256B Flit 格式支持所有速率的物理层（8 GT/s 到 128 GT/s），CXL 3.x/4.0 设备可降级使用 68B Flit 以兼容旧版</li>
+</ul>
+<h3 id="263">2.6.3 传输层视角</h3>
+<p>CXL 没有独立定义的 OSI 式"传输层"（如 TCP/UDP），但其<strong>端到端可靠传输</strong> 功能由链路层和事务层的信用/重传机制联合实现：</p>
+<ul>
+<li><strong>端到端信用流控：</strong> CXL.cache 和 CXL.mem 协议在事务层实现端到端信用管理，确保接收方有足够缓冲来处理发送方的事务请求</li>
+<li><strong>可靠交付保证：</strong> 链路层 LLR 确保点到点（Hop-by-Hop）的可靠传输，事务层排序规则和确认机制确保端到端语义正确性</li>
+<li><strong>Flit 路由：</strong> 在多级交换拓扑中，Flit 通过 HBR/PBR 交换机逐跳转发，等效于传输层的分段路由。</li>
+<li><strong>端到端安全（CXL 2.0+）：</strong> CXL IDE 在链路层提供端到端加密和完整性保护，确保数据在多跳 Fabric 中传输的机密性和完整性</li>
+</ul>
+<h3 id="264">2.6.4 各版本协议层能力对比</h3>
+<table>
+<thead>
+<tr>
+<th>协议层</th>
+<th>CXL 1.0/1.1</th>
+<th>CXL 2.0</th>
+<th>CXL 3.0/3.1/3.2</th>
+<th>CXL 4.0</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>物理层</strong></td>
+<td>PCIe 5.0, NRZ</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>32 GT/s, 2 Retimer</td>
+<td>PCIe 5.0, NRZ</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>32 GT/s, 2 Retimer</td>
+<td>PCIe 6.0, PAM-4</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>64 GT/s, 2 Retimer</td>
+<td>PCIe 7.0, PAM-4</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>128 GT/s, 4 Retimer</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>原生 x2 宽度</td>
+<td>每代带宽翻倍；4.0 支持捆绑端口聚合；更多重定时器扩展距离</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>链路层</strong></td>
+<td>68B Flit, CRC-16</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LLR 重传, Ak 批量确认</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>双链路层（io + cache/mem）</td>
+<td>+ 链路层 IDE 加密</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ CTL_FMT 001b (96b payload)</td>
+<td>+ 256B Flit + FEC</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ LO Flit (延迟优化)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 增强信令</td>
+<td>+ 捆绑端口链路聚合</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 改进 RAS 错误报告</td>
+<td>2.0 加安全加密; 3.0 换大 Flit + FEC; 4.0 加端口聚合 + 更好 RAS</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ARB/MUX</strong></td>
+<td>加权轮询</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>可编程权重</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ALMP 管理包</td>
+<td>不变</td>
+<td>支持 256B Flit 仲裁</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>扩展 ALMP 能力</td>
+<td>捆绑端口间负载均衡</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>（BPD 流量喷洒）</td>
+<td>ARB/MUX 核心功能稳定；4.0 扩展到跨物理端口的流量分发</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>事务层</strong></td>
+<td>CXL.io (PCIe TLP)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CXL.cache (三通道)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CXL.mem (M2S/S2M)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>偏置模式一致性</td>
+<td>+ 全局持久刷新 (GPF)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ MLD 逻辑设备</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 热插拔</td>
+<td>+ 增强一致性 (Back-Inv)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存共享 (FAM 硬件)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ P2P DMA</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ DCD 动态容量</td>
+<td>+ 内存 RAS 增强</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 细粒度错误报告</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ PPR/POST 修复</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存备用</td>
+<td>事务层每代显著增强；3.0 是最大跳跃（增强一致性 + 共享）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>网络/路由层</strong></td>
+<td>无（仅直连）</td>
+<td>HBR 单级交换</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Fabric Manager API</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MCTP Mngt</td>
+<td>HBR 多级交换</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ PBR (3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ GIM 路由 (3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 胖树/CLOS 拓扑</td>
+<td>不变（复用 3.x）</td>
+<td>从 2.0 开始有网络层概念；3.x 形成完整路由体系</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="cxl_3">第三章 · CXL 设备类型与一致性模型</h2>
+<h3 id="31">3.1 三种设备类型</h3>
+<p>CXL 定义了三种设备类型，由其支持的子协议组合决定：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>支持协议</th>
+<th>典型设备</th>
+<th>特征</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Type 1</strong></td>
+<td>CXL.io + CXL.cache</td>
+<td>智能网卡（SmartNIC）、原子操作加速器</td>
+<td>无本地内存或不对主机暴露本地内存的加速器。通过 CXL.cache 协议利用主机 CPU 内存作为其缓存。例如 SmartNIC 可直接将网络数据包处理结果写入主机内存的接收队列。</td>
+</tr>
+<tr>
+<td><strong>Type 2</strong></td>
+<td>CXL.io + CXL.cache + CXL.mem</td>
+<td>GPU、FPGA、AI ASIC</td>
+<td>拥有自身高性能内存（HBM/GDDR）的加速器。CPU 可通过 CXL.mem 推送数据到加速器内存，加速器可通过 CXL.cache 访问系统内存。设备与主机双向缓存一致。</td>
+</tr>
+<tr>
+<td><strong>Type 3</strong></td>
+<td>CXL.io + CXL.mem</td>
+<td>内存扩展卡、持久性内存模块</td>
+<td>目前最广泛部署的类型。主机 CPU 通过 CXL.mem 将设备附加内存作为主内存扩展使用（HDM — Host-Managed Device Memory）。OS 将其视为"无 CPU 的 NUMA 节点"。不支持 CXL.cache，设备不缓存主机内存。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32">3.2 一致性模型</h3>
+<h4 id="321">3.2.1 非对称一致性架构</h4>
+<p>CXL 的一个重要设计特征是其一致性协议是<strong>非对称的</strong> ：Home 缓存代理（Home Agent）仅存在于主机处理器中。主机控制内存的缓存，负责处理连接的 CXL 设备请求的整个系统一致性问题。</p>
+<p>这与 CPU 到 CPU 的对称一致性协议（如 Intel QPI/UPI、AMD Infinity Fabric）截然不同——对称协议中所有互连设备都是对等的，必须各自处理一致性的复杂性。CXL 的非对称方法使得不同架构的 CPU 和加速器可以轻松纳入 CXL 生态系统，降低了设备端实现门槛。</p>
+<h4 id="322-bias-mode-cxl-1x-20">3.2.2 偏置模式（Bias Mode）— CXL 1.x / 2.0</h4>
+<p>对于 Type 2 设备，CXL 1.x/2.0 定义了两种内存一致性"偏置"模式，控制主机与设备附加内存之间的一致性数据处理方式。偏置模式可以 4KB 页面粒度进行更改，通过 Type 2 设备中的偏置表跟踪。</p>
+<table>
+<thead>
+<tr>
+<th>偏置模式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>主机偏置</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>(Host Bias)</td>
+<td>主机 CPU 的缓存控制器管理所有对设备内存的访问。设备内存对于设备而言就像主机内存，如需访问则通过请求主机处理。适用于工作提交阶段（主机向设备内存写入数据）和工作完成后导出数据。默认模式。</td>
+</tr>
+<tr>
+<td><strong>设备偏置</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>(Device Bias)</td>
+<td>设备直接访问本地内存，CPU 不进行缓存。确保设备无需与主机一致性引擎通信即可访问本地内存，为设备提供最优延迟。加速器执行工作时的主要操作模式。主机仍可访问设备内存但性能非最优。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="323-enhanced-coherency-cxl-30">3.2.3 增强一致性（Enhanced Coherency）— CXL 3.0+</h4>
+<p>CXL 3.0 引入了<strong>增强一致性模型</strong> ，替代了之前的偏置模式。核心改进包括：</p>
+<ul>
+<li><strong>硬件反向失效（Back-Invalidation）：</strong> Type 2 设备可以直接反向失效主机缓存中的缓存行，实现对称一致性管理。</li>
+<li><strong>Snoop Filter 支持：</strong> Type 2 设备可为 HDM 地址范围实现 Snoop Filter，以更高效地映射和管理大量内存。</li>
+<li><strong>内存共享（Memory Sharing）：</strong> 多台主机可同时一致性访问同一内存区域，突破了 CXL 2.0 仅能通过软件实现内存共享的限制。</li>
+</ul>
+<h2 id="cxl_4">第四章 · CXL 版本演进详解</h2>
+<h3 id="40">4.0 版本演进时间线</h3>
+<p>2019 年 3 月 11 日</p>
+<p>CXL 1.0</p>
+<p>基于 PCIe 5.0，速率 32 GT/s。首次定义三大子协议（CXL.io、CXL.cache、CXL.mem）和三种设备类型。单主机直连拓扑，无交换支持。建立 DVSEC 寄存器用于 CXL 设备枚举。</p>
+<p>2019 年 6 月 / 9 月</p>
+<p>CXL 1.1</p>
+<p>CXL 1.0 的勘误修正和合规性澄清版本。增加病毒告警（Viral Alert）支持（错误传播），改进 RAS 定义。大多数第一代 CXL IP 基于 CXL 1.1 实现。Intel Sapphire Rapids 处理器实现 CXL 1.1。</p>
+<p>2020 年 11 月 10 日</p>
+<p>CXL 2.0</p>
+<p>重大架构升级。引入 CXL 交换（单级）、内存池化（MLD — 多逻辑设备）、持久内存支持、CXL IDE（完整性与数据加密）、热插拔和意外移除支持、跨设备内存交织。仍使用 PCIe 5.0 PHY，速率不变。</p>
+<p>2022 年 8 月 2 日</p>
+<p>CXL 3.0</p>
+<p>基于 PCIe 6.0（PAM-4），速率翻倍至 64 GT/s（x16 聚合带宽达 256 GB/s），无额外延迟增加。引入 256B Flit、多级交换（Fabric）、设备对等（P2P）DMA、增强一致性（硬件反向失效）、内存共享、每根端口多设备支持。</p>
+<p>2023 年 11 月 14 日</p>
+<p>CXL 3.1</p>
+<p>渐进式更新。引入 GIM（全局互连内存）支持主机间直接通信、PBR（基于端口的路由）交换机支持、可信执行环境安全协议（TSP）、扩展元数据（每缓存行最多 32 位）、增强内存 RAS 可见性。</p>
+<p>2024 年 12 月 3 日</p>
+<p>CXL 3.2</p>
+<p>优化 CXL 内存设备监控和管理。引入 CXL 热页面监控单元（CHMU）用于分层内存、扩展 IDE 安全合规、改进 OS 级设备健康和遥测可见性。减少 Fabric 开销。</p>
+<p>2025 年 11 月 18 日</p>
+<p>CXL 4.0</p>
+<p>基于 PCIe 7.0，速率再次翻倍至 128 GT/s（x16 聚合带宽达 ~484 GB/s），零额外延迟。引入原生 x2 宽度概念支持更大扇出、捆绑端口（Bundled Port）能力、最多 4 个重定时器支持、增强内存 RAS。完全向后兼容 CXL 3.x / 2.0 / 1.1 / 1.0。</p>
+<h3 id="41-cxl-10-11">4.1 CXL 1.0 / 1.1 — 奠基</h3>
+<p>CXL 1.0 / 1.1</p>
+<p><strong>发布时间：</strong> CXL 1.0 于 2019 年 3 月发布，CXL 1.1 于 2019 年中发布</p>
+<p><strong>物理层：</strong> PCIe 5.0，32 GT/s，NRZ 编码</p>
+<p><strong>核心特性：</strong></p>
+<ul>
+<li>定义三大子协议：CXL.io（基于 PCIe 5.0）、CXL.cache、CXL.mem</li>
+<li>定义三种设备类型：Type 1（智能 NIC）、Type 2（GPU/FPGA/ASIC）、Type 3（内存扩展器）</li>
+<li>单主机对设备的直连拓扑（Direct Attach），无交换机支持</li>
+<li>非对称一致性模型，Home Agent 仅在主机侧</li>
+<li>Type 2 设备支持偏置模式（主机偏置 / 设备偏置），以 4KB 页面粒度切换</li>
+<li>68 字节 Flit 格式（528 位 = 4×16B 数据 + 2B CRC）</li>
+<li>使用 Flex Bus 端口，可静态配置为 PCIe 或 CXL 模式</li>
+<li>CXL 1.1 额外增加：病毒告警支持、改进 RAS 定义、合规性澄清</li>
+</ul>
+<p><strong>典型应用场景：</strong></p>
+<ul>
+<li>内存扩展（Type 3）— 为服务器增加 TB 级内存容量</li>
+<li>加速器缓存一致性（Type 2）— GPU/FPGA 高效共享主机内存</li>
+<li>智能 I/O 卸载（Type 1）— SmartNIC 直接操作主机内存</li>
+</ul>
+<h3 id="42-cxl-20">4.2 CXL 2.0 — 交换与池化</h3>
+<p>CXL 2.0</p>
+<p><strong>发布时间：</strong> 2020 年 11 月 10 日</p>
+<p><strong>物理层：</strong> PCIe 5.0，32 GT/s（与 1.x 相同，无速率提升）</p>
+<p><strong>核心新增特性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>新特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CXL 交换（Switching）</strong></td>
+<td>引入单级 CXL 交换机，允许多个 CXL 1.x/2.0 设备连接到一个 CXL 2.0 主机处理器，和/或将每个设备池化分配给多个主机处理器。实现分布式共享内存和解耦存储配置。</td>
+</tr>
+<tr>
+<td><strong>内存池化（Memory Pooling）</strong></td>
+<td>通过 MLD（Multi-Logical Device）技术，单个物理 CXL 设备可呈现为多个逻辑设备，分配给不同主机。Fabric Manager API 负责动态资源分配。主机可按需从内存池获取或释放内存。</td>
+</tr>
+<tr>
+<td><strong>持久内存支持</strong></td>
+<td>通过 CXL.mem 支持持久性内存（PMem），引入全局持久刷新（Global Persistent Flush）机制确保数据持久性。</td>
+</tr>
+<tr>
+<td><strong>安全性</strong></td>
+<td>引入 CXL IDE（Integrity and Data Encryption）— 端到端数据完整性和加密，保护 CXL.mem 和 CXL.cache 事务免受篡改和物理攻击。</td>
+</tr>
+<tr>
+<td><strong>热插拔支持</strong></td>
+<td>支持设备的热插拔和意外移除（Surprise Removal），提高运维灵活性。</td>
+</tr>
+<tr>
+<td><strong>内存交织</strong></td>
+<td>支持跨多个 CXL 设备的内存交织（Interleave），提升带宽。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键区分：池化（Pooling）≠ 共享（Sharing）</strong> CXL 2.0 的内存池化将设备容量划分为多个切片，每个切片在同一时间仅分配给一台主机。要实现多台主机同时一致性访问同一内存区域（即"共享"），需要 CXL 3.0 的硬件支持。CXL 2.0 的共享只能通过软件实现。</p>
+<p><strong>完全向后兼容：</strong> CXL 2.0 完全兼容 CXL 1.1 和 CXL 1.0 设备。</p>
+<h3 id="43-cxl-30-fabric">4.3 CXL 3.0 — Fabric 与增强一致性</h3>
+<p>CXL 3.0</p>
+<p><strong>发布时间：</strong> 2022 年 8 月 2 日</p>
+<p><strong>物理层：</strong> PCIe 6.0，64 GT/s，PAM-4 编码</p>
+<p><strong>核心新增特性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>新特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>带宽翻倍</strong></td>
+<td>基于 PCIe 6.0 PAM-4 信令，速率从 32 GT/s 提升至 64 GT/s。x16 链路聚合原始带宽达 256 GB/s。无额外延迟增加。</td>
+</tr>
+<tr>
+<td><strong>256B Flit 格式</strong></td>
+<td>引入 256 字节 Flit，结合轻量级 FEC 和强 CRC。提供更大的协议头部空间。同时引入延迟优化 Flit 变体（128B 子 Flit 粒度 CRC），额外降低 2-5ns 延迟。</td>
+</tr>
+<tr>
+<td><strong>多级交换（Fabric）</strong></td>
+<td>支持多级交换拓扑，可将数百至数千个节点互联。交换机之间可级联，构建大规模 CXL Fabric。</td>
+</tr>
+<tr>
+<td><strong>增强一致性</strong></td>
+<td>Type 2 设备可执行硬件反向失效（Back-Invalidation）主机缓存。支持 Snoop Filter 管理更大内存。替代了 CXL 1.x/2.0 的偏置模式。</td>
+</tr>
+<tr>
+<td><strong>内存共享</strong></td>
+<td>多台主机可同时一致性访问同一内存区域（FAM — Fabric-Attached Memory），在硬件层面实现真正的多机共享内存。</td>
+</tr>
+<tr>
+<td><strong>设备对等（P2P）DMA</strong></td>
+<td>两个加速器可通过 CXL Fabric 直接共享内存，无需 CPU 介入。</td>
+</tr>
+<tr>
+<td><strong>每端口多设备</strong></td>
+<td>每根端口可连接多个 Type 1/Type 2 设备，提高扇出能力。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="44-cxl-31">4.4 CXL 3.1 — 扩展性与安全</h3>
+<p>CXL 3.1</p>
+<p><strong>发布时间：</strong> 2023 年 11 月 14 日</p>
+<p><strong>物理层：</strong> PCIe 6.0，64 GT/s（与 3.0 相同）</p>
+<p><strong>核心新增特性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>新特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GIM（全局互连内存）</strong></td>
+<td>定义主机间通信机制。两台主机的本地内存可直接共享（GIM 域），无需通过 FAM。GIM 地址范围映射在主机物理地址的 Fabric 地址空间内。引入 FAST（Fabric Address Segment Table）加速访问。</td>
+</tr>
+<tr>
+<td><strong>PBR 交换机</strong></td>
+<td>除 HBR（层次化路由）外，新增支持 PBR（基于端口的路由）。交换机之间支持点对点连接，可构建胖树等非树形拓扑。支持链路聚合。HBR 和 PBR 交换机可混合使用。</td>
+</tr>
+<tr>
+<td><strong>TSP 安全协议</strong></td>
+<td>可信执行环境安全协议（Trusted-Execution-Environment Security Protocol）。扩展 CXL IDE 安全范围到加速器和内存设备，支持基于虚拟化的 TEE，实现机密计算。</td>
+</tr>
+<tr>
+<td><strong>直接 P2P CXL.mem</strong></td>
+<td>通过 PBR 交换机支持直接的点对点 CXL.mem 访问，跨域对等 DMA 流量也受支持。</td>
+</tr>
+<tr>
+<td><strong>内存扩展增强</strong></td>
+<td>扩展元数据支持（每缓存行最多 34 位主机特定状态）、改进 CXL 内存设备错误可见性、增强 RAS 能力。</td>
+</tr>
+<tr>
+<td><strong>HDM-DB</strong></td>
+<td>支持加速器直接缓存内存（HDM-DB），进一步提升性能。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="45-cxl-32">4.5 CXL 3.2 — 监控与遥测</h3>
+<p>CXL 3.2</p>
+<p><strong>发布时间：</strong> 2024 年 12 月 3 日</p>
+<p><strong>物理层：</strong> PCIe 6.0/6.1，64 GT/s</p>
+<p><strong>核心新增特性：</strong></p>
+<ul>
+<li><strong>CHMU（CXL 热页面监控单元）：</strong> 用于分层内存的热页面遥测，帮助 OS 优化内存分层策略。</li>
+<li><strong>扩展 TSP 安全合规：</strong> 更广泛的安全协议覆盖。</li>
+<li><strong>改进 OS 级设备健康和遥测可见性。</strong></li>
+<li><strong>减少 Fabric 开销：</strong> 优化池化环境中的延迟。</li>
+<li><strong>优化与 PCIe 6.0/6.1 的集成。</strong></li>
+</ul>
+<h3 id="46-cxl-40">4.6 CXL 4.0 — 带宽再翻倍</h3>
+<p>CXL 4.0</p>
+<p><strong>发布时间：</strong> 2025 年 11 月 18 日</p>
+<p><strong>物理层：</strong> PCIe 7.0，128 GT/s</p>
+<p><strong>核心新增特性：</strong></p>
+<table>
+<thead>
+<tr>
+<th>新特性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>带宽再次翻倍</strong></td>
+<td>速率从 64 GT/s 提升至 128 GT/s，零额外延迟。x16 链路聚合带宽达约 484 GB/s。</td>
+</tr>
+<tr>
+<td><strong>原生 x2 宽度</strong></td>
+<td>引入原生 x2 通道宽度概念，支持平台中更大的扇出能力。</td>
+</tr>
+<tr>
+<td><strong>捆绑端口（Bundled Port）</strong></td>
+<td>可将主机与 CXL 加速器（Type 1/2 设备）之间的多个物理端口聚合为单个逻辑连接，成倍增加连接带宽。如两个 x16 端口捆绑可实现约 1.5 TB/s 的聚合带宽。</td>
+</tr>
+<tr>
+<td><strong>4 个重定时器支持</strong></td>
+<td>支持最多 4 个重定时器（Retimer），显著增加信道传输距离，支持机架级部署。</td>
+</tr>
+<tr>
+<td><strong>256B Flit 保持</strong></td>
+<td>维持 CXL 3.x 引入的 256B Flit 格式和所有协议增强功能。</td>
+</tr>
+<tr>
+<td><strong>内存 RAS 增强</strong></td>
+<td>改进可靠性、错误可见性和维护效率。</td>
+</tr>
+<tr>
+<td><strong>完全向后兼容</strong></td>
+<td>兼容 CXL 3.x、2.0、1.1 和 1.0。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="47">4.7 全版本特性对比总表</h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>CXL 1.0 / 1.1</th>
+<th>CXL 2.0</th>
+<th>CXL 3.0</th>
+<th>CXL 3.1 / 3.2</th>
+<th>CXL 4.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>发布日期</strong></td>
+<td>2019.03 / 2019.06</td>
+<td>2020.11</td>
+<td>2022.08</td>
+<td>2023.11 / 2024.12</td>
+<td>2025.11</td>
+</tr>
+<tr>
+<td><strong>PCIe 代际</strong></td>
+<td>PCIe 5.0</td>
+<td>PCIe 5.0</td>
+<td>PCIe 6.0</td>
+<td>PCIe 6.0</td>
+<td>PCIe 7.0</td>
+</tr>
+<tr>
+<td><strong>最大链路速率</strong></td>
+<td>32 GT/s</td>
+<td>32 GT/s</td>
+<td>64 GT/s</td>
+<td>64 GT/s</td>
+<td>128 GT/s</td>
+</tr>
+<tr>
+<td><strong>Flit 格式</strong></td>
+<td>68B</td>
+<td>68B</td>
+<td>68B + 256B</td>
+<td>68B + 256B</td>
+<td>68B + 256B</td>
+</tr>
+<tr>
+<td><strong>Type 1/2/3 设备</strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>交换（单级）</strong></td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>交换（多级/Fabric）</strong></td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+<td>✓ (PBR)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>内存池化（MLD）</strong></td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>内存共享（硬件）</strong></td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+<td>✓ (GIM)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>对等（P2P）DMA</strong></td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>增强一致性</strong></td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>持久内存支持</strong></td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>CXL IDE（加密）</strong></td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>TSP（可信执行）</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✓ (3.1+)</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>每端口多设备</strong></td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>捆绑端口</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>最大 Retimer 数</strong></td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+<td>2</td>
+<td>4</td>
+</tr>
+<tr>
+<td><strong>向后兼容</strong></td>
+<td>—</td>
+<td>1.x</td>
+<td>2.0, 1.x</td>
+<td>3.0, 2.0, 1.x</td>
+<td>3.x, 2.0, 1.x</td>
+</tr>
+</tbody>
+</table>
+<h3 id="48">4.8 各版本协议层能力对比总表</h3>
+<p>以下从物理层、链路层、ARB/MUX、事务层、网络层的角度，系统对比 CXL 各版本的能力演进：</p>
+<table>
+<thead>
+<tr>
+<th>协议层</th>
+<th>CXL 1.0/1.1</th>
+<th>CXL 2.0</th>
+<th>CXL 3.0/3.1/3.2</th>
+<th>CXL 4.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>物理层</strong></td>
+<td>PCIe 5.0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>32 GT/s, NRZ</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>x1/x4/x8/x16</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2 Retimers</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Flex Bus 端口</td>
+<td>PCIe 5.0 (不变)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>32 GT/s, NRZ</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>x1/x4/x8/x16</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2 Retimers</td>
+<td>PCIe 6.0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>64 GT/s, PAM-4</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>x1/x4/x8/x16</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>2 Retimers</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>FEC 内嵌</td>
+<td>PCIe 7.0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>128 GT/s, PAM-4</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 原生 x2 宽度</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 4 Retimers</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 捆绑端口</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ BNF x2/x4</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>链路层</strong></td>
+<td>68B Flit</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CRC-16 校验</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LLR 重传 + Ak 批量确认</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>双链路层架构</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>INIT.Param 初始化</td>
+<td>+ CTL_FMT 001b</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ CXL IDE 加密</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>链路层完整性与加密</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>热插拔链路事件</td>
+<td>+ 256B Flit + 强 FEC</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ LO Flit (128B CRC 粒度)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 增强信号完整性</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>链路层初始化增强</td>
+<td>+ 捆绑端口链路聚合</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 改进错误报告粒度</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存 RAS 链路</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>层协议增强</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>ARB/MUX</strong></td>
+<td>加权轮询仲裁</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>可编程权重</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>ALMP 管理包</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>反压处理</td>
+<td>不变</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>（复用 1.x 设计）</td>
+<td>+ 256B Flit 仲裁模式</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 扩展 ALMP 类型</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ PAM-4 模式适配</td>
+<td>+ 捆绑端口间</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>流量负载均衡</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>（BPD 流量喷洒）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>事务层</strong></td>
+<td>CXL.io (VDM/ATS)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CXL.cache (三通道)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CXL.mem (M2S/S2M)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>偏置模式一致性</td>
+<td>+ GPF (持久内存)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ MLD (最多 16 LD)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 热插拔支持</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存交织</td>
+<td>+ 增强一致性</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ hardware Back-Inv</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存共享(FAM)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ P2P DMA</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ DCD 动态容量</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 扩展元数据 (3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ TSP 安全 (3.1+)</td>
+<td>+ 细粒度错误报告</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 设备启动 PPR</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 内存备用 (Spare)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 捆绑端口</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>事务映射</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>网络/路由层</strong></td>
+<td>无</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>仅直连拓扑</td>
+<td>HBR 单级交换</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>FM API (MCTP)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LD-ID 设备标识</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MLD 分区路由</td>
+<td>+ HBR 多级交换</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ PBR 路由 (3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ GIM 路由 (3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 非树形拓扑</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 链路聚合</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ P2P 跨交换路由</td>
+<td>不变</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>（复用 3.x 路由体系）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>捆绑端口仅影响</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>物理/链路层</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>安全层</strong></td>
+<td>基本 DVSEC 枚举</td>
+<td>CXL IDE</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(端到端加密+</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>完整性校验)</td>
+<td>+ TSP (CXL 3.1+)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ CMA/SPDM 认证</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 访问控制机制</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ IDE 流扩展</td>
+<td>不变</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>（复用 3.x 安全特性）</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键观察</strong> CXL 1.x 和 2.0 共享同一物理层（PCIe 5.0），2.0 的变革主要在事务层（池化）和网络层（交换机）。CXL 3.0 是最大的协议层跨越——物理层换代到 PCIe 6.0、链路层升级到 256B Flit、事务层引入增强一致性和内存共享、网络层引入完整 Fabric 路由。CXL 4.0 主要在物理层翻倍带宽，其它层保持 3.x 的能力。</p>
+<h2 id="cxl_5">第七章 · CXL 内存池全局统一编址 — 软件架构与交互流程</h2>
+<h3 id="71">7.1 软件架构全景</h3>
+<p>CXL 内存池的全局统一编址依赖于<strong>硬件-固件-操作系统-管理软件</strong> 四层协同工作的完整软件栈。下图展示了端到端的软件架构：</p>
+<p>CXL 内存池全局统一编址 — 软件架构全景 用户空间（User Space） numactl / ndctl / cxl-cli NUMA 感知应用 (IMDB/AI) Orchestrator / 管理控制台 内核空间（Kernel Space） NUMA 子系统 内存分级 (Tiering) 内存热插拔 (MHP) PMEM / DAX 子系统 CXL 子系统 (cxl_core / cxl_pci / cxl_acpi) CXL KMEM Driver / DAX Driver 固件 / BIOS / BMC ACPI CEDT / CFMWS / SRAT Fabric Manager (FM) MCTP / PLDM 存储器固件 CXL 硬件 Host CXL RP CXL Switch Type 3 内存设备 Type 2 加速器 BMC syscall ioctl/netlink MCTP/SMBus CXL 协议 三层管理通路： In-Band (带内) 通路 PCIe CXL.io → 设备邮箱 CXL PCI 驱动 + FM API Out-of-Band (带外) 通路 SMBus/I²C → MCTP BMC → FM → 设备 SPDM Fabric Manager API (MCTP) 拓扑发现 → 绑定 → 分配 事件通知 → 热插拔管理 HDM Decoder 地址映���：Host Physical Address ←→ Device Physical Address ←→ Fabric Address OFMWS (ACPI 表) → CXL Window → HDM Decoder → Device DPA → Media 物理地址 示例: HPA 0x8800000000 → CXL Decoder 0 → DPA 0x4000000000 → Channel 0, Rank 0, Row X</p>
+<h3 id="72-linux-cxl">7.2 Linux 内核 CXL 驱动栈详解</h3>
+<p>Linux 内核从 v5.12 开始集成 CXL 驱动支持，到 v6.x 已形成完整的功能栈：</p>
+<h4 id="721">7.2.1 驱动栈层次结构</h4>
+<table>
+<thead>
+<tr>
+<th>内核组件</th>
+<th>模块文件</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CXL 核心</strong></td>
+<td>drivers/cxl/core/</td>
+<td>通用 CXL 设备模型、端口、解码器、区域管理。提供 HDM Decoder 编程接口、CDAT 解析（Coherent Device Attribute Table）、内存区域生命周期管理。</td>
+</tr>
+<tr>
+<td><strong>CXL ACPI 驱动</strong></td>
+<td>drivers/cxl/acpi.c</td>
+<td>解析 ACPI CEDT（CXL Early Discovery Table）和 CFMWS（CXL Fixed Memory Window Structure），建立 CXL 根端口、主机桥、内存窗口的拓扑关系。创建 EFI Memory Map 中的 Soft-Reserved 区域。</td>
+</tr>
+<tr>
+<td><strong>CXL PCI 驱动</strong></td>
+<td>drivers/cxl/pci.c</td>
+<td>CXL 设备的 PCI 枚举驱动。探测设备 DVSEC 寄存器，识别 CXL 能力，建立与 CXL 核心的关联。负责寄存器定位器（Register Locator）和邮箱（Mailbox）接口初始化。</td>
+</tr>
+<tr>
+<td><strong>CXL PMEM 驱动</strong></td>
+<td>drivers/cxl/pmem.c</td>
+<td>将 CXL 持久性内存区域（PMEM）暴露为 NVDIMM 设备。通过 ndctl/libnvdimm 框架管理，支持创建命名空间和文件系统直接访问（DAX）。</td>
+</tr>
+<tr>
+<td><strong>CXL KMEM 驱动</strong></td>
+<td>drivers/cxl/mem.c</td>
+<td>将 CXL 易失性内存区域作为热插拔内存（Hotplug Memory）添加到系统页面分配器。CXL 内存作为独立 NUMA 节点暴露，通过 HMAT 报告延迟/带宽属性。</td>
+</tr>
+<tr>
+<td><strong>CXL DAX 驱动</strong></td>
+<td>drivers/dax/</td>
+<td>设备直接访问（Device DAX）驱动。CXL 内存区域可先创建为 /dev/daxX.Y 设备，再由用户选择绑定模式（system-ram / devdax）。</td>
+</tr>
+<tr>
+<td><strong>NUMA 子系统</strong></td>
+<td>mm/memory-tiers.c</td>
+<td>内存分级框架。自动检测 CXL 节点并通过抽象距离（Abstract Distance）分配内存层级（Tier 0 = 本地 DRAM，Tier 1 = CXL 内存），驱动冷页降级和热页提升。</td>
+</tr>
+<tr>
+<td><strong>MHP 子系统</strong></td>
+<td>mm/memory_hotplug.c</td>
+<td>内存热插拔框架。CXL KMEM 驱动创建内存块后，由 MHP 上线并纳入页面分配器（Zone Normal 或 Movable）。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="722-acpi">7.2.2 关键 ACPI 表</h4>
+<table>
+<thead>
+<tr>
+<th>ACPI 表</th>
+<th>全称</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CEDT</strong></td>
+<td>CXL Early Discovery Table</td>
+<td>在标准 PCIe 枚举之前发现 CXL 设备。包含 CHBS（CXL Host Bridge Structure）定义 CXL 主机桥位置，以及 CFMWS 定义 CXL 固定内存窗口。</td>
+</tr>
+<tr>
+<td><strong>CFMWS</strong></td>
+<td>CXL Fixed Memory Window Structure</td>
+<td>定义主机物理地址空间中分配给 CXL 内存的固定窗口。每个窗口指定起始地址、大小、交错方式（Interleave Ways/Granularity）、目标主机桥。OS 据此建立 HDM Decoder 编程依据。</td>
+</tr>
+<tr>
+<td><strong>SRAT</strong></td>
+<td>System Resource Affinity Table</td>
+<td>定义每个 CXL 内存区域的 NUMA 邻近域（Proximity Domain, PXM）。CXL 内存通常标记为 EFI_MEMORY_SP（Soft Reserved），与 System RAM 区分。</td>
+</tr>
+<tr>
+<td><strong>HMAT</strong></td>
+<td>Heterogeneous Memory Attribute Table</td>
+<td>定义不同内存 NUMA 节点之间的延迟和带宽属性。提供访问发起者（Initiator）到目标（Target）的读/写延迟（ns）和带宽（MB/s），使 OS 能做出正确的内存分级决策。</td>
+</tr>
+<tr>
+<td><strong>CDAT</strong></td>
+<td>Coherent Device Attribute Table</td>
+<td>设备侧属性表（通过 DOE — Data Object Exchange 读取）。定义 CXL 设备内存的详细性能参数（DSMAS — Device Scoped Memory Affinity Structure），如延迟、带宽和容量。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-fabric-manager">7.3 Fabric Manager 架构与工作流程</h3>
+<p>Fabric Manager（FM）是 CXL 内存池化的<strong>核心管理软件</strong> ，通常运行在 BMC 或专用管理节点上。</p>
+<h4 id="731-fm">7.3.1 FM 三大核心职责</h4>
+<ul>
+<li><strong>设备发现与枚举（Discovery）：</strong> FM 通过 MCTP（Management Component Transport Protocol）协议遍历整个 CXL Fabric，发现所有交换机、主机、内存设备，构建完整拓扑图。执行 Virtual-to-Physical Binding（虚拟到物理绑定），将物理端口抽象为逻辑设备（LD）供上层使用。</li>
+<li><strong>资源池化与分配（Allocation）：</strong> FM 根据策略（按需分配、负载均衡、优先级）将内存池中的物理内存块动态分配给申请的主机。配置 HDM Decoder 的地址映射关系，建立从设备物理地址（DPA）到主机物理地址（HPA）的映射。</li>
+<li><strong>事件监控与管理（Monitoring）：</strong> FM 监听来自设备的事件（错误、热插拔、容量变化），并采取响应措施（隔离故障设备、重新分配内存、通知 Orchestrator）。</li>
+</ul>
+<h4 id="732-fm">7.3.2 FM 管理命令接口</h4>
+<ul>
+<li><strong>FM API over MCTP：</strong> CXL 规范定义了基于 MCTP 的标准 Fabric Manager API 命令集，包括设备查询（Identify Device）、绑定/解绑（Bind/Unbind）、HDM Decoder 编程（Set HDM Decoder）、事件通知（Event Notification）等。</li>
+<li><strong>CCI（Component Command Interface）over MCTP：</strong> 针对 Type 3 设备的标准化管理命令接口，通过 MCTP 传输。支持设备发现（Identify Memory Device）、容量查询（Get Partition Info）、事件通知（Event Record）等。</li>
+<li><strong>同步/异步事件通知：</strong> FM 支持同步请求-响应模式和异步事件推送（如设备热移除通知、错误事件）。CXL 2.0 勘误表（ECN）对异步 MCTP 事件通知进行了关键修正。</li>
+</ul>
+<h4 id="733-fm-mld">7.3.3 FM 交互流程（以 MLD 分配为例）</h4>
+<p>Fabric Manager — MLD 内存分配交互时序 Orchestrator Fabric Manager CXL Switch Type 3 MLD Device Host OS 1. 请求分配内存 (HostID, Size) 2. 查询可用 LD/剩余容量 3. MCTP Identify Memory Device (转发) 4. 返回: 可用 Extent 列表 5. Bind (LD-ID, HostPort) → 配置 Switch 路由表 6. Set HDM Decoder (DPA Range → HPA Window) 7. 通知 Host: 新 CXL 内存就绪 (ACPI Hotplug / MCTP) 8. Host 枚举新内存 → cxl_region 创建 → daxctl 绑定 system-ram → 上线为 NUMA Node 9. 完成通知 10. 返回分配结果 (HPA Window)</p>
+<h3 id="74">7.4 全局地址映射与绑定机制</h3>
+<p>CXL 内存池的全局统一编址是实现"池化"的核心技术，涉及<strong>三层地址空间的映射</strong> ：</p>
+<h4 id="741">7.4.1 三层地址空间</h4>
+<table>
+<thead>
+<tr>
+<th>地址空间</th>
+<th>缩写</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>主机物理地址</strong></td>
+<td>HPA</td>
+<td>Host Physical Address — 主机 CPU 视角的物理地址空间。CFMWS 为 CXL 保留固定窗口（如 HPA 0x8800000000 - 0x8FFFFFFFFF）。</td>
+</tr>
+<tr>
+<td><strong>设备物理地址</strong></td>
+<td>DPA</td>
+<td>Device Physical Address — CXL 设备内存控制器的内部地址空间。Type 3 设备将 DRAM 物理空间暴露为 DPA 范围。可能被划分为多个分区（Partition），经由不同 HDM Decoder 映射到不同 HPA 窗口。</td>
+</tr>
+<tr>
+<td><strong>Fabric 地址</strong></td>
+<td>FPA</td>
+<td>Fabric Physical Address — CXL 3.0+ 引入的全局 Fabric 地址空间。多台主机可同时通过 FPA 访问同一物理内存区域（FAM — Fabric-Attached Memory）。FPA 到 DPA 的映射由交换机路由表维护。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="742-hdm-decoder">7.4.2 HDM Decoder 编程（地址映射核心）</h4>
+<p>HDM (Host-Managed Device Memory) Decoder 是 CXL 内存映射的<strong>核心硬件单元</strong> ，位于 CXL 主机桥和 Type 3 设备中：</p>
+<ul>
+<li><strong>主机侧解码器：</strong> CXL 主机桥中的 HDM Decoder 将 HPA 窗中的访存请求路由到正确的 CXL 根端口（Root Port）。每个 Decoder 对应一个 CFMWS 定义的内存窗口，指定交错方式（Interleave Granularity、Interleave Ways）、目标列表（Target List）和地址范围。</li>
+<li><strong>设备侧解码器：</strong> Type 3 设备中的 HDM Decoder 将来自主机的 CXL.mem 请求解码到设备内部 DPA 空间。每个 Decoder 映射一个 DPA 范围到一个 HPA 窗口，支持锁定（Lock）配置防止运行时意外修改。</li>
+<li><strong>解码器编程流程（内核侧）：</strong><pre class="highlight"><code># 1. 枚举 CXL 设备
+cxl list -M    # 列出所有 memdev (mem0, mem1, ...)
+cxl list -D -d decoder0.0   # 查看 decoder 状态
+
+# 2. 创建区域 (Region) — 多个 memdev 可交错
+cxl create-region -m -d decoder0.0 -w 2 mem0 mem1
+
+# 3. 启用区域
+cxl enable-region region0
+
+# 4. 绑定为系统内存
+daxctl reconfigure-device --mode=system-ram dax0.0</code></pre>
+</li>
+</ul>
+<h4 id="743-virtual-to-physical-binding">7.4.3 虚拟到物理绑定（Virtual-to-Physical Binding）</h4>
+<p>FM 通过 Virtual-to-Physical Binding 机制简化上层管理：</p>
+<ul>
+<li><strong>逻辑设备（LD）抽象：</strong> FM 将复杂的物理端口映射（Port X → Switch Y → Device Z）抽象为简单的逻辑标识符（LD-ID），操作系统只需要与逻辑设备交互。</li>
+<li><strong>多路径支持：</strong> 在多级交换拓扑中，一个 LD 可能通过多条物理路径可达（链路聚合/冗余）。FM 维护路径映射，实现故障切换。</li>
+<li><strong>动态重绑定：</strong> CXL 3.0 的 DCD（Dynamic Capacity Device）允许在不重启主机的情况下动态改变 LD 到主机的绑定关系，实现弹性内存分配。</li>
+</ul>
+<h3 id="75">7.5 内存池访问交互流程</h3>
+<h4 id="751-cxl-memory-read">7.5.1 CXL Memory Read 端到端流程</h4>
+<p>CXL.mem Memory Read — 端到端交互流程 Host CPU CXL Host Bridge CXL Switch Type 3 Device DRAM ① CPU Issue LOAD HPA ② HPA → CXL MemRd→Flit ③ HBR 查表 转发 Flit ④ HDM Decoder Flit→DPA ⑤ DPA→Row/Col DRAM Read 前向请求路径 (M2S Request)： ① CPU Core 发出 LOAD 指令，目标地址 HPA = 0x8800123000 (位于 CXL Window 内) ② CXL Host Bridge 的 HDM Decoder 将 HPA 匹配到 CXL Root Port → 创建 CXL.mem MemRd Flit ③ CXL Switch 解析 Flit 头部 (HBR 路由)，查找路由表确定目标端口 → 转发至 Type 3 Device ④ Device 内 HDM Decoder 将 DPA 映射到内存控制器 → 发起 DRAM Read (Row/Column 地址) 返回数据路径 (S2M Response)： ⑤ ⑥ ⑦ ⑧ ⑨ ⑤ DRAM 返回 64B Cacheline → 内存控制器封装为 S2M MemData Flit → 注入 Fabric ⑥-⑦ CXL Switch 反向路由 MemData Flit 回到源主机 (利用请求时建立的反向路径或路由表对称查找) ⑧ CXL Host Bridge 接收 Flit → CRC 校验 → 解封 → 返回 Cacheline 给 CPU 缓存层次 ⑨ CPU Core 的 LOAD 指令完成，数据填充 L1/L2/L3 Cache (如命中缓存一致性协议管理)</p>
+<h4 id="752-cxl-30-fam">7.5.2 多主机共享内存交互（CXL 3.0+ FAM）</h4>
+<p>在 CXL 3.0+ 的多主机共享内存场景中，关键区别在于<strong>缓存一致性维护</strong> ：</p>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Host A 读取 FAM 地址 (Shared)</td>
+<td>Host A 发出 CXL.mem MemRd 请求 → 交换机路由到 Type 3 设备 → 返回数据。Type 3 设备记录 Host A 持有一份 Shared 副本。</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Host B 写入 FAM 地址 (Modified)</td>
+<td>Host B 发出 CXL.mem MemWr 请求 → Type 3 设备检测到 Host A 持有 Shared 副本 → <strong>Type 3 设备通过 Back-Invalidation 机制向 Host A 发出 Snoop-Invalidate</strong> → Host A 失效其缓存行 → Type 3 确认后允许 Host B 写入。</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Host A 再次读取 FAM 地址</td>
+<td>Host A 发出 MemRd → 由于其缓存行已失效 → Type 3 返回最新数据（Host B 写入的值）→ 缓存一致性得以维护。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键设计差异 — CXL 2.0 池化 vs CXL 3.0 共享</strong> CXL 2.0 的 MLD 池化将设备容量划分为独立分区，分配给不同主机，<strong>不需要硬件缓存一致性维护</strong> （各分区互不干扰）。CXL 3.0 的 FAM 共享允许多主机访问同一物理内存区域，<strong>必须依赖硬件 Back-Invalidation 机制</strong> 来维护缓存一致性。这是两者最根本的架构差异。</p>
+<h3 id="76-memory-tiering">7.6 内存分级（Memory Tiering）与动态容量管理</h3>
+<h4 id="761-linux">7.6.1 Linux 内存分级框架</h4>
+<p>Linux 内核将 CXL 内存视为<strong>比本地 DRAM 慢的第二级内存</strong> ，通过内存分级框架实现透明的冷热数据迁移：</p>
+<ul>
+<li><strong>自动降级（Demotion）：</strong> 当本地 DRAM 面临内存压力（kswapd 触发回收），内核将冷页（访问频率低的页面）从 Tier 0（本地 DRAM）迁移到 Tier 1（CXL 内存）。通过 <code>pgdemote_kswapd</code> 和 <code>pgdemote_khugepaged</code> 计数器监控。</li>
+<li><strong>自动提升（Promotion）：</strong> NUMA 平衡器（NUMA Balancing）定期扫描内存页面访问模式，将热页（频繁访问的页面）从 CXL 内存提升回本地 DRAM。通过 <code>pgpromote_success</code> 计数器监控。</li>
+<li><strong>DAMON 辅助：</strong> DAMON（Data Access Monitor）和 DAMOS（DAMON-based Operation Schemes）可在内存压力发生前主动将冷页降级到 CXL。</li>
+<li><strong>监控命令：</strong><pre class="highlight"><code># 查看内存分级信息
+cat /sys/devices/virtual/memory_tiering/memory_tier*/nodelist
+
+# 实时监控分级活动
+watch -n 1 'grep -E "pgdemote|pgpromote" /proc/vmstat'
+
+# 手动设置内存策略
+numactl --membind=2 ./capacity_job   # 强制分配到 CXL 节点
+numactl --preferred=0 ./mixed_job    # 优先 DRAM，溢出到 CXL</code></pre>
+</li>
+</ul>
+<h4 id="762-dcd-cxl-30">7.6.2 DCD 动态容量设备（CXL 3.0+）</h4>
+<p>DCD（Dynamic Capacity Device）是 CXL 3.0 引入的一项革命性能力，允许<strong>主机在运行时动态增减内存容量，无需重启</strong> ：</p>
+<ul>
+<li><strong>Extent 概念：</strong> 内存以 Extent（容量块）为单位进行分配和释放。每个 Extent 有独立的设备地址范围和长度。</li>
+<li><strong>交互流程中的五个角色：</strong> Orchestrator（编排器）→ Fabric Manager（结构管理器）→ MLD 设备（逻辑设备）→ Host Kernel（内核 DCD 驱动）→ Host Userspace（用户空间工具）。</li>
+<li><strong>添加流程：</strong> Orchestrator → FM → MLD 发送 Add-DC-Request（分配 Extent X）→ MLD 向 Host 发送 Extent 事件 → Host 内核接收并创建新 DAX 区域/内存块 → 上线为可用内存。</li>
+<li><strong>释放流程：</strong> Orchestrator → FM → MLD 发送 Release-DC-Request（释放 Extent X）→ Host 内核将对应内存块下线 → 移除 DAX 区域 → 归还 Extent 到共享池。</li>
+<li><strong>实时演示验证：</strong> 2025 年底，Montage Technology 使用其 CXL 3.2 MXC Gen3 控制器完成了双主机 DCD 功能演示——8GB Extent 在两台主机间动态分配和释放，整个过程无需任何系统重启。</li>
+</ul>
+<p><strong>DCD 的重要意义</strong> DCD 将 CXL 内存池从"静态配置"升级为"弹性资源"。AI 训练集群可以在不同训练阶段按需分配不同容量的内存（如数据加载阶段需要大内存、训练阶段需要少内存），内存利用率接近 100%，相比传统静态分配可节省 30-50% 的内存成本。</p>
+<h3 id="77-cxl">7.7 CXL 软件生态系统概述</h3>
+<table>
+<thead>
+<tr>
+<th>工具/项目</th>
+<th>维护方</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ndctl</strong></td>
+<td>Intel / 社区</td>
+<td>CXL CLI 管理工具。支持内存设备枚举（cxl list）、区域创建/删除、解码器编程。集成 DAX 设备管理。</td>
+</tr>
+<tr>
+<td><strong>SMDK</strong></td>
+<td>Samsung</td>
+<td>可扩展内存开发套件��Scalable Memory Development Kit）。提供 API 让应用感知 CXL 内存，优化异构内存环境下的数据放置。支持 CMM-D 设备的兼容性库。</td>
+</tr>
+<tr>
+<td><strong>HMSDK</strong></td>
+<td>SK hynix</td>
+<td>异构内存软件开发套件。主要功能已合并到 Linux 内��主线，支持 CXL 内存的自动分层和性能优化。</td>
+</tr>
+<tr>
+<td><strong>Memory Machine X</strong></td>
+<td>MemVerge</td>
+<td>企业级大内存软件。将 DRAM 和 CXL 内存组合为集群内存池，GISMO 技术支持 AI 推理卸载（KV Cache）。</td>
+</tr>
+<tr>
+<td><strong>SCMC</strong></td>
+<td>Samsung</td>
+<td>Samsung Cognos Management Console。基于 REST API 和 Redfish 标准的 CMM-B 内存池管理控制台，提供可视化拓扑、资源统计和动态分配功能。</td>
+</tr>
+<tr>
+<td><strong>TPP</strong></td>
+<td>Meta / 社区</td>
+<td>透明页面放置（Transparent Page Placement）。Meta 开源的 CXL 内存分层方案（已合并到 Linux v5.18+），基于轻量级热/冷页识别实现透明的页面放置，性能远超传统 NUMA Balancing。</td>
+</tr>
+<tr>
+<td><strong>QEMU CXL 模拟</strong></td>
+<td>社区</td>
+<td>QEMU 虚拟机支持 CXL Type 3 设备模拟，用于开发测试。支持 CXL Fixed Memory Window、多区域和简单的池化拓扑。</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cxl_6">第五章 · CXL 拓扑架构演进</h2>
+<h3 id="51-cxl-11-direct-attach">5.1 CXL 1.1 — 直连拓扑（Direct Attach）</h3>
+<p>CXL 1.1 仅支持<strong>单主机对设备的直连拓扑</strong> 。主机 CPU 的 CXL 根端口直接连接 Type 1/2/3 设备，类似于 PCIe 设备直连 CPU。没有交换机，没有池化能力。每条 CXL 链路专属于一对主机-设备。</p>
+<p>CXL 1.1 直连拓扑 Host CPU CXL Root Port Type 1 SmartNIC Type 2 GPU/FPGA Type 3 内存扩展器 Type 3 内存扩展器</p>
+<h3 id="52-cxl-20">5.2 CXL 2.0 — 交换与池化拓扑</h3>
+<p>CXL 2.0 引入<strong>单级 CXL 交换机</strong> ，实现内存池化。交换机位于主机和设备之间，通过 Fabric Manager（FM）动态管理设备与主机的连接。多个主机可以共享一个内存池，但每个内存切片在同一时间仅分配给一台主机。</p>
+<p>CXL 2.0 交换与内存池化拓扑 Host CPU A Server 1 Host CPU B Server 2 CXL Switch Fabric Manager Mem Pool 1 256 GB DDR5 Mem Pool 2 256 GB DDR5 Mem Pool 3 256 GB DDR5 Mem Pool 4 256 GB DDR5 FM 动态分配：Host A 使用 Pool 1+2，Host B 使用 Pool 3+4 — 运行时可重配</p>
+<h3 id="53-cxl-30-fabric">5.3 CXL 3.0+ — 多级交换与 Fabric</h3>
+<p>CXL 3.0 引入<strong>多级交换拓扑</strong> ，交换机之间可级联互联，构建大规模 CXL Fabric。支持数百至数千节点的互联，实现跨机架的内存共享和对等通信。CXL 3.1 进一步引入 PBR 路由，支持胖树等非树形拓扑和链路聚合。</p>
+<p>CXL 3.0+ 多级交换 Fabric 拓扑 Spine Switch 1 Spine Switch 2 级联链路 Leaf Switch A Leaf Switch B Leaf Switch C Host 1 Host 2 Host 3 GPU/加速器 Host 4 GPU/加速器 Fabric-Attached Memory (FAM) — 多主机共享</p>
+<h3 id="78">7.8 全局共享池统一编址管理机制 — 深度解析</h3>
+<p>前面的章节描述了 CXL 内存池统一编址的<strong>软件架构概览</strong> 。本节深入到<strong>硬件寄存器级</strong> ，完整解析从 Host PA 到 Device PA 的逐层地址翻译、交织计算、FM 绑定以及动态容量分配的在位机制。</p>
+<h4 id="781-hdm-decoder">7.8.1 全局编址的硬件基石：三层 HDM Decoder 架构</h4>
+<p>CXL 内存池之所以能呈现为"全局统一地址空间"，其核心硬件单元是<strong>HDM Decoder</strong> （Host-managed Device Memory Decoder），分布于 Fabric 的三个关键位置：</p>
+<table>
+<thead>
+<tr>
+<th>Decoder 位置</th>
+<th>职责</th>
+<th>配置来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>**Host Bridge / Root Port</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>HDM Decoder**</td>
+<td>将 Host PA 范围映射到下游 RP 端口。</td>
+<td></td>
+</tr>
+<tr>
+<td>决定"从哪个 Root Port 出去"。</td>
+<td>BIOS 通过 CEDT/CFMWS 预配置，</td>
+<td></td>
+</tr>
+<tr>
+<td>或 OS 运行时通过 cxl-cli 编程。</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>**Switch USP</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>HDM Decoder**</td>
+<td>将上游进入的 Host PA 范围映射到对应的下游 DSP 端口。</td>
+<td></td>
+</tr>
+<tr>
+<td>决定"从 Switch 的哪个下游口出去"。</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>支持最多 32 个 Decoder。</td>
+<td>FM 通过 MCTP/CCI 配置。</td>
+<td></td>
+</tr>
+<tr>
+<td>FM 维护路由表的一致性。</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>**Endpoint/Device</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>DPA Decoder**</td>
+<td><strong>最终翻译：HPA → DPA。</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>将经过多层路由后的 Host PA 映射到设备内部物理地址（DRAM Rank/Bank/Row/Column）。</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>设备最多 10 个 Decoder。</td>
+<td>FM 或 OS 运行时编程。</td>
+<td></td>
+</tr>
+<tr>
+<td>DPA 范围提交必须<strong>按地址递增顺序</strong> 。</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>三层 HDM Decoder — HPA 到 DPA 的逐级翻译 Host Physical Address Space (HPA) — 全局统一地址空间 0x0000000000 ··· Local DRAM ··· | 0x880_0000_0000 ··· CXL HDM Window ··· | 0x1000_0000_0000 ··· GIM/FAM ··· Level 1: Host Bridge / Root Port HDM Decoder Decoder[m]: Base=0x880_0000_0000, Size=1TB, IW=4, IG=256B, Targets=[RP0,RP1,RP2,RP3] Level 2: Switch USP HDM Decoder (可选，仅 CXL 2.0+ 有交换机时) Decoder[k]: Base=0x880_2000_0000, Size=256GB, IW=4, IG=1KB, Targets=[DSP0,DSP1,DSP2,DSP3] Level 3: Endpoint/Device DPA Decoder（最终翻译） HPA_DEVICE = HPA &gt;&gt; (lg(IW × IG)) × IG + (HPA &amp; (IG-1)) → DPA Decoder[0]: DPA_Base=0x0, DPA_Size=64GB, HPA映射到物理Rank/Bank/Row/Column 物理 DRAM 颗粒 (DDR5 Rank × N) Rank[0] Bank[0] Row[0xABCD] Column[0x40] → 最终返回 64B Cache Line 路由决策 Switch 路由 HPA→DPA</p>
+<h4 id="782-hpadpa">7.8.2 HPA→DPA 地址翻译数学公式</h4>
+<p><strong>Endpoint 端 HPA → DPA 翻译算法</strong> 假设一个 interleave set 有 <code>IW</code> 个设备、交织粒度为 <code>IG</code> 字节、本设备在交织集中的位置为 <code>ISP</code>（Interleave Set Position）：</p>
+<pre class="highlight"><code>Step 1: 检查 HPA 是否在本 Decoder 的 [Base, Base+Size) 范围内
+Step 2: 计算交织偏移:
+  HPA_OFFSET = HPA - Base                          // 窗口内偏移
+  Chunk_Index = HPA_OFFSET &gt;&gt; lg(IG)               // 所属 IG 块编号
+  Device_Chunk = Chunk_Index / IW                   // 本设备的 IG 块序号
+  Chunk_Offset = HPA_OFFSET &amp; (IG - 1)             // IG 块内偏移
+  HPA_DEVICE = (Device_Chunk &lt;&lt; lg(IG)) | Chunk_Offset  // 去交织后的地址
+Step 3: 转换为设备内部 DPA:
+  DPA = HPA_DEVICE + Decoder_DPA_Base</code></pre>
+<p><strong>示例：</strong> IW=4, IG=256B, ISP=2, Base=0x880_0000_0000<br />
+HPA = 0x880_0000_0200 (偏移 0x200 = 512 字节)<br />
+→ Chunk_Index = 512 &gt;&gt; 8 = 2<br />
+→ Device_Chunk = 2 / 4 = 0<br />
+→ Chunk_Offset = 512 &amp; 255 = 0<br />
+→ HPA_DEVICE = (0 × 256) + 0 = 0x0<br />
+→ 如果 IW×IG = 1024B，等效为 HPA_DEVICE = (512 / 1024) × 256 + (512 % 256) = 0<br />
+→ <strong>即：HPA=0x880_0000_0200 在 ISP=2 设备上命中 DPA=0x0</strong></p>
+<h4 id="783-cross-link-first">7.8.3 多级交织（Cross-Link-First）模型</h4>
+<p>CXL 支持<strong>跨多级</strong> 进行交织，在 Linux 内核 CXL 驱动中称为 <strong>Cross-Link-First Interleave</strong> 。以 "4 Host Bridge × 4 Endpoint = 16 路交织" 为例：</p>
+<pre class="highlight"><code>配置:
+  Root Decoder:  IW=4, IG=256B,  Targets=[HB0, HB1, HB2, HB3]
+  HB Decoder:    IW=4, IG=1024B, Targets=[EP0, EP1, EP2, EP3]
+  EP Decoder:    IW=16, IG=256B (每个 EP 感知全局 16 路交织)
+
+地址路由过程 (以 HPA 为例):
+  Root 层:  target_HB = (HPA &gt;&gt; 8) % 4         → 选 Host Bridge
+  HB 层:    target_EP = (HPA &gt;&gt; 10) % 4        → 选 Endpoint
+  EP 层:    根据 IW=16, IG=256B 完成最终 HPA→DPA 翻译
+
+交织粒度倍增规则：每向下游一级，IG 乘以该级的 IW。
+  即：下游 IG = 上游 IG × 上游 IW
+  本例：IG(HB) = 256B × 4 = 1024B ✓</code></pre>
+<p>Cross-Link-First 16 路交织示例 (4×4) Root Decoder: IW=4, IG=256B, 1TB Window target = (HPA &gt;&gt; 8) % 4 → HB0/HB1/HB2/HB3 每个 Host Bridge Decoder: IW=4, IG=1024B (256B×4) HB0 (ISP=0)Chunks: 0,4,8,12 HB1 (ISP=1)Chunks: 1,5,9,13 HB2 (ISP=2)Chunks: 2,6,10,14 HB3 (ISP=3)Chunks: 3,7,11,15 每个 HB 连接 4 个 Endpoint (共 16 个)，EP Decoder IW=16, IG=256B EP 0 EP 4 EP 1 EP 5 EP 10 EP 14 EP 3 EP 7 最终效果：16 个 64GB 设备 = 1TB 统一地址空间，聚合带宽 16×63 GB/s ≈ 1 TB/s (CXL 1.1/2.0) OS 视角：单个 NUMA Node 1，512 GB System RAM，透明交织</p>
+<h4 id="784-cfmws-bios">7.8.4 CFMWS — BIOS 定义的全局地址窗口</h4>
+<p><strong>CFMWS (CXL Fixed Memory Window Structure)</strong> 是 ACPI CEDT 表中的核心条目，由 BIOS/UEFI 在启动时填充。它<strong>在 Host PA 空间中为 CXL 内存"预留"了地址窗口</strong> ，OS 根据这些条目创建 CXL Decoder 和 Region。</p>
+<h5 id="cfmws">CFMWS 条目结构</h5>
+<pre class="highlight"><code>struct CFMWS_Entry {
+    uint8_t  subtable_type;       // 0x01 = CFMWS
+    uint16_t length;              // 条目长度
+    uint64_t window_base_hpa;     // Host PA 基地址 (必须 256MB 对齐)
+    uint64_t window_size;         // 窗口大小 (必须为 256MB 的整数倍)
+    uint8_t  interleave_members;  // 交织成员数 (2^n, 0 = 1 路, 即无交织)
+    uint8_t  interleave_arith;    // 交织算法 (0 = 模运算)
+    uint16_t interleave_granularity;
+    uint16_t restrictions;        // Bit[1]=Type3 Volatile, Bit[2]=Type3 PMem, 等
+    uint16_t qtg_id;              // QoS Telemetry Group ID
+    // Target Host Bridge _UID 列表
+    uint16_t target_host_bridge_uids[];  // 最多 8 个 Host Bridge
+};</code></pre>
+<h5 id="cfmws_1">CFMWS 多窗口分配示例</h5>
+<p>一台配备 4 个 CXL Host Bridge 的服务器，BIOS 可能创建如下 CFMWS：</p>
+<pre class="highlight"><code>CFMWS 0 (非交织 — 给 Volatile RAM，1 个设备直通):
+  Base_HPA: 0x880_0000_0000, Size: 256 GB
+  IW: 1 (无交织), Restrictions: Volatile (Bit[1])
+  Targets: [HB0]
+
+CFMWS 1 (非交织 — 给 Persistent Memory，1 个设备直通):
+  Base_HPA: 0x8C0_0000_0000, Size: 256 GB
+  IW: 1, Restrictions: Persistent (Bit[2])
+  Targets: [HB0]
+
+CFMWS 2 (4 路交织 — 4 个 Host Bridge 交织):
+  Base_HPA: 0x900_0000_0000, Size: 1 TB
+  IW: 4, IG: 256B, Restrictions: Type3
+  Targets: [HB0, HB1, HB2, HB3]
+
+这三个 CFMWS 使 OS 有灵活选择：
+  · 可以将同一个 256GB 设备作为 Volatile RAM 或 PMem 使用（CFMWS 0 或 1）
+  · 可以将 4 个 256GB 设备交织为 1TB 统一地址空间（CFMWS 2）
+  · OS 选择使用哪个 CFMWS 通过 cxl create-region 工具实现</code></pre>
+<h5 id="hdm-decoder">HDM Decoder 编程规则</h5>
+<p><strong>编程约束 (Commit Flow)</strong></p>
+<ol>
+<li><strong>地址递增：</strong> Decoder[m+1].Base &gt;= Decoder[m].Base + Decoder[m].Size。不允许地址重叠。</li>
+<li><strong>无回绕：</strong> Decoder[m].Base + Decoder[m].Size 不可超过 64 位地址空间。</li>
+<li><strong>3/6/12 路规则 (CXL 3.0+)：</strong> 如果 IW &gt;= 8 且为 3 的倍数，Size 必须是 3 的倍数。</li>
+<li><strong>目标唯一性：</strong> Decoder[m] 中 IW 个 Target Port ID 必须互不相同。</li>
+<li><strong>前序提交：</strong> Commit Decoder[m] 之前，Decoder[m-1] 必须已 Commit 且通过检查。</li>
+<li><strong>Endpoint 顺序提交：</strong> DPA 空间必须从地址 0 开始按序提交（Dec[0] at DPA=0, Dec[1] at DPA=Dec[0].Size, ...）。</li>
+</ol>
+<h4 id="785-vcs-vh-fm">7.8.5 VCS-VH-FM 绑定流程 — 从物理设备到虚拟层次</h4>
+<p>在 CXL 2.0+ 的交换架构中，<strong>Fabric Manager (FM)</strong> 是全局编址的"总调度师"。它将物理设备资源通过 <strong>VCS (Virtual CXL Switch)</strong> 和 <strong>VH (Virtual Hierarchy)</strong> 抽象分配给各主机。</p>
+<h5 id="vcs">VCS 虚拟交换架构</h5>
+<pre class="highlight"><code>物理视图:
+  ┌───────────────────────────────────────────────────┐
+  │             CXL 物理交换机 (Physical Switch)        │
+  │  ┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐              │
+  │  │USP 0│  │USP 1│  │DSP 0│  │DSP 1│  ...          │
+  │  └──┬──┘  └──┬──┘  └──┬──┘  └──┬──┘              │
+  └─────┼────────┼─────────┼────────┼──────────────────┘
+
+FM 虚拟化后 (每台主机看到的逻辑视图):
+  Host A 视角 (VH-A):               Host B 视角 (VH-B):
+  ┌─────────────────────┐          ┌─────────────────────┐
+  │ Virtual CXL Switch A │          │ Virtual CXL Switch B │
+  │  ┌─────┐  ┌─────┐   │          │  ┌─────┐  ┌─────┐   │
+  │  │VPPB │  │VPPB │   │          │  │VPPB │  │VPPB │   │
+  │  │  0  │  │  1  │   │          │  │  0  │  │  1  │   │
+  │  └──┬──┘  └──┬──┘   │          │  └──┬──┘  └──┬──┘   │
+  └─────┼────────┼───────┘          └─────┼────────┼───────┘
+        ↓        ↓                        ↓        ↓
+      LD-0     LD-1                     LD-2     LD-3
+    (MLD Device, 128GB each)          (MLD Device, 128GB each)
+
+VPPB = Virtual PCIe-to-PCIe Bridge
+每个 VPPB 对应一个 LD 绑定。
+FM 确保不同 VH 的 VPPB 指向不同的 LD（隔离性）。</code></pre>
+<h5 id="fm-10">FM 完整绑定流程 — 10 步序列</h5>
+<p>1</p>
+<p><strong>FM 发现拓扑</strong><br />
+通过 MCTP 带外通道向所有交换机和设备发送 <code>Identify</code> 命令。收集每个组件的端口连接关系、设备类型、内存容量。</p>
+<p>2</p>
+<p><strong>FM 创建 MLD/分区</strong><br />
+对 MLD 设备发送 <code>Set LD Allocations</code> 命令，将物理内存划分为 N 个 LD。例如：512GB 设备 → 4 个 128GB LD (LD-ID 0~3)。</p>
+<p>3</p>
+<p><strong>FM 建立 VCS 实例</strong><br />
+为每台主机创建独立的 VCS 实例。每个 VCS 包含若干 VPPB 节点，形成虚拟树结构。</p>
+<p>4</p>
+<p><strong>FM 绑定 LD 到 VPPB (虚拟到物理映射)</strong><br />
+发送 <code>Bind LD</code> 命令：<code>{VPPB_ID, LD-ID, Device_Handle}</code>。将 VPPB 叶节点与具体的 LD 绑定。一旦绑定，该 LD 从"可用池"移到"已分配集"。</p>
+<p>5</p>
+<p><strong>FM 配置 Switch HDM Decoder（路由表）</strong><br />
+为交换机 USP 和 DSP 的 HDM Decoder 写入路由表。例如：<code>{HPA_Range=0x900_0000_0000-0x900_3FFF_FFFF, Target_Port=DSP2, LD-ID=5}</code>。</p>
+<p>6</p>
+<p><strong>FM 配置 Device DPA Decoder</strong><br />
+通过 CCI 命令配置设备端的 DPA Decoder：<code>{DPA_Base, DPA_Size, HPA_Window_Info, Interleave_Params}</code>。</p>
+<p>7</p>
+<p><strong>FM 解锁绑定端口</strong><br />
+发送 <code>Unlock VPPB</code> 命令，使主机可见绑定后的设备。此时主机在 PCIe 枚举时会"发现"新的 CXL 设备。</p>
+<p>8</p>
+<p><strong>主机 PCIe 枚举 + CXL 探测</strong><br />
+主机 OS 启动或热插拔检测到新设备。PCIe 子系统枚举，CXL 驱动接管，解析 CEDT/CFMWS，创建 Decoder 和 Region。</p>
+<p>9</p>
+<p><strong>OS 创建内存 Region + 上线</strong><br />
+通过 cxl-cli 创建 Region、启用 kmem/daxdev 驱动，内存上线为 NUMA 节点。</p>
+<p>10</p>
+<p><strong>FM 监控与事件处理</strong><br />
+FM 持续监听设备热插拔、错误、容量变更事件。当 Orchestrator 发出重新分配请求时，FM 执行解除绑定→重新绑定流程。</p>
+<h4 id="786-dcd">7.8.6 DCD 动态容量分配 — 无停机弹性伸缩</h4>
+<p><strong>DCD (Dynamic Capacity Device)</strong> 是 CXL 3.1 引入的革命性特性，允许内存容量在主机之间<strong>秒级</strong> 动态迁移，无需重启或重置。</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Extent</strong></td>
+<td>DCD 分配的最小单元。典型大小为 8 GB。每个设备可支持数百个 Extent。</td>
+</tr>
+<tr>
+<td><strong>Region</strong></td>
+<td>若干连续 Extent 的集合。Host 看到的是一个连续的 DAX Region。</td>
+</tr>
+<tr>
+<td><strong>Tag</strong></td>
+<td>每个 Extent 带一个 Tag（0-99），Host 通过 Tag 识别和释放特定 Extent。</td>
+</tr>
+<tr>
+<td><strong>待处理上限</strong></td>
+<td>最多 100 个待处理 Extent（防止无限刷新）。超过上限时 FM 必须等待确认。</td>
+</tr>
+</tbody>
+</table>
+<pre class="highlight"><code>DCD 容量迁移典型时序 (以 Montage Technology 公开演示为参考):
+
+Step 1: Host 1 初始配置 = 64 GB DDR (基线), Host 0 = 32 GB DDR
+
+Step 2: FM → Device 1: Add-DC-Request {Region=2, Extent_Count=1}
+  Device 1 → FM: Add-DC-Response {Accepted}
+  FM → Host 1: 通知添加 8 GB DC Extent
+  Host 1 OS: 热添加 8 GB → 总内存 = 72 GB
+
+Step 3: FM → Device 1: Add-DC-Request {Region=2, Extent_Count=1}
+  → Host 1: 80 GB
+
+Step 4: FM → Host 1: 请求释放 Extent Tag=1
+  Host 1 OS: 页面迁移 (migrate) Extent 上的数据 → Extent 置空
+  FM → Device 1: Release-DC-Request {Extent_Tag=1}
+  Device 1 → FM: Release-DC-Response
+
+Step 5: FM 将释放的 Extent 分配给 Host 0
+  FM → Device 1: Add-DC-Request {Region=0, Extent_Count=1}
+  → Host 0: 40 GB
+
+关键机制:
+  · Extent 每次分配/释放前后，Host 必须确保数据一致性
+  · Host 通过 CXL.io mailbox 发送 Add/Release DC 命令
+  · 设备侧 DPA Decoder 动态更新：添加 Extent = 扩展 DPA 范围，释放 = 收缩
+  · 原子性保证：同一 Tag Group 内的 Extent 分配/释放是事务性的</code></pre>
+<h2 id="cxl_7">第六章 · CXL 核心应用场景</h2>
+<h3 id="61-memory-expansion">6.1 内存扩展（Memory Expansion）</h3>
+<p><strong>适用版本：</strong> CXL 1.1+（Type 3 设备）</p>
+<p>最基础也是最广泛部署的应用。通过 CXL Type 3 内存扩展器为服务器增加 TB 级内存容量和额外带宽。CXL 内存以字节寻址、缓存一致性的方式被 CPU 通过标准加载/存储指令访问，OS 将其视为无 CPU 的 NUMA 节点。</p>
+<ul>
+<li>延迟特性：相比本地 DRAM 增加约 70-250ns，但仍比 NVMe SSD 快 20-50 倍</li>
+<li>典型形态：E3.S 模块或 PCIe AIC 板卡</li>
+<li>应用：内存数据库、AI 推理（KV Cache）、实时分析</li>
+</ul>
+<h3 id="62-memory-pooling">6.2 内存池化（Memory Pooling）</h3>
+<p><strong>适用版本：</strong> CXL 2.0+（需 CXL 交换机 + MLD）</p>
+<p>通过 CXL 交换机将多个内存设备组成池，动态分配给不同主机。当某台服务器内存不足时，可从池中获取；不需要时归还。大幅提高内存利用率，减少搁浅内存，降低 TCO。</p>
+<ul>
+<li>核心组件：CXL 交换机、Fabric Manager、MLD 设备</li>
+<li>每个内存切片在同一时间仅分配给一台主机</li>
+<li>应用：云基础设施弹性内存、虚拟化内存超分</li>
+</ul>
+<h3 id="63-memory-sharing">6.3 内存共享（Memory Sharing）</h3>
+<p><strong>适用版本：</strong> CXL 3.0+（需硬件增强一致性）</p>
+<p>多台主机可同时一致性访问同一内存区域，在硬件层面实现真正的多机共享内存。突破 CXL 2.0 池化模式下"一切片一主机"的限制。CXL 3.1 进一步通过 GIM 支持主机间本地内存直接共享。</p>
+<ul>
+<li>关键技术：硬件反向失效、FAM、GIM</li>
+<li>应用：MPI 并行计算、图数据库加速、分布式共享内存</li>
+</ul>
+<h3 id="64-composable-infrastructure">6.4 可组合基础设施（Composable Infrastructure）</h3>
+<p><strong>适用版本：</strong> CXL 2.0+（完整 Fabric 需 CXL 3.0+）</p>
+<p>将 CPU、内存、GPU、FPGA 等资源解耦为独立池，按工作负载需求动态组合虚拟服务器。使用完毕后解构，资源归还池中供复用。CXL 是实现真正软件定义、完全可组合数据中心的关键使能技术。</p>
+<h3 id="65-ai">6.5 AI 工作负载加速</h3>
+<p>CXL 在 AI 领域的关键应用：</p>
+<ul>
+<li><strong>KV Cache 卸载：</strong> 将 AI 推理中的 KV Cache 从 GPU 显存卸载到 CXL 内存池，突破"内存墙"，性能较 SSD 提升 5 倍以上</li>
+<li><strong>Prefill/Decode 分离：</strong> Prefill GPU 和 Decode GPU 通过 CXL 内存池同步交换 KV Cache</li>
+<li><strong>GPU 内存扩展：</strong> 通过 CXL 为 GPU 扩展外部内存，形成统一虚拟内存空间</li>
+<li><strong>大规模推理：</strong> 2025 年已可实现 100 TiB 级别的 CXL 内存池部署</li>
+</ul>
+<h2 id="_2">第八章 · 各版本内存读写端到端流程详解</h2>
+<p>本章通过<strong>四个实际案例</strong> ，完整展示从 CPU 发出 Load/Store 指令到数据返回的<strong>端到端处理流程</strong> ，包括<strong>事务层、链路层、网络/路由层、物理层</strong> 每一级的报文格式和处理动作。每个案例均标注适用的 CXL 版本和核心特性。</p>
+<h3 id="81-cxl-11-type-3-68b-flit-nrz-32gts">8.1 案例一：CXL 1.1 直连 Type 3 内存读取（68B Flit, NRZ, 32GT/s）</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>场景</strong></td>
+<td>Host CPU 从直连的 CXL Type 3 内存扩展器（256GB DDR5）读取一个 64 字节 Cache Line。</td>
+</tr>
+<tr>
+<td><strong>拓扑</strong></td>
+<td>Host CPU → CXL Root Port (Flex Bus x16) → Type 3 Device (HDM-H 模式)</td>
+</tr>
+<tr>
+<td><strong>目标地址</strong></td>
+<td>HPA = <code>0x880_0000_1000</code>（已在 CFMWS 定义的 HDM 窗口内）</td>
+</tr>
+<tr>
+<td><strong>协议</strong></td>
+<td>CXL.mem only（Type 3 无 CXL.cache）。M2S MemRd + S2M MemData。</td>
+</tr>
+</tbody>
+</table>
+<h4 id="12">端到端完整流程（12 步）</h4>
+<p>1</p>
+<p><strong>CPU 核发出 Load 指令</strong><br />
+<code>MOV RAX, [0x880_0000_1000]</code> → MMU 将 VA 转换为 HPA <code>0x880_0000_1000</code>。LLC Miss。请求进入 CPU 的 Home Agent。</p>
+<p>2</p>
+<p><strong>事务层 — CXL.mem: M2S MemRd 请求构造</strong><br />
+Home Agent 识别 HPA 在 HDM Decoder 范围内 → 创建 M2S MemRd 事务包：<br />
+<strong>MemOpcode</strong>| <code>0001b</code> (MemRd)<br />
+---|---<br />
+<strong>Address[51:6]</strong>| <code>0x880_0000_1000 &gt;&gt; 6</code> = <code>0x220_0000_0040</code><br />
+<strong>Tag[15:0]</strong>| <code>0x0042</code>（用于匹配响应）<br />
+<strong>MetaField[1:0]</strong>| <code>00b</code>（HDM-H 无元数据更新）<br />
+<strong>SnpType</strong>| <code>000b</code>（HDM-H 不需要 Snoop）<br />
+→ 从 M2S Req Credit 池消耗 1 个信用。</p>
+<p>3</p>
+<p><strong>事务层 — MemRd 事务进入发送队列</strong><br />
+事务层根据 Tag 分配事务表条目（Transaction Table Entry, TTE）。TTE 记录 Tag=0x0042 等待 S2M DRS 响应。若信用不足则阻塞等待。</p>
+<p>4</p>
+<p><strong>ARB/MUX — 仲裁通过</strong><br />
+ARB/MUX 从 CXL.io / CXL.cache / CXL.mem 三个协议队列中按加权轮询选择。当前 CXL.mem 获得 85% 带宽权重 → MemRd 事务获得 Flit 时隙。</p>
+<p>5</p>
+<p><strong>链路层 — Flit 打包（68B Flit 格式）</strong></p>
+<pre class="highlight"><code>Flit Header (528-bit = 66 Byte):
+  Byte 0:  CTL_FMT[7:0] = 0x08  (001b = CXL 2.0+ 模式, H3 编码)
+  Byte 1:  H0[7:0]    = Slot 0 类型: H3 (M2S Req Header, 4B)
+  Byte 1:  H1[7:0]    = Slot 1 类型: G5 (S2M NDR) — 本 Flit 中用不到，填充 G5
+  Slot 0  (Byte 2-17):  M2S MemRd Header (16B)
+    - Byte 2-5:  4B Header (MemOpcode, Address[51:12], MetaField, SnpType, Tag)
+    - Byte 6-17: Address[11:0]扩展 + Reserved 填充至 16B
+  Slot 1  (Byte 18-33): 未使用 (Empty Slot, G5 编码)
+  Slot 2  (Byte 34-49): 未使用
+  Slot 3  (Byte 50-65): 未使用
+  CRC     (Byte 66-67): CRC-16 覆盖前 66 字节</code></pre>
+<p><strong>打包规则检查：</strong> ✓ 单 M2S Req ≤ 2 条、✓ 紧密打包、✓ 无 Rollover（64B 数据部分未使用）、✓ 无 Control/Data 交错。</p>
+<p>6</p>
+<p><strong>链路层 — 发送并写入 LLRB</strong><br />
+Flit 被赋予当前发送序列号（例如 <code>ESeq=0x0103</code>）→ 完整 Flit 写入 <strong>LLRB (Link Layer Retry Buffer)</strong> （缓存最多 N 个已发送但未确认的 Flit）。→ 通过 ARB/MUX 交给逻辑 PHY。</p>
+<p>7</p>
+<p><strong>物理层 — 扰码、8b/10b 编码、串行化</strong><br />
+逻辑 PHY 对 528-bit Flit 进行扰码（LFSR）→ 分段为 16 条 Lane → 每条 Lane 通过 SERDES 进行 NRZ 编码（32 GT/s）→ 差分信号经 PCB 走线和连接器传输 ~5 ns。</p>
+<p>8</p>
+<p><strong>设备端物理层 — 解串 → 解扰 → Flit 重组</strong><br />
+设备 SERDES 接收差分信号 → CDR (Clock Data Recovery) 恢复时钟 → NRZ 解码 → Lane Deskew（去偏斜）→ 扰码解除 → 528-bit Flit 重组完成 (~7 ns)。CRC 校验通过 ✓。</p>
+<p>9</p>
+<p><strong>设备端链路层 — ACK 返回 + Flit 解包</strong><br />
+接收方每 8 个正确 Flit 后将 Ak bit 置位，通过 <strong>LLCRD Flit</strong> 返回 ACK 和更新的 Credit。→ 当前 Flit 解包：Slot 0 = M2S MemRd Header → 提交给设备事务层。</p>
+<p>10</p>
+<p><strong>设备端事务层 — DPA Decoder 翻译 + DRAM 访问</strong><br />
+DPA Decoder: HPA <code>0x880_0000_1000</code> → DPA <code>0x0_0000_1000</code>（假设无交织，直映射）。→ 内存控制器发出 DDR5 ACTIVATE + READ 命令 → ~45 ns 后从 DRAM 阵列读取 64B Cache Line 数据。</p>
+<p>11</p>
+<p><strong>响应封装 — S2M DRS (MemData)</strong><br />
+设备事务层构造 S2M MemData 响应：<br />
+<strong>Header (H5, Slot 0)</strong>|  4B: Tag=0x0042, 无错误 (Cmp=0)<br />
+---|---<br />
+<strong>Data (Slot 1-4)</strong>|  4 × 16B = 64B Cache Line 数据<br />
+→ 需要 2 个 Flit：Flit A (H5 Header + 16B Data 开始 Rollover) → Flit B (All-Data, 剩余 48B)。链路层打包、LLRB、物理层传输均与请求方向相同。</p>
+<p>12</p>
+<p><strong>Host 端接收 + 事务匹配</strong><br />
+Host 链路层接收 S2M DRS Flit → ACK → 解包 → 事务层根据 Tag=0x0042 查找 TTE → 匹配原始 MemRd → 释放 TTE 条目 → 数据交付给 CPU 的 Load 缓冲区 → <strong>Load 指令完成。总延迟 ≈ 120-150 ns（含 DRAM 访问）。</strong></p>
+<h4 id="811">8.1.1 各层报文处理总结</h4>
+<table>
+<thead>
+<tr>
+<th>方向</th>
+<th>事务层</th>
+<th>链路层</th>
+<th>物理层</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>**M2S 请求</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Host→Dev)**</td>
+<td>M2S MemRd Header (4B)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>MemOpcode, Address[51:6], Tag, MetaField, SnpType</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>消耗 1 个 M2S Req Credit</td>
+<td>68B Flit: CTL_FMT=0x08, Slot0=H3(M2S Hdr)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Slots 1-3 = Empty (G5)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>CRC-16 尾部</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LLRB 缓存 (ESeq=0x0103)</td>
+<td>NRZ @ 32 GT/s ×16 Lanes</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>528-bit Flit 串行化</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>扰码 + 发送 ~5ns</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>往返延迟 ~12-15ns (PHY)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>**S2M 响应</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Dev→Host)**</td>
+<td>S2M DRS MemData Header (H5, 4B)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>+ 64B Data (4 个 16B 时隙)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Tag=0x0042 匹配请求</td>
+<td>2 个 68B Flit (Rollover)</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Flit A: H5 + 16B Data</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Flit B: All-Data (48B)</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LLCRD ACK 嵌入控制 Flit</td>
+<td>物理层同上（对称）</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>案例一关键要点</strong></p>
+<ul>
+<li>CXL 1.1 的最小延迟开销来自 Flit 成帧/解帧（~5ns）+ SERDES（~12ns）= 约 17-20ns 单向</li>
+<li>总端到端延迟 ≈ 120-150ns，约 2× 本地 DDR5 延迟（~80ns），主要增量在协议栈 overhead</li>
+<li>HDM-H 模式不涉及任何 CXL.cache 交互，事务层极其简化（仅 M2S MemRd + S2M DRS）</li>
+</ul>
+<h3 id="82-cxl-20-mld-68b-flit-ld-id">8.2 案例二：CXL 2.0 穿越交换机的 MLD 内存写入（68B Flit, LD-ID 路由）</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>场景</strong></td>
+<td>Host A 通过 CXL 2.0 交换机向 MLD 设备的 LD-3（256GB 分区）写入一个 64B Cache Line。</td>
+</tr>
+<tr>
+<td><strong>拓扑</strong></td>
+<td>Host A → CXL Switch (单级) → MLD Type 3 Device (4 LD, each 256GB)。LD-3 已由 FM 绑定给 Host A。</td>
+</tr>
+<tr>
+<td><strong>目标地址</strong></td>
+<td>HPA = <code>0x900_0000_2000</code>（LD-3 的 HDM 窗口内）</td>
+</tr>
+<tr>
+<td><strong>新增特性</strong></td>
+<td>MLD 多逻辑设备、LD-ID 路由、CXL Switch HBR 路由、IDE 链路加密</td>
+</tr>
+</tbody>
+</table>
+<p>案例二拓扑: CXL 2.0 MLD 内存写入 Host ACXL 2.0 RP x16 CXL SwitchHBR 路由表 MLD Type 3 Device LD-0 | LD-1 | LD-3 (目标) 4 × 256GB DDR5, FM 已绑定 LD-3 给 Host A Fabric Manager Switch HDM Decoder 路由表 Decoder[2]: HPA=0x900_0000_0000, Size=256GB IW=1 → Target=DSP3, LD-ID=3 IDE Stream: Active (AES-GCM-256)</p>
+<h4 id="11">端到端完整流程（11 步）</h4>
+<p>1</p>
+<p><strong>CPU 发出 Store 指令</strong><br />
+<code>MOV [0x900_0000_2000], RBX</code> → MMU 转换 → HPA <code>0x900_0000_2000</code>。地址在 CFMWS 定义的 LD-3 窗口内（由 FM 预配置）。</p>
+<p>2</p>
+<p><strong>事务层 — CXL.mem: M2S MemWr (RwD) 构造</strong><br />
+M2S RwD (Request with Data) 消息：<br />
+<strong>MemOpcode</strong>| <code>0010b</code> (MemWr)<br />
+---|---<br />
+<strong>Address</strong>| <code>0x900_0000_2000</code><br />
+<strong>Tag</strong>| <code>0x00A1</code><br />
+<strong>LD-ID</strong>| <code>0x03</code>（CXL 2.0 MLD 新增字段，4-bit）<br />
+<strong>Data</strong>|  64B Cache Line<br />
+→ 消耗 1 M2S RwD Credit + Data Credit。</p>
+<p>3</p>
+<p><strong>事务层 — 事务记录 + ARB/MUX 仲裁</strong><br />
+TTE 记录 Tag=0x00A1，等待 S2M NDR (Cmp) 响应。ARB/MUX 加权轮询通过（CXL.mem 获得 80% 权重）。</p>
+<p>4</p>
+<p><strong>链路层 + IDE 安全 — Flit 打包与加密</strong></p>
+<pre class="highlight"><code>M2S RwD 需要 5 个 68B Flit (Header + 64B Data):
+  Flit 0: CTL_FMT=0x08, Slot0=H4 (M2S RwD Header, 4B)
+          Slot1-3 = Data[0:47]  (48B 数据)
+  Flit 1: All-Data Flit, Data[48:63] (最后 16B)
+  注意: CXL 2.0 的 CTL_FMT=001b 支持区分 96b/64b payload 模式。
+
+IDE 处理 (插入在链路层和物理层之间):
+  对承载 CXL.mem 数据的 Flit 进行 AES-GCM-256 加密。
+  IDE_KM (Key Management) 已通过带外 MCTP 交换密钥。
+  IDE MAC (Message Authentication Code) 附加在 IDE 控制 Flit 中。</code></pre>
+<p>5</p>
+<p><strong>物理层 → 交换机物理层</strong><br />
+NRZ @ 32GT/s ×16 传输 → CXL Switch USP 接收。CRC 校验通过。</p>
+<p>6</p>
+<p><strong>交换机网络层 — HBR 路由决策</strong><br />
+Switch 从 CXL.mem Flit 头中提取 <strong>HPA[63:28]</strong> 和 <strong>LD-ID=3</strong> → 查询 USP HDM Decoder[2] 路由表：<br />
+<code>{HPA_Range=[0x900_0000_0000, 0x900_FFFF_FFFF], Target=DSP3, LD-ID=3}</code> → 匹配 ✓。<br />
+→ Flit 转发到 DSP3 端口。仲裁：DSP3 当前无拥塞 → 立即转发。若多个源竞争同一 DSP，使用虚拟通道仲裁。</p>
+<p>7</p>
+<p><strong>交换机链路层 — Flit 重新打包 + 转发</strong><br />
+68B Flit 在交换内部穿过 Crossbar 交换矩阵 → DSP3 的链路层重新发送（新 ESeq、新 CRC-16）。在出口端可能重新进行 IDE 加密（若设备支持逐跳 IDE）。</p>
+<p>8</p>
+<p><strong>MLD 设备端 — LD-ID 分发 + DPA 翻译</strong><br />
+设备链路层解包 → 事务层提取 LD-ID=3 → <strong>LD-ID Decoder</strong> 将请求路由到 LD-3 的资源域。→ DPA Decoder: HPA <code>0x900_0000_2000</code> → LD-3 内部 DPA <code>0x0_0200</code>（LD-3 基地址 = DPA 空间的第 3 个 256GB 区域）。→ DDR5 Write 命令 → DRAM 写入完成。</p>
+<p>9</p>
+<p><strong>S2M NDR 完成响应</strong><br />
+设备构造 S2M NDR (No Data Response) — 仅 4B Header (Tag=0x00A1, Cmp=0 表示成功)。→ 通过交换机路由回 Host A（沿原路由反向）。</p>
+<p>10</p>
+<p><strong>Host 端接收 + 事务匹配</strong><br />
+Host 链路层接收 S2M NDR → 事务层 Tag=0x00A1 匹配 TTE → 写入完成确认 → 释放 TTE 和 Credit。<strong>写入完成总延迟 ≈ 100-110ns（写入比读取快，无需等待 DRAM 读取延迟）。</strong></p>
+<p>11</p>
+<p><strong>LLCRD Credit 回收</strong><br />
+Host 链路层接收到来自设备的 LLCRD 控制 Flit → 解析 Ak bit + Credit 字段 → 释放链路层和事务层信用 → LLRB 中已确认的 Flit 可以被回收（ESeq ≤ Acknowledged_Seq）。</p>
+<p><strong>案例二新增要素（vs CXL 1.1）</strong></p>
+<ul>
+<li><strong>LD-ID 路由：</strong> CXL.mem 事务头新增 4-bit LD-ID 字段，设备通过 LD-ID Decoder 分发到正确的逻辑设备。FM 确保隔离性（一个 LD 同时只绑定一个主机）。</li>
+<li><strong>HBR 路由：</strong> 交换机根据 HPA 范围 + LD-ID 查询路由表，决定转发到哪个 DSP。路由表由 FM 通过 MCTP 编程。</li>
+<li><strong>IDE 链路加密：</strong> AES-GCM-256 在链路层对 Flit 进行加密和完整性校验。IDE_KM Flit 在初始化时协商密钥。</li>
+<li><strong>额外延迟：</strong> 交换机引入的 Store-and-Forward 延迟（~20-30ns/crossbar hop），单级交换机总延迟增加约 25ns。</li>
+</ul>
+<h3 id="83-cxl-30-p2p-dma-back-invalidate256b-flit-pam-4-64gts">8.3 案例三：CXL 3.0 P2P DMA — 设备间直接内存访问 + Back-Invalidate（256B Flit, PAM-4, 64GT/s）</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>场景</strong></td>
+<td>加速器 A（Type 2 GPU）通过 CXL Fabric 直接读取 Memory Device B（Type 3 内存扩展器）上的数据，不经过 Host CPU。同时数据在 Host CPU 缓存中有脏副本。</td>
+</tr>
+<tr>
+<td><strong>拓扑</strong></td>
+<td>Host → Spine SW → Leaf SW1 → GPU A</td>
+</tr>
+<tr>
+<td><strong>核心特性</strong></td>
+<td>256B Flit, P2P DMA, UIO (Unordered I/O), Back-Invalidate (BI), PBR 路由</td>
+</tr>
+</tbody>
+</table>
+<p>案例三拓扑: CXL 3.0 P2P DMA + Back-Invalidate Host CPU + LLC | CXL 3.0 Cache Line X in Dirty (M) state Spine SW (PBR 路由) Leaf SW1 — DSP0: GPU A Type 2 GPU A (UIO) 发起 P2P DMA Read Leaf SW2 — DSP1: Mem Dev B Type 3 Mem Dev B HDM-DB, Back-Invalidate UIO P2P Read: GPU A → Mem Dev B (绕过 Host CPU)</p>
+<h4 id="14">端到端完整流程（14 步 — 含一致性解冲突）</h4>
+<p>1</p>
+<p><strong>GPU A 事务层 — UIO Read 请求构造</strong><br />
+GPU A 需要读取 Mem Dev B 上的地址 <code>HPA_X = 0x900_0000_5000</code>。GPU 使用 <strong>CXL.io UIO Flow</strong> （Unordered I/O，VC1 通道）而非传统有序 CXL.io（VC0）。<br />
+<code>UIO MemRd: Address=0x900_0000_5000, TC=VC1, Attr=Unordered</code>。<br />
+不使用 CXL.cache 通道，因为目标 Type 3 设备不监听 CXL.cache。</p>
+<p>2</p>
+<p><strong>GPU 端链路层 — 256B Flit 打包</strong></p>
+<pre class="highlight"><code>256B Flit 格式 (CXL 3.0):
+  Flit Header (8B):
+    - Flit Type = Protocol (CXL.io UIO)
+    - Sequence Number = 0x0501
+    - Credit Info (嵌入在 Protocol Flit 中, 不再需要单独的 LLCRD Flit)
+
+  Slot[0..7], each 32B:
+    G-Slots: 用于通用 Header/Data (CXL.io/CXL.cache/CXL.mem)
+    H-Slots: 用于 CXL.cache 数据 (本例不涉及)
+    Slot 0:  CXL.io UIO MemRd Header (UIO TLP, ~16B)
+    Slot 1-2: 未使用 (Read 请求无数据)
+
+  FEC (6B) + CRC (8B) = 270B 物理帧
+  PAM-4 编码: 2 bits/symbol @ 64 GT/s
+
+Credit 回收: CXL 3.0 不再使用独立的 LLCRD Flit。
+  Credit 值嵌入在正常 Protocol Flit 的字节 240-241 中。</code></pre>
+<p>3</p>
+<p><strong>PBR 路由 — 多跳转发到 Mem Dev B</strong></p>
+<pre class="highlight"><code>UIO Read 请求从 GPU A 发出 → Leaf SW1 → Spine SW → Leaf SW2 → Mem Dev B
+
+每跳使用 PBR (Port-Based Routing):
+  Flit 头部携带 Port Path = [DSP1(Leaf1), USP2(Spine), DSP2(Spine), USP1(Leaf2), DSP1(Leaf2)]
+  每跳处理当前端口号并前进到下一个端口号。
+
+延迟: 每级交换机 ~10ns × 3 跳 = ~30ns 额外延迟</code></pre>
+<p>4</p>
+<p><strong>Mem Dev B 接收 — DPA Decoder 翻译</strong><br />
+设备链路层解包 → 事务层接收 UIO MemRd → DPA Decoder 翻译 → 准备 DRAM Read。</p>
+<p>5</p>
+<p><strong>⚠ 一致性冲突检测 — BI 触发</strong><br />
+Mem Dev B 的内存控制器检查 HPA_X 的目录状态 → 发现 Host CPU 缓存中有 <strong>Dirty (M) 状态</strong> 的副本。<br />
+→ CXL 3.0 内存控制器 <strong>不</strong> 将请求转发到 Host，而是触发 <strong>Back-Invalidate (S2M BI)</strong> 流程：</p>
+<pre class="highlight"><code>S2M BI 通道 (CXL 3.0 新增):
+  S2M BI Req: {Address=HPA_X, BI_Type=SnpInv, Tag=0xBI_01}
+  → 通过 CXL.mem S2M 通道发送到 Host CPU
+  → Host Home Agent 收到 BI SnpInv → 向 LLC 发出 Snoop →
+    LLC 返回 Dirty Data (WriteBack) + 缓存行置为 Invalid
+  → Host 通过 M2S 通道返回 BI-Rsp: {Tag=0xBI_01, Data=64B Dirty, Status=Complete}
+  → Mem Dev B 接收 BI-Rsp，获得最新 Dirty 数据
+
+与传统 CXL 2.0 方式对比:
+  CXL 2.0: Host 需要代理所有 P2P 请求 → Host 访问 Mem Dev →
+           Host 回写 Dirty → Host 转发给 GPU A → 3 次穿越 Fabric
+  CXL 3.0 BI: Mem Dev 直接获取 Host dirty 数据 → 然后直接返回给 GPU A
+           → 2 次穿越 Fabric，节省 ~40% 带宽和延迟</code></pre>
+<p>6</p>
+<p><strong>Mem Dev B — DRAM 读取（若 BI 返回的数据非所需范围）</strong><br />
+如果请求的 64B 与 BI 返回的 Dirty 数据完全匹配 → 直接使用 BI 返回的数据。否则需要从 DRAM 补充读取其余范围。DDR5 Read → ~45ns → 合并 BI 数据和 DRAM 数据形成完整 64B。</p>
+<p>7</p>
+<p><strong>Mem Dev B — UIO Completion 返回 GPU A</strong><br />
+设备事务层构造 CXL.io UIO Completion with Data：</p>
+<pre class="highlight"><code>UIO CplD: {Requester_ID=GPU_A, Tag=UIO_Tag, Data=64B, Status=Successful}
+经过 PBR 路由返回 GPU A (路径: Leaf SW2 → Spine → Leaf SW1 → GPU A)</code></pre>
+<p>8</p>
+<p><strong>GPU A 接收数据 — 完成</strong><br />
+GPU A 链路层接收 → 事务层匹配 UIO Tag → 数据交付给计算单元。<strong>P2P 读取完成。总延迟 ≈ 180-250ns（含 BI 流程）。</strong></p>
+<h4 id="cxl-20-vs-cxl-30-p2p">案例三各层报文处理对比（CXL 2.0 vs CXL 3.0 P2P）</h4>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>CXL 2.0 方式 (经 Host 中继)</th>
+<th>CXL 3.0 P2P + BI 方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>事务层</strong></td>
+<td>GPU → CXL.io MRd (→ Host) → Host CXL.mem MemRd (→ Dev) → Host CXL.mem Write (→ GPU)</td>
+<td>GPU → CXL.io UIO MRd (→ Dev 直接)；Dev → CXL.mem S2M BI (→ Host, 仅冲突时)；Dev → UIO CplD (→ GPU)</td>
+</tr>
+<tr>
+<td><strong>链路层</strong></td>
+<td>三段 68B/256B Flit (GPU→Host, Host→Dev, Dev→Host→GPU)</td>
+<td>两段 256B Flit (GPU→Dev, Dev→GPU)，BI 是第三条独立流</td>
+</tr>
+<tr>
+<td><strong>网络层</strong></td>
+<td>单级/HBR 树形路由</td>
+<td>多级 PBR 网状路由，最低延迟路径</td>
+</tr>
+<tr>
+<td><strong>物理层</strong></td>
+<td>NRZ 32GT/s</td>
+<td>PAM-4 64GT/s，双倍物理带宽</td>
+</tr>
+<tr>
+<td><strong>总数据穿越 Fabric</strong></td>
+<td>3 次</td>
+<td>2 次 (+ BI 流，仅冲突时)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>案例三关键要点</strong></p>
+<ul>
+<li><strong>UIO (Unordered I/O):</strong> 使用独立 VC1 通道，break PCIe ordering 约束，支持非树形拓扑的 P2P 通信。</li>
+<li><strong>Back-Invalidate:</strong> CXL 3.0 的核心创新。Memory Device 可以直接失效 Host CPU 缓存，无需先经过 Host 中转。BI 使用 CXL.mem S2M 通道独立发送。</li>
+<li><strong>PBR 路由:</strong> 脱离树形拓扑限制，支持 Fat-Tree/Mesh/Dragonfly。每跳 ~10ns 额外延迟。</li>
+<li><strong>256B Flit:</strong> 提供更大的 Header 空间（8×32B Slots），P2P DMA 无需担心 Header 空间不足。</li>
+</ul>
+<h3 id="84-cxl-40-bundled-port-128gts-256b-flit-only">8.4 案例四：CXL 4.0 捆绑端口 (Bundled Port) — 多端口流量喷射写入（128GT/s, 256B Flit Only）</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>场景</strong></td>
+<td>AI 加速器通过 CXL 4.0 捆绑端口向 Type 3 内存池写入 1KB AI 推理 KV Cache 数据（16 个 Cache Line，1KB）。</td>
+</tr>
+<tr>
+<td><strong>拓扑</strong></td>
+<td>Host → 3×CXL RP (捆绑) → 3×BPD 端口 → Type 3 SLD-B Device（1.5 TB/s 聚合带宽）</td>
+</tr>
+<tr>
+<td><strong>核心特性</strong></td>
+<td>128GT/s PAM-4, Bundled Ports (3×x16), SLD-B, 仅 256B Flit, Native x2, 4 Retimer</td>
+</tr>
+</tbody>
+</table>
+<p>案例四拓扑: CXL 4.0 Bundled Ports (3 × x16 @ 128GT/s) Host Root Complex (CXL 4.0, PCIe 7.0 PHY) BPD Driver hints: interleave traffic across 3 ports RP0 (Full-Cap) x16 @ 128GT/s RP1 (Streamlined) x16 @ 128GT/s RP2 (Streamlined) x16 @ 128GT/s Bundled Port Logical Entity — SLD-B (Single Logical Device-Bundled) CXL 4.0 SLD-B Type 3 Memory Device (BPD) 3 × x16 捆绑 = 1.5 TB/s 双向聚合带宽 | 仅 256B Flit | 4096 GB DDR5 DDR5 DRAM Array (4TB) — BPD sprays writes across all 3 internal memory controllers 流量喷射：Port 0: Lines 0,3,6,9,12,15 | Port 1: Lines 1,4,7,10,13 | Port 2: Lines 2,5,8,11,14</p>
+<h4 id="12_1">端到端完整流程（12 步）</h4>
+<p>1</p>
+<p><strong>应用层请求 — 1KB KV Cache 写入</strong><br />
+AI 推理引擎请求将 1KB（16 条 64B Cache Line）KV Cache 写入 CXL 4.0 内存池。BPD 驱动接收请求并提供<strong>交织提示 (Traffic Hint)</strong> ：<code>{Policy=Round-Robin, Granularity=64B}</code>。</p>
+<p>2</p>
+<p><strong>事务层 — 16 个独立 CXL.mem MemWr 事务</strong><br />
+BPD 驱动将 1KB 分解为 16 个独立的 64B MemWr 请求。根据流量提示，分配到 3 个端口：</p>
+<pre class="highlight"><code>Port 0 (RP0, Full-Cap): Tag 0x100-0x105 → 6 Lines (Addr 0x900_0000_0000 + 0,192,384,576,768,960)
+Port 1 (RP1, Streamlined): Tag 0x200-0x204 → 5 Lines (Addr + 64,256,448,640,832)
+Port 2 (RP2, Streamlined): Tag 0x300-0x304 → 5 Lines (Addr + 128,320,512,704,896)
+
+  Streamlined Port 特性: 不处理 CXL.io 配置事务，不包含 CXL.cache 支持，
+  仅优化 CXL.mem 数据传输，硬件复杂度大幅降低。</code></pre>
+<p>3</p>
+<p><strong>事务层 — Credit 管理（每端口独立）</strong><br />
+3 个端口各自独立管理 M2S RwD Credit + Data Credit。Port 0 有 6 个事务排队，Port 1/2 各 5 个。<br />
+信用不足时端口独立等待，不阻塞其他端口。</p>
+<p>4</p>
+<p><strong>链路层 — 纯 256B Flit 打包（消除 68B 开销）</strong></p>
+<pre class="highlight"><code>CXL 4.0 捆绑端口可优化为仅 256B Flit 模式（捆绑中至少一个端口须支持 68B 以保持向后兼容）。
+
+Port 0 的 6 个 MemWr 打包过程:
+  Flit 0: 256B, 8 Slots × 32B
+    Slot 0 (H4): MemWr Header 0 (Tag=0x100, Addr+0)
+    Slot 1: Data[0:31]
+    Slot 2 (H4): MemWr Header 1 (Tag=0x101, Addr+192)
+    Slot 3: Data[192:223]
+    Slot 4 (H4): MemWr Header 2 (Tag=0x102, Addr+384)
+    Slot 5: Data[384:415]
+    Slot 6 (H4): MemWr Header 3 (Tag=0x103, Addr+576)
+    Slot 7: Data[576:607]
+
+  Flit 1: 同上打包剩余 2 Headers + 剩余 32B Data
+    Slot 0-1: MemWr 4 (H4+Data)
+    Slot 2-3: MemWr 5 (H4+Data)
+    Slot 4-7: 空闲
+
+  FEC (6B) + CRC (8B) 嵌入 270B 物理帧中
+  PAM-4 @ 128GT/s: 2 bits/symbol, Nyquist Freq ×2 vs CXL 3.0
+
+  Port 1/2 类似处理 5 个 MemWr 各自。</code></pre>
+<p>5</p>
+<p><strong>ARB/MUX — 3 端口并行发送</strong><br />
+3 个物理端口独立通过各自的 ARB/MUX 提交到各自的链路层/物理层 → <strong>并行发送</strong> 。无端口间串行化开销。</p>
+<p>6</p>
+<p><strong>物理层 — 128GT/s PAM-4 + 4 Retimer 长距离传输</strong></p>
+<pre class="highlight"><code>Port 0: 256B Flit → FEC 编码 → PAM-4（2 bits/symbol）→ 16 Lanes SERDES
+  → 经过 4 个 Retimer（每个 Retimer 独立恢复时钟、重定时）→ 到达 BPD 设备。
+  −36 dB 信道损耗，FBER &lt; 1E-6。
+
+Port 1, Port 2: 并行传输，各自独立物理层。
+
+CXL 4.0 128GT/s 的 PAM-4 眼图开口约为 CXL 3.0 64GT/s 的 50%，
+4 Retimer 确保长距离（&gt;1m PCB 走线或光纤 Retimer）的信号完整性。
+
+注意: CXL 4.0 支持 Native x2 宽度 — 未来可用于更灵活的小宽度链路汇聚。</code></pre>
+<p>7</p>
+<p><strong>BPD 设备端物理层 — 3 端口并行接收</strong><br />
+3 个端口各自完成：CDR 恢复 → PAM-4 解码 → FEC 校正（如有错误）→ 256B Flit 重组 → CRC 校验。<br />
+3 端口并行处理，无串行化。</p>
+<p>8</p>
+<p><strong>BPD 设备端链路层 — 合并与排序（可选）</strong><br />
+3 个端口各自解包 Flit → 提取 16 个 MemWr 事务。BPD 内部根据 Tag 和 Address 排序（确保内存模型一致性）→ 提交给事务层。<br />
+SLD-B 抽象：主机侧看到的是 3 个物理端口，设备侧看到的也是 3 个（但 BPD 将它们聚合为单一逻辑设备）。</p>
+<p>9</p>
+<p><strong>DPA Decoder + 内存交织写入</strong><br />
+SLD-B 设备内部的 DPA Decoder 将 16 个 HPA 翻译为 DPA → BPD 内存控制器将 16 条 Cache Line <strong>喷射</strong> 写入 3 个内部 DRAM 通道：</p>
+<pre class="highlight"><code>Channel 0 (从 Port 0 数据): Lines 0,3,6,9,12,15
+Channel 1 (从 Port 1 数据): Lines 1,4,7,10,13
+Channel 2 (从 Port 2 数据): Lines 2,5,8,11,14
+→ 3 通道并行写入 DDR5, ~45ns DRAM 写入周期</code></pre>
+<p>10</p>
+<p><strong>S2M NDR 完成响应（逐端口返回）</strong><br />
+设备事务层为 16 个 MemWr 各生成 S2M NDR (Cmp)。通过对应物理端口原路返回 Host：<br />
+Port 0 → 6 NDR, Port 1 → 5 NDR, Port 2 → 5 NDR。</p>
+<p>11</p>
+<p><strong>Host 接收 — 事务匹配与完成</strong><br />
+各端口独立接收 S2M NDR → Tag 匹配 TTE → 释放 Credit。16 个事务全部完成后，BPD 驱动向上层报告 <strong>1KB KV Cache 写入完成。</strong><br />
+<strong>总延迟 ≈ 90-110ns（得益于 3 端口并行和 PAM-4 高带宽）。</strong></p>
+<p>12</p>
+<p><strong>RAS 监控 — Patrol Scrub 与 PPR</strong><br />
+CXL 4.0 新增的 RAS 特性在后台运行：<strong>Patrol Scrub</strong> 在巡逻周期中细粒度检测并纠正内存错误；<strong>PPR (Post Package Repair)</strong> 在设备启动时主机可发起主动内存修复操作。<strong>Memory Sparing</strong> 支持启动时或延迟执行备用行替换。</p>
+<h4 id="_3">案例四各层新特性总结</h4>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>CXL 4.0 新增/增强</th>
+<th>对比 CXL 3.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>事务层</strong></td>
+<td>SLD-B 抽象 — 软件看到单一逻辑设备</td>
+<td></td>
+</tr>
+<tr>
+<td>BPD 流量提示 — 驱动指导硬件交织策略</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>RAS 增强 — PPR, Sparing, Patrol Scrub</td>
+<td>MHD/MH-MLD → SLD-B 简化</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>链路层</strong></td>
+<td>纯 256B Flit 模式（消除 68B 兼容开销）</td>
+<td></td>
+</tr>
+<tr>
+<td>捆绑端口聚合 — 逻辑链路 ×3 带宽</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>FEC + CRC 不变（继承 CXL 3.0）</td>
+<td>双 Flit 模式 (68B+256B) → 单模式</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>物理层</strong></td>
+<td>PCIe 7.0 @ 128GT/s PAM-4</td>
+<td></td>
+</tr>
+<tr>
+<td>原生 x2 宽度</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>最多 4 个 Retimer</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>FBER &lt; 1E-6 不变</td>
+<td>64GT/s → 128GT/s</td>
+<td></td>
+</tr>
+<tr>
+<td>2 Retimer → 4 Retimer</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>网络层</strong></td>
+<td>保持 CXL 3.x 所有 Fabric 特性</td>
+<td>无新增</td>
+</tr>
+<tr>
+<td><strong>带宽 (x16 单端口)</strong></td>
+<td>~242 GB/s 单向</td>
+<td>~121 GB/s 单向</td>
+</tr>
+<tr>
+<td><strong>带宽 (3×x16 捆绑)</strong></td>
+<td>~726 GB/s 单向 (~1.5 TB/s 双向)</td>
+<td>不支持捆绑</td>
+</tr>
+</tbody>
+</table>
+<p><strong>案例四关键要点</strong></p>
+<ul>
+<li><strong>捆绑端口 (Bundled Ports):</strong> CXL 4.0 最重要的架构创新。通过逻辑聚合多个物理端口，实现带宽线性扩展而无需修改软件模型。</li>
+<li><strong>SLD-B:</strong> 软件仍然看到<strong>单一逻辑设备</strong> （Single Logical Device），多个物理端口在硬件层透明聚合。对比 CXL 2.0 MLD（需要 LD-ID 管理）大幅简化。</li>
+<li><strong>纯 256B Flit 模式:</strong> 消除 68B Flit 兼容的复杂性和开销。每 Flit 可承载更多 Header+Data。</li>
+<li><strong>流量喷射:</strong> 设备驱动可向 BPD 提供交织提示，BPD 硬件在多个端口间均匀分配流量，最大化带宽利用率。</li>
+<li><strong>AI/ML 场景核心价值:</strong> 1.5 TB/s 双向带宽满足下一代 GPU/ASIC 的显存带宽需求，可与 NVLink/UALink 形成互补层次。</li>
+</ul>
+<h3 id="85">8.5 全版本端到端流程对比总结</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>CXL 1.1</th>
+<th>CXL 2.0</th>
+<th>CXL 3.0</th>
+<th>CXL 4.0</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>拓扑</strong></td>
+<td>1:1 直连</td>
+<td>单级交换 + MLD</td>
+<td>多级 Fabric + P2P</td>
+<td>捆绑端口 + Fabric</td>
+</tr>
+<tr>
+<td><strong>地址路由</strong></td>
+<td>HDM Decoder</td>
+<td>HDM Decoder + LD-ID</td>
+<td>HBR + PBR + GIM/FAST</td>
+<td>HBR + PBR + BPD 流量提示</td>
+</tr>
+<tr>
+<td><strong>Flit 格式</strong></td>
+<td>68B</td>
+<td>68B + IDE</td>
+<td>256B (LO) + 68B 兼容</td>
+<td>256B 优先</td>
+</tr>
+<tr>
+<td><strong>数据速率</strong></td>
+<td>32 GT/s NRZ</td>
+<td>32 GT/s NRZ</td>
+<td>64 GT/s PAM-4</td>
+<td>128 GT/s PAM-4</td>
+</tr>
+<tr>
+<td><strong>内存读流程</strong></td>
+<td>M2S MemRd → S2M DRS</td>
+<td>M2S MemRd (LD-ID) → Switch HBR → S2M DRS</td>
+<td>UIO MemRd → PBR → DPA → (BI) → UIO CplD</td>
+<td>M2S MemRd (BPD 多端口) → 并行 S2M DRS</td>
+</tr>
+<tr>
+<td><strong>典型读延迟</strong></td>
+<td>~120-150 ns</td>
+<td>~140-175 ns (+25ns Switch)</td>
+<td>~160-220 ns (P2P, 含 BI)</td>
+<td>~110-140 ns (BPD 并行)</td>
+</tr>
+<tr>
+<td><strong>典型写延迟</strong></td>
+<td>~100-110 ns</td>
+<td>~120-135 ns</td>
+<td>~120-160 ns</td>
+<td>~90-110 ns</td>
+</tr>
+<tr>
+<td><strong>最大 x16 带宽</strong></td>
+<td>~63 GB/s</td>
+<td>~63 GB/s</td>
+<td>~121 GB/s</td>
+<td>~242 GB/s (×3 捆绑 = 726 GB/s)</td>
+</tr>
+<tr>
+<td><strong>Credit 机制</strong></td>
+<td>每通道独立信用</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>LLCRD Flit 返回</td>
+<td>+ LD-ID 独立信用</td>
+<td>信用嵌入 Protocol Flit</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(字节 240-241)</td>
+<td>每端口独立信用</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>无共享瓶颈</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>一致性冲突</strong></td>
+<td>偏置模式（需 Bias Flip）</td>
+<td>偏置模式</td>
+<td>Back-Invalidate (S2M BI)</td>
+<td>Back-Invalidate (继承 3.x)</td>
+</tr>
+<tr>
+<td><strong>安全</strong></td>
+<td>无链路加密</td>
+<td>IDE (AES-GCM-256)</td>
+<td>IDE + TSP (3.1+)</td>
+<td>IDE + TSP (继承)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>总结：CXL 各版本端到端流程的核心演进脉络</strong></p>
+<ol>
+<li><strong>CXL 1.1:</strong> 奠定基础。M2S/S2M 两通道模型、68B Flit、HDM-H 直连——最简洁的流程。</li>
+<li><strong>CXL 2.0:</strong> 引入"池化"维度。LD-ID 使单个物理设备呈现为多个逻辑设备。HBR 交换机使数据流多了一级路由决策。IDE 在链路层加入了加/解密开销。</li>
+<li><strong>CXL 3.0:</strong> 引入"分布式"维度。P2P DMA 使数据流从"必须经过 Host"变为"直接设备间流转"。Back-Invalidate 使一致性解决从"Host 居中"变为"设备自主"。</li>
+<li><strong>CXL 4.0:</strong> 引入"聚合"维度。Bundled Ports 使多个物理端口透明组合，从"单路串行"变为"多路并行喷射"。纯 256B Flit 消除兼容开销。</li>
+</ol>
+<h2 id="_4">第九章 · 各厂商主要产品介绍</h2>
+<h3 id="91-cpu">9.1 CPU 处理器厂商</h3>
+<p>Intel</p>
+<p>CPU 处理器 · CXL 联盟创始成员</p>
+<table>
+<thead>
+<tr>
+<th>处理器平台</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 4 代 Xeon Scalable</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Sapphire Rapids)</td>
+<td>CXL 1.1</td>
+<td>2023 年 1 月发布。首批支持 CXL 的服务器处理器平台。80 条 PCIe 5.0 / CXL Flex Bus 通道，支持 Type 1/2/3 设备。</td>
+</tr>
+<tr>
+<td>第 5 代 Xeon Scalable</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Emerald Rapids)</td>
+<td>CXL 1.1</td>
+<td>2023 年 12 月发布。与 Sapphire Rapids 平台兼容，最多 64 核，更大 LLC，更快 DDR5。CXL 支持与上一代相同。</td>
+</tr>
+<tr>
+<td>Xeon 6</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Granite Rapids)</td>
+<td>CXL 2.0</td>
+<td>2024 年发布。支持 CXL 2.0，引入交换和内存池化能力。包括 P 核和 E 核（Sierra Forest）版本。</td>
+</tr>
+<tr>
+<td>Diamond Rapids</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(预计 2026-2027)</td>
+<td>CXL 3.x（预期）</td>
+<td>下一代平台，预计支持 CXL 3.x 规范。</td>
+</tr>
+</tbody>
+</table>
+<p>AMD</p>
+<p>CPU 处理器 · CXL 联盟董事会成员</p>
+<table>
+<thead>
+<tr>
+<th>处理器平台</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 4 代 EPYC</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Genoa / Bergamo)</td>
+<td>CXL 1.1</td>
+<td>2022-2023 年发布。Zen 4 架构，PCIe 5.0 + CXL 1.1 支持。Genoa 最多 96 核，Bergamo 最多 128 核（Zen 4c）。</td>
+</tr>
+<tr>
+<td>第 5 代 EPYC</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Turin)</td>
+<td>CXL 2.0</td>
+<td>2024 年底发布。Zen 5 架构，支持 CXL 2.0，最多 128 核。</td>
+</tr>
+<tr>
+<td>第 6 代 EPYC</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(Venice，预计 2026+)</td>
+<td>CXL 3.0（预期）</td>
+<td>Zen 6 架构，预计支持 CXL 3.0。</td>
+</tr>
+</tbody>
+</table>
+<p>Arm 生态</p>
+<p>CPU IP · CXL 联盟贡献成员</p>
+<p>Arm Neoverse 系列核心（如 Neoverse V2/V3）已集成 CXL 支持能力。多家基于 Arm 架构的服务器芯片厂商（如 Ampere、AWS Graviton 等）正在其产品中集成 CXL 接口。Marvell Structera A 近内存加速器即集成了 16 个 Arm Neoverse V2 核心。</p>
+<h3 id="72-cxl">7.2 CXL 内存扩展模块厂商</h3>
+<p>Samsung（三星）</p>
+<p>内存模块 · CXL 联盟董事会成员</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>容量</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMM-D (Gen 1)</td>
+<td>128/256/512 GB</td>
+<td>CXL 2.0</td>
+<td>2022 年发布。E3.S 外形，DDR5。首批量产的 CXL 内存扩展模块之一。512GB 版本使用自研内存控制器。</td>
+</tr>
+<tr>
+<td>CMM-D 2.0</td>
+<td>128/256 GB</td>
+<td>CXL 2.0</td>
+<td>2025 年发布。DDR5 原生 CMM-D 刷新版。CXL 3.1 变体预计 2026 H1 推出。2025 年底开始客户样品。</td>
+</tr>
+<tr>
+<td>CMM-H</td>
+<td>128/256 GB</td>
+<td>CXL 2.0</td>
+<td>2023 年发布。DDR5 + NAND 混合内存模块，兼具内存扩展和存储功能。</td>
+</tr>
+<tr>
+<td>CMM-B</td>
+<td>最高 ~5.5 TB</td>
+<td>CXL 1.1/2.0</td>
+<td>2U 内存池设备，最多容纳 24 个 E3.S CMM-D 模块，支持最多 8 台主机连接。配备 SCMC（Samsung Cognos Management Console）管理软件，提供 REST API、拓扑可视化、动态内存分配等功能。</td>
+</tr>
+<tr>
+<td>CMM-Ax</td>
+<td>—</td>
+<td>CXL 2.0+</td>
+<td>下一代计算型 CXL 模块，集成存内处理（PIM）功能。在 SC25 和 CES 2026 展示，正在采样中。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>生态合作</strong> 三星于 2023 年 12 月与 Red Hat 合作，首次在真实用户环境（RHEL 9.3）中验证了 CXL 内存互操作性。CMM-D 模块使用澜起科技（Montage Technology）的 MXC 控制器芯片。</p>
+<p>SK hynix（SK 海力士）</p>
+<p>内存模块 · CXL 联盟贡献成员</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>容量</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMM-DDR5 (CMS)</td>
+<td>96 GB</td>
+<td>CXL 2.0</td>
+<td>E3.S 外形，DDR5。2023 年发布，2025 年 10 月完成正式客户验证，进入量产就绪状态。使用澜起科技 MXC 控制器。</td>
+</tr>
+<tr>
+<td>CMM-DDR5</td>
+<td>128 GB</td>
+<td>CXL 2.0</td>
+<td>更大容量版本。</td>
+</tr>
+<tr>
+<td>CMM-Ax</td>
+<td>—</td>
+<td>CXL 2.0+</td>
+<td>下一代计算型 CXL 模块，集成存内处理功能。SC25 展示中与 Montage Technology 合作演示了 CMM-DDR5 + MRDIMM 异构内存系统。</td>
+</tr>
+</tbody>
+</table>
+<p>Micron（美光）</p>
+<p>内存模块 · CXL 联盟贡献成员</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>容量</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CZ120</td>
+<td>128/256 GB</td>
+<td>CXL 2.0</td>
+<td>E3.S-2T 外形，DDR4/DDR5。2023 年发布，2024 年 5 月开始出货。首批正式量产的 CXL 内存模块之一。</td>
+</tr>
+<tr>
+<td>CZ122</td>
+<td>最高 256 GB</td>
+<td>CXL 2.0</td>
+<td>2024 年发布。第二代产品，改进 RAS 特性，支持硬件异构交织，获得 Red Hat RHEL 9.3 认证。替代 CZ120 用于新设计。</td>
+</tr>
+</tbody>
+</table>
+<p>SMART Modular / Penguin Solutions</p>
+<p>内存模块与系统</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>容量</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CXA-4F1W</td>
+<td>512 GB</td>
+<td>CXL 2.0</td>
+<td>AIC (CEM) 外形，DDR5。2023 年发布。</td>
+</tr>
+<tr>
+<td>CXA-8F2W</td>
+<td>1 TB</td>
+<td>CXL 2.0</td>
+<td>AIC (CEM) 外形，DDR5。2023 年发布。大容量 AIC 板卡。</td>
+</tr>
+<tr>
+<td>CMM-E3S</td>
+<td>64/96/128 GB</td>
+<td>CXL 2.0</td>
+<td>E3.S-2T 外形，DDR5。2023 年发布。</td>
+</tr>
+<tr>
+<td>NV-CMM-E3S</td>
+<td>32 GB</td>
+<td>CXL 2.0</td>
+<td>E3.S-2T 外形，DDR5 + NAND 混合。2023 年发布。</td>
+</tr>
+</tbody>
+</table>
+<p>Advantech（研华）</p>
+<p>内存模块</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>容量</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQR-CX5N</td>
+<td>64 GB</td>
+<td>CXL 2.0</td>
+<td>E3.S-2T 外形，DDR5。2024 年发布。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-cxl">7.3 CXL 交换机与控制器芯片厂商</h3>
+<p>Astera Labs</p>
+<p>CXL 控制器与交换机 · 上市公司</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leo A-Series</td>
+<td>智能内存控制器</td>
+<td>CXL 2.0</td>
+<td>内存扩展、池化和共享。单控制器最高 2 TB 容量，x16 通道。2023 年发布。已在 Microsoft Azure M 系列 VM 中实现业界首个超大规模云 CXL 部署（2025 年 11 月）。</td>
+</tr>
+<tr>
+<td>Leo P-Series</td>
+<td>智能内存控制器</td>
+<td>CXL 2.0</td>
+<td>2022 年发布。内存扩展、池化与共享控制器。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>里程碑</strong> Astera Labs Leo A-Series 在 Microsoft Azure M 系列 VM 中实现了业界首个公开宣布的 CXL 附加内存云部署，验证了生产级 CXL 内存扩展能力。</p>
+<p>Marvell Technology</p>
+<p>CXL 控制器、交换机与近内存加速器</p>
+<p>Marvell 通过收购 Tanzanite Silicon Solutions（2022 年）和 XConn Technologies（2026 年初，约 5.4 亿美元）建立了完整的 CXL 产品组合。Structera 产品线是业界唯一完成与 AMD EPYC 和 Intel Xeon 两大 CPU 架构以及三大内存供应商（Micron、Samsung、SK hynix）互操作性测试的 CXL 2.0 产品系列。</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Structera A</td>
+<td>近内存计算加速器</td>
+<td>CXL 2.0</td>
+<td>集成 16 个 Arm Neoverse V2 核心和多个内存通道。面向深度学习推荐模型（DLRM）和机器学习等高带宽内存应用。业界首个支持四通道内存、集成 LZ4 压缩、5nm 工艺。</td>
+</tr>
+<tr>
+<td>Structera X</td>
+<td>内存扩展控制器</td>
+<td>CXL 2.0</td>
+<td>为通用服务器增加 TB 级内存容量。面向内存数据库等大容量内存应用。业界首个支持四通道、集成 LZ4 压缩、5nm 工艺。</td>
+</tr>
+<tr>
+<td>Structera S 20256</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(原 XConn Apollo)</td>
+<td>交换机 ASIC</td>
+<td>CXL 2.0</td>
+<td>256 通道 CXL 2.0 + PCIe Gen5 交换芯片。总交换容量 2048 Gbps。2024 年量产。TSMC N16/N5 工艺。</td>
+</tr>
+<tr>
+<td>Structera S 30260</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(原 XConn Apollo 2)</td>
+<td>混合交换机 ASIC</td>
+<td>CXL 3.1</td>
+<td>260 通道混合 CXL 3.1 + PCIe Gen 6.2 交换芯片。2025 年发布，2026 Q3 采样。业界首款单芯片支持 CXL 3.1 和 PCIe Gen6 的混合交换机。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>IP 授权业务</strong> Marvell 还提供 Structera IP 授权，允许客户将经过硅验证的 CXL 技术嵌入自研芯片中，支持从全定制 SoC 到紧耦合加速器的多种集成模式。</p>
+<p>Panmnesia</p>
+<p>CXL 交换机与控制器 · 韩国 Fabless</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PanSwitch (H1SW06245ACFAA)</td>
+<td>融合交换机 ASIC</td>
+<td>CXL 3.2</td>
+<td><strong>业界首款完全实现 CXL 3.2 规范（含 PBR）的交换芯片</strong> 。256 通道 PCIe 6.4-CXL 3.2 融合交换芯片，64 GT/s，支持 x4/x8/x16 通道分叉。2025 年 10 月首次出样，2026 年下半年量产。支持级联（数千设备互联）、树形和非树形拓扑、CXL Fabric 自组织。内部延迟达数十纳秒级。</td>
+</tr>
+<tr>
+<td>CXL/PCIe 控制器</td>
+<td>控制器 IP/芯片</td>
+<td>CXL 3.2</td>
+<td>基于自研低延迟控制器，提供业界领先的数十纳秒往返延迟。硅验证完成，提供内存、加速器和 CPU 应用变体。</td>
+</tr>
+<tr>
+<td>CXL-GPU 内存扩展方案</td>
+<td>系统方案</td>
+<td>—</td>
+<td>通过 CXL 为 GPU 扩展外部内存，形成统一虚拟内存空间。2025 年获 CES 创新奖。</td>
+</tr>
+</tbody>
+</table>
+<p>Montage Technology（澜起科技）</p>
+<p>CXL 控制器与 Retimer · 上市公司</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MXC Gen1 (M88MX685x)</td>
+<td>内存扩展控制器</td>
+<td>CXL 2.0</td>
+<td>量产中。支持 DDR4-3200/DDR5-5600。三星和 SK hynix 的 E3.S CXL 内存模块均使用此控制器。</td>
+</tr>
+<tr>
+<td>MXC Gen2</td>
+<td>内存扩展控制器</td>
+<td>CXL 2.0</td>
+<td>量产中。支持 DDR5-6400。</td>
+</tr>
+<tr>
+<td>MXC (M88MX6852)</td>
+<td>内存扩展控制器</td>
+<td>CXL 3.1</td>
+<td>2025 年 9 月发布，正在向关键客户送样。符合 CXL 3.1 Type 3 规范，PCIe 6.2 PHY，最高 64 GT/s (x8)，可拆分为两个 x4 端口。集成双通道 DDR5 控制器（最高 8000 MT/s），双 RISC-V 微处理器（APU + SPU）。25mm×25mm 封装，支持 E3.S 和 AIC 外形。</td>
+</tr>
+<tr>
+<td>M88RT51632</td>
+<td>Retimer</td>
+<td>CXL 2.0</td>
+<td>16 通道 PCIe 5.0/CXL 2.0 Retimer。2023 年 1 月量产。澜起为全球第二大 PCIe 5.0/4.0 Retimer 供应商，在中国市场占主导地位。</td>
+</tr>
+<tr>
+<td>M88RT61632</td>
+<td>Retimer</td>
+<td>CXL 3.x</td>
+<td>16 通道 PCIe 6.x/CXL 3.x Retimer。64 GT/s PAM-4，自研 PAM4 SerDes IP，链路预算达 43dB。2025 年 1 月开始客户送样。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>市场地位</strong> 澜起科技是全球第二大 PCIe 5.0/4.0 Retimer 供应商。其 MXC 控制器芯片被全球三大内存制造商（三星、SK hynix、Micron）用于 E3.S CXL 内存模块。澜起正在开发 PCIe 7.0 Retimer，延续其在互连领域的领导地位。</p>
+<p>Microchip Technology</p>
+<p>CXL 控制器</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMC 2000 系列</td>
+<td>智能内存控制器</td>
+<td>CXL 2.0</td>
+<td>低延迟 CXL 2.0 控制器，支持 DDR4/DDR5。2022 年发布。</td>
+</tr>
+</tbody>
+</table>
+<p>Enfabrica</p>
+<p>CXL 交换与网络融合</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>类型</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RCE (Rapid-Compute Engine)</td>
+<td>交换/Fabric ASIC</td>
+<td>CXL 2.0</td>
+<td>CXL 2.0 交换机，集成 800 GbE 网络接口。将 CXL 内存互连与高速以太网融合在单芯片上。2023 年发布。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="74-cxl-ip">7.4 CXL IP 授权厂商</h3>
+<p>Rambus</p>
+<p>半导体 IP · CXL 联盟贡献成员</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CXL 3.1 控制器 IP</td>
+<td>CXL 3.1</td>
+<td>基于 PCIe 6.1 控制器架构。支持 CXL.io 协议并添加 CXL.cache 和 CXL.mem。提供原生 Tx/Rx 用户界面和 Intel CPI 接口。提供 AMBA AXI 兼容版本（AXI3/AXI4/AXI4-Lite）。集成 IDE 模块。100% 一次流片成功率，服务超 600 家客户。</td>
+</tr>
+<tr>
+<td>PCIe 5.0/CXL 2.0 控制器 IP</td>
+<td>CXL 2.0</td>
+<td>已通过 CXL 合规性测试（CTE 007），列入 Integrators List。Type 3 设备，16 GT/s x8。FPGA 原型验证完成。</td>
+</tr>
+<tr>
+<td>PCIe 7.0 IP 产品组合</td>
+<td>—</td>
+<td>2024 年发布。包括控制器 IP、Retimer IP 和交换机 IP。在 Retimer IP 领域几乎占据市场主导地位。</td>
+</tr>
+</tbody>
+</table>
+<p>Cadence</p>
+<p>EDA 与半导体 IP</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller IP for CXL</td>
+<td>CXL 2.0/1.1</td>
+<td>符合 PCIe 5.0/4.0/3.1/2.1/1.1 和 CXL 2.0/1.1 规范。支持 Type 1/2/3 应用，最高 x16 通道。低延迟数据路径，PIPE 5.2 接口。提供 AMBA 5.0 AXI 或 HLS 接口。超 100 项配置特性。已在大规模生产中验证。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>提供 CXL 3.x 设计方案</strong> Cadence 已提供 CXL 3.x 的设计 IP 方案，但目前尚无实用化量产产品。</p>
+<p>Synopsys</p>
+<p>EDA 与半导体 IP</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DesignWare CXL IP</td>
+<td>CXL 1.0/1.1</td>
+<td>基于 PCIe 5.0 PHY 的 CXL 控制器 IP。支持 x4/x8/x16 通道配置，32 GT/s。提供完整的 CXL.io、CXL.cache、CXL.mem 协议支持。已在多个客户设计中验证。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="75-cxl">7.5 CXL 系统与软件方案厂商</h3>
+<p>MemVerge</p>
+<p>CXL 内存软件 · Big Memory 软件</p>
+<p>MemVerge 是大内存软件领域的领导者，其核心技术包括：</p>
+<ul>
+<li><strong>Memory Machine X 软件：</strong> 将 DRAM 和 CXL 内存组合为集群内存池，供现有应用使用，无需修改代码</li>
+<li><strong>GISMO（Global IO-free Shared Memory Objects）：</strong> 全局无 IO 共享内存对象技术，使 NVIDIA Dynamo 和 NIXL 能够利用大型 CXL 内存池作为 AI 推理的 KV Cache 存储</li>
+<li><strong>与 XConn/Marvell 合作：</strong> 2025 年 OCP 全球峰会上联合演示了基于 XConn Apollo 交换机和 MemVerge GISMO 技术的机架级 CXL 内存池方案，支持高达 100 TiB 内存池，AI 推理性能较 SSD 提升 5 倍以上</li>
+</ul>
+<p>Liqid</p>
+<p>可组合基础设施系统</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EX-5410C</td>
+<td>CXL 2.0</td>
+<td>4U 内存池设备，支持 10 个 CXL Gen5 x16 FHFL 双宽模块。通过 Liqid HX-5160C-1C CXL 2.0 Gen5 x16 主机总线适配器（HBA）连接主机。2024 年发布。</td>
+</tr>
+<tr>
+<td>Matrix CDI 平台</td>
+<td>—</td>
+<td>可组合分解基础设施（CDI）平台，通过 PCIe Fabric 池化独立 CPU+DRAM、GPU、SSD、FPGA、网络和存储资源，动态组合虚拟服务器。与 MemVerge 大内存技术集成。</td>
+</tr>
+</tbody>
+</table>
+<p>H3 Platform（创义达科技）</p>
+<p>CXL 内存共享与池化系统</p>
+<table>
+<thead>
+<tr>
+<th>产品</th>
+<th>CXL 版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Falcon C5022</td>
+<td>CXL 2.0</td>
+<td>2U 内存池设备，支持 22 个 E3.S CXL 模块，4 个 PCIe Gen5 x16 主机端口。2023 年发布。</td>
+</tr>
+<tr>
+<td>CXL 内存共享平台</td>
+<td>CXL 1.1/2.0</td>
+<td>支持三种部署模式：直连模式（单主机扩展）、池化模式（多主机动态分配，已在亚洲某大型云提供商 AI 开发平台部署）、VCS 模式（虚拟 CXL 交换，多主机同时读写同一内存模块，已在金融行业内存数据库验证）。2025 年 FMS 上宣布正式向所有客户开放部署。</td>
+</tr>
+</tbody>
+</table>
+<p><strong>H3 Fabric Manager</strong> H3 开发了 API 软件界面，可整合 Kubernetes 及容器，主要应用场景涵盖 HPC（流体、大气、洋流模拟）和金融科技内存数据库。支持 4-8 台服务器共享访问内存池。</p>
+<p>Samsung — CMM-B + SCMC</p>
+<p>CXL 内存池设备与管理软件</p>
+<p>三星的 CMM-B（CXL Memory Module-Box）是完整的内存池系统方案，2U 机箱支持最多 24 个 E3.S CMM-D 模块，总容量 3-24 TiB，最多 8 台主机连接。配套的 SCMC（Samsung Cognos Management Console）提供：</p>
+<ul>
+<li>REST API 支持、DMTF/Redfish 标准兼容</li>
+<li>主机内存使用可视化与统计</li>
+<li>CMM 设备、交换机、主机拓扑视图</li>
+<li>动态内存分配/释放（池化模式与直连模式）</li>
+<li>与第三方管理系统的北向 API 集成</li>
+</ul>
+<p>据三星内部测算，CMM-B + SCMC 方案可降低约 30% 的内存扩展成本。</p>
+<h3 id="76">7.6 厂商产品总览表</h3>
+<table>
+<thead>
+<tr>
+<th>厂商</th>
+<th>类别</th>
+<th>代表产品</th>
+<th>CXL 版本</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Intel</td>
+<td>CPU</td>
+<td>Xeon 6 (Granite Rapids)</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>AMD</td>
+<td>CPU</td>
+<td>EPYC 9005 (Turin)</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Samsung</td>
+<td>内存模块</td>
+<td>CMM-D 2.0</td>
+<td>2.0</td>
+<td>量产/样品</td>
+</tr>
+<tr>
+<td>Samsung</td>
+<td>内存池设备</td>
+<td>CMM-B + SCMC</td>
+<td>1.1/2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>SK hynix</td>
+<td>内存模块</td>
+<td>CMM-DDR5</td>
+<td>2.0</td>
+<td>量产就绪</td>
+</tr>
+<tr>
+<td>Micron</td>
+<td>内存模块</td>
+<td>CZ122</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>SMART Modular</td>
+<td>内存模块</td>
+<td>CXA-8F2W (1TB)</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Advantech</td>
+<td>内存模块</td>
+<td>SQR-CX5N</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Astera Labs</td>
+<td>控制器</td>
+<td>Leo A-Series</td>
+<td>2.0</td>
+<td>量产（Azure 部署）</td>
+</tr>
+<tr>
+<td>Marvell</td>
+<td>控制器/加速器</td>
+<td>Structera A / X</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Marvell</td>
+<td>交换机 ASIC</td>
+<td>Structera S 20256 (Apollo)</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Marvell</td>
+<td>交换机 ASIC</td>
+<td>Structera S 30260 (Apollo 2)</td>
+<td>3.1</td>
+<td>采样 (2026 Q3)</td>
+</tr>
+<tr>
+<td>Panmnesia</td>
+<td>交换机 ASIC</td>
+<td>PanSwitch</td>
+<td>3.2</td>
+<td>样品 (2026 H2 量产)</td>
+</tr>
+<tr>
+<td>Montage Technology</td>
+<td>内存控制器</td>
+<td>MXC (M88MX6852)</td>
+<td>3.1</td>
+<td>采样</td>
+</tr>
+<tr>
+<td>Montage Technology</td>
+<td>Retimer</td>
+<td>M88RT61632</td>
+<td>3.x</td>
+<td>采样</td>
+</tr>
+<tr>
+<td>Microchip</td>
+<td>控制器</td>
+<td>SMC 2000</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Enfabrica</td>
+<td>交换/Fabric</td>
+<td>RCE</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>Rambus</td>
+<td>IP</td>
+<td>CXL 3.1 控制器 IP</td>
+<td>3.1</td>
+<td>授权中</td>
+</tr>
+<tr>
+<td>Cadence</td>
+<td>IP</td>
+<td>Controller IP for CXL</td>
+<td>2.0/1.1</td>
+<td>授权中</td>
+</tr>
+<tr>
+<td>Synopsys</td>
+<td>IP</td>
+<td>DesignWare CXL IP</td>
+<td>1.1</td>
+<td>授权中</td>
+</tr>
+<tr>
+<td>MemVerge</td>
+<td>软件</td>
+<td>Memory Machine X / GISMO</td>
+<td>2.0/3.x</td>
+<td>商用</td>
+</tr>
+<tr>
+<td>Liqid</td>
+<td>系统</td>
+<td>EX-5410C / Matrix CDI</td>
+<td>2.0</td>
+<td>量产</td>
+</tr>
+<tr>
+<td>H3 Platform</td>
+<td>系统</td>
+<td>Falcon C5022 / VCS</td>
+<td>1.1/2.0</td>
+<td>量产</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cxl_8">第十章 · CXL 术语表</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>全称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CXL</strong></td>
+<td>Compute Express Link</td>
+<td>开放标准的缓存一致性互连技术，基于 PCIe 物理层</td>
+</tr>
+<tr>
+<td><strong>CXL.io</strong></td>
+<td>—</td>
+<td>CXL 的 I/O 子协议，功能等价于 PCIe，负责设备发现、枚举、配置等</td>
+</tr>
+<tr>
+<td><strong>CXL.cache</strong></td>
+<td>—</td>
+<td>CXL 的缓存一致性子协议，允许设备缓存主机内存</td>
+</tr>
+<tr>
+<td><strong>CXL.mem</strong></td>
+<td>—</td>
+<td>CXL 的内存语义子协议，允许主机访问设备附加内存</td>
+</tr>
+<tr>
+<td><strong>HDM</strong></td>
+<td>Host-Managed Device Memory</td>
+<td>主机管理的设备内存，Type 3 设备的内存被主机作为主内存扩展</td>
+</tr>
+<tr>
+<td><strong>MLD</strong></td>
+<td>Multi-Logical Device</td>
+<td>多逻辑设备，单个物理 CXL 设备可呈现为多个逻辑设备</td>
+</tr>
+<tr>
+<td><strong>FM</strong></td>
+<td>Fabric Manager</td>
+<td>结构管理器，负责动态资源分配和管理 CXL Fabric</td>
+</tr>
+<tr>
+<td><strong>FAM</strong></td>
+<td>Fabric-Attached Memory</td>
+<td>结构附加内存，多主机可同时共享访问的内存</td>
+</tr>
+<tr>
+<td><strong>GIM</strong></td>
+<td>Global Integrated Memory</td>
+<td>全局互连内存，CXL 3.1 引入的主机间本地内存直接共享机制</td>
+</tr>
+<tr>
+<td><strong>IDE</strong></td>
+<td>Integrity and Data Encryption</td>
+<td>完整性与数据加密，CXL 2.0 引入的端到端安全机制</td>
+</tr>
+<tr>
+<td><strong>TSP</strong></td>
+<td>Trusted-Execution-Environment Security Protocol</td>
+<td>可信执行环境安全协议，CXL 3.1 引入</td>
+</tr>
+<tr>
+<td><strong>Tee</strong></td>
+<td>Trusted Execution Environment</td>
+<td>可信执行环境，机密计算的基础</td>
+</tr>
+<tr>
+<td><strong>PBR</strong></td>
+<td>Port-Based Routing</td>
+<td>基于端口的路由，CXL 3.1 引入，支持非树形拓扑</td>
+</tr>
+<tr>
+<td><strong>HBR</strong></td>
+<td>Hierarchy-Based Routing</td>
+<td>基于层次结构的路由，CXL 2.0 交换机使用的传统树形路由</td>
+</tr>
+<tr>
+<td><strong>FAST</strong></td>
+<td>Fabric Address Segment Table</td>
+<td>结构地址段表，CXL 3.1 引入，加速 GIM 内存访问</td>
+</tr>
+<tr>
+<td><strong>Flit</strong></td>
+<td>Flow Control Unit</td>
+<td>流控单元，CXL 传输的固定大小数据单元（68B 或 256B）</td>
+</tr>
+<tr>
+<td><strong>PAM-4</strong></td>
+<td>Pulse Amplitude Modulation 4-level</td>
+<td>四电平脉冲幅度调制，PCIe 6.0+ 使用的信号编码方式</td>
+</tr>
+<tr>
+<td><strong>Retimer</strong></td>
+<td>—</td>
+<td>重定时器，重新生成高速数字信号以延伸传输距离</td>
+</tr>
+<tr>
+<td><strong>DVSEC</strong></td>
+<td>Designated Vendor-Specific Extended Capability</td>
+<td>指定供应商扩展能力寄存器，用于 CXL 设备枚举</td>
+</tr>
+<tr>
+<td><strong>CHMU</strong></td>
+<td>CXL Hot-Page Monitoring Unit</td>
+<td>CXL 热页面监控单元，CXL 3.2 引入</td>
+</tr>
+<tr>
+<td><strong>Bundled Port</strong></td>
+<td>—</td>
+<td>捆绑端口，CXL 4.0 引入，将多个物理端口聚合为单个逻辑连接</td>
+</tr>
+<tr>
+<td><strong>NUMA</strong></td>
+<td>Non-Uniform Memory Access</td>
+<td>非一致性内存访问，CXL 内存在 OS 中表现为 NUMA 节点</td>
+</tr>
+<tr>
+<td><strong>VCS</strong></td>
+<td>Virtual CXL Switch</td>
+<td>虚拟 CXL 交换，H3 Platform 的多主机共享内存技术</td>
+</tr>
+</tbody>
+</table>
+<p>CXL 协议技术手册 · 基于公开资料整理 · 2026 年 8 月</p>
+<p>资料来源：CXL 联盟官方文档、各厂商公开发布信息、行业分析报告</p>
+<p>本手册仅供技术参考，具体产品规格以厂商最新官方信息为准</p>
+</div>
+</body>
+</html>

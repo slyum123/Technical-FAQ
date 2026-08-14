@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日技术 FAQ</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+h5, h6 { color: #8b949e; margin: 16px 0 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../index.html">&larr; 返回索引</a>
+<h1 id="faq">每日技术 FAQ</h1>
+<h2 id="2026-08-13">日期：2026-08-13</h2>
+<hr />
+<h2 id="_1">问题汇总</h2>
+<h3 id="1-github-faq">1. GitHub 仓库管理与每日 FAQ 自动化推送</h3>
+<ul>
+<li><strong>分类</strong>：Computer</li>
+<li><strong>问题描述</strong>：如何管理 GitHub 仓库（删除/新增目录），并将 WorkBuddy 每日技术问答自动汇总推送到指定仓库？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>删除仓库</strong>：进入仓库 Settings → Danger Zone → Delete this repository → 输入 <code>用户名/仓库名</code> 确认</li>
+<li><strong>创建新仓库</strong>：GitHub 页面 <code>+</code> → New repository，或使用 <code>gh repo create</code></li>
+<li><strong>本地创建并推送</strong>：<code>git init</code> → <code>git add .</code> → <code>git commit</code> → <code>git remote add origin &lt;url&gt;</code> → <code>git push -u origin main</code></li>
+<li><strong>仓库内删除文件夹</strong>：<code>git rm -r &lt;路径&gt;</code> → commit → push</li>
+<li><strong>仓库内新增文件夹</strong>：创建文件即可；空目录需用 <code>.gitkeep</code> 占位</li>
+<li><strong>自动化配置</strong>：在 WorkBuddy 中创建定时自动化任务，每天 23:00 汇总当日技术 FAQ，写入 <code>docs/YYYY-MM/YYYY-MM-DD-FAQ.md</code> 后自动 commit 并 push</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>Git 不跟踪空目录，新增空目录需放置 <code>.gitkeep</code> 占位文件</li>
+<li>删除 GitHub 仓库为不可逆操作，必须输入完整仓库名确认</li>
+<li>自动汇总依赖本地 git 身份配置（<code>user.name</code> / <code>user.email</code>）与 HTTPS/SSH 认证</li>
+<li>文档命名规范：<code>YYYY-MM-DD-FAQ.md</code>，按月归档到 <code>docs/YYYY-MM/</code></li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>GitHub 官方文档：https://docs.github.com/repositories</li>
+<li>项目实际操作记录</li>
+</ul>
+<hr />
+<h3 id="2-transformer">2. Transformer 架构源代码逐段分析</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：如何逐段分析 Transformer 架构的 PyTorch 源代码，理解各模块语义与设计动机？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li>核心组件顺序：PositionalEncoding → MultiHeadAttention → FeedForward → EncoderLayer → DecoderLayer → Transformer</li>
+<li><strong>PositionalEncoding</strong>：为词嵌入添加位置信息，使用正弦/余弦函数，支持外推到更长序列</li>
+<li><strong>MultiHeadAttention</strong>：将 Q/K/V 投影到多个头并行计算注意力，再拼接并线性投影；支持缩放点积注意力</li>
+<li><strong>FeedForward</strong>：两层线性变换 + ReLU/GELU，扩展维度再投影回模型维度</li>
+<li><strong>Encoder/Decoder Layer</strong>：自注意力 + 前馈 + 残差连接 + LayerNorm</li>
+<li><strong>Decoder</strong>：额外包含 Encoder-Decoder Cross-Attention，使用两个不同来源的 K/V</li>
+<li>可视化辅助：架构总览图、多头注意力数据流图</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>Transformer 完全基于注意力机制，抛弃了 RNN/CNN 的序列依赖</li>
+<li>多头注意力通过并行多子空间学习不同层面的依赖关系</li>
+<li>残差连接与 LayerNorm 是训练深层模型的关键稳定器</li>
+<li>位置编码使模型具备顺序感知能力，正弦/余弦编码具有外推性</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>"Attention Is All You Need" 原始论文</li>
+<li>PyTorch 官方 Transformer 实现</li>
+</ul>
+<hr />
+<h3 id="3-transformer-encoder-decoder-mask">3. Transformer Encoder 与 Decoder 中 Mask 机制的区别</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：为什么 Transformer 的 Encoder 和 Decoder 对 Mask 的需求不同？具体实现有何差异？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>Encoder Self-Attention</strong>：仅使用 Padding Mask，形状为 <code>[B,1,1,src_len]</code>，屏蔽填充位置</li>
+<li><strong>Decoder Masked Self-Attention</strong>：同时使用 Causal Mask 和 Padding Mask，形状为 <code>[B,1,tgt_len,tgt_len]</code>，阻止看到未来位置</li>
+<li><strong>Decoder Cross-Attention</strong>：仅使用 Source Padding Mask，形状为 <code>[B,1,1,src_len]</code>，屏蔽源序列填充位置</li>
+<li><strong>Causal Mask</strong>：上三角为 <code>-inf</code>，保证自回归生成时每个 token 只能依赖前文</li>
+<li><strong>Padding Mask</strong>：将填充位置的注意力分数置为 <code>-inf</code>，避免无效信息干扰</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>Encoder 是双向编码，不需要因果掩码；Padding Mask 即可</li>
+<li>Decoder 自回归生成必须因果掩码，防止未来信息泄露</li>
+<li>Cross-Attention 只关注 Encoder 输出，因此只需要对源端做 Padding Mask</li>
+<li>三种 Mask 的维度设计与其作用范围（源/目标、自注意/交叉注意）严格对应</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>"Attention Is All You Need"</li>
+<li>PyTorch nn.Transformer 源码</li>
+</ul>
+<hr />
+<h3 id="4-pfccbfcllr">4. PFC、CBFC、LLR 链路层机制对比</h3>
+<ul>
+<li><strong>分类</strong>：Communication</li>
+<li><strong>问题描述</strong>：基于 RFC/IEEE/UEC 标准，详细说明 PFC、CBFC、LLR 三种链路层流控与重传机制。</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>PFC (IEEE 802.1Qbb)</strong>：</li>
+<li>8 个优先级独立 PAUSE 帧流控</li>
+<li>DCBx 协商参数（XOFF/XON/Headroom）</li>
+<li>PFC Watchdog 防止死锁</li>
+<li><strong>CBFC (UEC v1.0)</strong>：</li>
+<li>信用制流控，替代 PFC</li>
+<li>20-bit 循环信用计数器，32 个 VC</li>
+<li>8B Ordered Set + 64B Sync Packet 传输信用</li>
+<li>关键公式：<code>Available = Initial_Grant + Credits_Freed(remote) - Credits_Consumed(local)</code>（累计计数器）</li>
+<li><strong>LLR (UEC v1.0)</strong>：</li>
+<li>链路层 Go-back-N 重传</li>
+<li>序列号嵌入前导码</li>
+<li>ACK/NACK 控制有序集</li>
+<li>重放缓冲区 + CRC 毒化防止 Livelock</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>PFC 是粗粒度 PAUSE，易造成 Head-of-Line Blocking 和死锁</li>
+<li>CBFC 是细粒度信用流控，按 VC 精确控制发送量，避免全局暂停</li>
+<li>LLR 解决误码问题，与 CBFC/PFC 协同实现无损链路</li>
+<li>三者关系：CBFC/PFC 防溢出 + LLR 防误码 = 无损可靠链路</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>IEEE 802.1Qbb</li>
+<li>UEC v1.0 Specification</li>
+<li>IEEE 802.1Qaz (DCBx)</li>
+</ul>
+<hr />
+<h3 id="5-cbfc">5. CBFC 信用公式中累计计数器的理解</h3>
+<ul>
+<li><strong>分类</strong>：Communication</li>
+<li><strong>问题描述</strong>：CBFC 的信用公式 <code>Available = CG - CC</code> 为何在按增量理解时会得到 0？应如何正确理解？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li>原公式 <code>Available = CG - CC</code> 中，<code>CG</code> 和 <code>CC</code> 均为累计计数器（Cumulative Counter）</li>
+<li><code>CG</code> = 初始授权 + 对端释放的历史累计</li>
+<li><code>CC</code> = 本端已消耗的历史累计</li>
+<li>若误将二者当作增量，则每次发送后计算结果会错误地归零</li>
+<li>正确显式公式：<code>Available = Initial_Grant + Credits_Freed(remote) - Credits_Consumed(local)</code></li>
+<li>累计计数器优势：幂等性、抗丢包、回绕安全、简化同步</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>CBFC 的 CG 与 CC 必须按累计值理解，不能按增量相减</li>
+<li>单次信用包丢失可自愈；连续丢包才会导致信用泄漏</li>
+<li>用累计计数器可在不维护复杂状态机的情况下实现可靠信用同步</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>UEC v1.0 Credit-Based Flow Control 章节</li>
+<li>项目中对 CBFC 文档的修正记录</li>
+</ul>
+<hr />
+<h3 id="6-scale-up">6. Scale-Up 网络协议全景分析</h3>
+<ul>
+<li><strong>分类</strong>：Communication / Computer</li>
+<li><strong>问题描述</strong>：如何系统对比 NVLink、UB（灵衢）、MTLink、GLink、OLink、Alink、SUE、UALink、OISA 等 Scale-Up 互联协议？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li>分析维度：物理层、数据链路层、网络层、传输层、事务层、全局编址、部署架构</li>
+<li><strong>物理层</strong>：SerDes 速率、调制方式（NRZ/PAM4）、通道数、FEC 策略</li>
+<li><strong>数据链路层</strong>：Flit 格式、CRC、流控（CBFC/PFC）、重传（LLR/Replay）</li>
+<li><strong>网络层</strong>：路由方式、包头格式（AFH/CNA/Accel ID）</li>
+<li><strong>传输层</strong>：可靠性、拥塞控制、负载均衡</li>
+<li><strong>事务层</strong>：内存语义、事务类型、一致性协议</li>
+<li><strong>全局编址</strong>：UVM 49-bit / UB CNA+EID+UBA+Token / 10-bit Flat ID / 以太兼容方案</li>
+<li><strong>部署架构</strong>：Die 内、基板、机柜、集群级别的组件分布</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>各厂商自研协议的共同驱动力：PCIe 的 I/O 语义、树形拓扑、BDF 编址已无法满足 GPU  Scale-Up 的内存语义、扁平 Fabric、全局地址需求</li>
+<li>协议差异主要体现在 SerDes 速率、Flit 大小、流控重传机制、一致性模型和生态开放性</li>
+<li>全局统一编址与 RDMA/内存语义是 Scale-Up 区别于传统 PCIe/CXL 的核心特征</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>MDPI 学术论文</li>
+<li>OCP 规范</li>
+<li>UALink 白皮书</li>
+<li>华为、中兴、阿里、摩尔线程、紫光官方资料</li>
+</ul>
+<hr />
+<h3 id="7-scale-up-3-6-mtlinkglinkolinkalink">7. Scale-Up 协议第 3-6 章（MTLink/GLink/OLink/Alink）深度补充</h3>
+<ul>
+<li><strong>分类</strong>：Communication / Computer</li>
+<li><strong>问题描述</strong>：如何基于公开技术特征和通用设计模式，补充 MTLink、GLink、OLink、Alink 四章的技术细节？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>MTLink</strong>：</li>
+<li>PHY：112G/224G SerDes、PAM4、可配置 FEC、多 lane 分发</li>
+<li>DL：256B Flit（Header + SeqNum + VC + Credit + Payload + CRC32）</li>
+<li>TL：8 种事务类型（Read/Write/Atomic/DMA/Reduce/Broadcast/Cpl），40-bit MUSA VA</li>
+<li>编址：GPU ID × 1TB 分区，MMU/TLB → MTLink TL → 远端 GPU HBM</li>
+<li><strong>GLink</strong>：</li>
+<li>PHY：UCIe Mainband + Sideband 双通道</li>
+<li>DL：UCIe D2D Adapter 256-bit Flit，ACK/NACK/DLLP</li>
+<li>TL：MemRead/Write/Atomic/DMA/CollectiveOp，Stream 模式 48-bit VA</li>
+<li>编址：Chiplet ID 8-bit 路由 + 48-bit 全局 VA</li>
+<li><strong>OLink</strong>：</li>
+<li>PHY：修改以太网 Preamble 嵌入 VC/Seq/Credit/OLink-ID</li>
+<li>DL：Preamble + DL Header + MAC + OLink Header + Payload + CRC</li>
+<li>TL：Transaction Packing 提升 5.3x 效率，12B 精简头</li>
+<li>编址：48-bit 统一 VA，VA[47:40] = GPU ID</li>
+<li><strong>Alink</strong>：</li>
+<li>PHY：224G×128 SerDes，铜+光双介质，CPO 连接器</li>
+<li>DL：640B Flit，16B DL Header，LLR + CBFC</li>
+<li>TL：Memory/Message/Tensor 三种语义，10-bit XPU + 26-bit Page + 12-bit Offset 压缩编址</li>
+<li>在网计算：INT32/FP8/FP16/BF16/FP32 的 Sum/Max/Min</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>各协议 PHY 层趋向 112G/224G PAM4 + 可选 FEC，DL 层趋向大 Flit + 信用/重传</li>
+<li>编址方案分为扁平全局 VA（OLink/GLink）和压缩层级编址（Alink）两类</li>
+<li>在网计算与事务打包是降低延迟、提升带宽利用率的关键优化</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>摩尔线程 MUSA 架构文档</li>
+<li>中兴 OLink 技术白皮书（ZTE Technologies）</li>
+<li>UCIe 协议详解</li>
+<li>阿里 UPN512/ALS 架构</li>
+<li>deeplink 超节点白皮书</li>
+</ul>
+<hr />
+<h3 id="8-scale-up">8. Scale-Up 协议文档目录布局修复</h3>
+<ul>
+<li><strong>分类</strong>：Computer</li>
+<li><strong>问题描述</strong>：如何修复长文档中 <code>position: sticky</code> 目录遮挡正文的问题？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li>问题根源：粘性定位的 TOC 在滚动时可能与正文重叠</li>
+<li>解决方案：将 TOC 改为左侧固定侧边栏（280px 宽）</li>
+<li>正文使用 <code>content-wrapper</code> + <code>margin-left</code> 偏移，避免遮挡</li>
+<li>移动端响应式：小于 1100px 时隐藏侧边栏，显示汉堡菜单按钮</li>
+<li>添加 <code>scroll-behavior: smooth</code> 实现点击目录平滑滚动</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>长文档导航优先采用固定侧边栏，而非粘性定位</li>
+<li>响应式设计需为移动端提供替代导航入口</li>
+<li><code>scroll-behavior: smooth</code> 提升目录跳转体验</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>项目前端调试记录</li>
+</ul>
+<hr />
+<h3 id="9-pcie-scale-up">9. PCIe 在 Scale-Up 网络中的根本劣势</h3>
+<ul>
+<li><strong>分类</strong>：Communication / Computer</li>
+<li><strong>问题描述</strong>：为什么 GPU/AI 集群 Scale-Up 互联中，各厂商倾向于自研协议而非使用 PCIe？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>I/O 语义 vs 内存语义</strong>：PCIe 基于请求/响应的 I/O 模型，不适合 GPU 直接内存访问和低延迟 Load/Store</li>
+<li><strong>树形拓扑 vs 扁平 Fabric</strong>：PCIe 以 Root Complex 为中心，P2P 受限；Scale-Up 需要任意节点直连的网状/ Fabric 拓扑</li>
+<li><strong>BDF + BAR vs 全局扁平编址</strong>：PCIe 使用总线/设备/功能号 + 基址寄存器，扩展性差；Scale-Up 使用全局虚拟地址</li>
+<li><strong>带宽差距</strong>：同代际对比，PCIe 6.0 vs NVLink 4.0 双向带宽差距约 3.6x</li>
+<li><strong>延迟差距</strong>：PCIe 400-600ns vs NVLink 100-200ns，差距 3-4x</li>
+<li><strong>小报文效率</strong>：PCIe TLP 头开销大，小报文效率仅约 3.8%</li>
+<li><strong>CXL 的局限</strong>：CXL 改进了缓存一致性和内存扩展，但仍基于 PCIe PHY，无法解决拓扑和编址根本问题</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>PCIe 的三大根本矛盾（I/O 语义、树形拓扑、BDF 编址）决定了它不适合 Scale-Up 场景</li>
+<li>带宽差距主要来自 SerDes 调制方式（PAM4 vs NRZ）和通道数量差距</li>
+<li>CXL 是 PCIe 的改良而非替代，无法根本解决 Scale-Up 需求</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>PCI-SIG PCIe 规范</li>
+<li>NVIDIA NVLink 白皮书</li>
+<li>CXL 联盟规范</li>
+</ul>
+<hr />
+<h3 id="10-pcie-nvlink">10. PCIe 与 NVLink 带宽对比的公平性修正</h3>
+<ul>
+<li><strong>分类</strong>：Communication / Computer</li>
+<li><strong>问题描述</strong>：为什么直接比较 PCIe 与 NVLink 带宽会得到虚高的倍数？应如何公平对比？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>常见误区 1</strong>：NVLink 的 lane 指 link（含 4 条 SerDes），PCIe 的 lane 是单条 SerDes</li>
+<li><strong>常见误区 2</strong>：PCIe 按单向标称，NVLink 按双向标称，直接相除虚高 2 倍</li>
+<li><strong>公平对比公式</strong>：<code>Total = Per-SerDes × Count × 2 (bidir)</code></li>
+<li><strong>同代际修正</strong>：</li>
+<li>NVLink 4.0 vs PCIe 5.0 同双向对比：约 7x（非 14x）</li>
+<li>PCIe 6.0 vs NVLink 4.0：约 3.6x</li>
+<li><strong>差距来源分解</strong>：</li>
+<li>单 SerDes 速率差距：约 3.2x（PAM4 vs NRZ）</li>
+<li>SerDes 数量差距：约 2.25x（72 vs 16）</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>带宽对比必须在同一维度：单 SerDes 速率、方向性、调制方式、通道数</li>
+<li>直接除法容易夸大 PCIe 劣势；双向同维度对比后差距仍显著但合理</li>
+<li>文档中所有带宽引用应统一为双向标称，并注明 SerDes 分解</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>NVIDIA NVLink 官方规格</li>
+<li>PCI-SIG PCIe 带宽规格</li>
+<li>项目中对 PCIE.html 的修正记录</li>
+</ul>
+<hr />
+<h3 id="11-pcie-p2p">11. PCIe P2P 路由机制修正</h3>
+<ul>
+<li><strong>分类</strong>：Communication / Computer</li>
+<li><strong>问题描述</strong>：PCIe 拓扑图中"所有事务都必须经过 Root Complex"的描述为何不严谨？P2P 路由实际如何工作？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>Switch 独立路由</strong>：Switch 内部有独立路由表，P2P 本地转发不需要经过 Root Complex</li>
+<li><strong>Root Complex 角色</strong>：RC 在枚举阶段建立 Switch 路由表，运行阶段 Switch 自主查表转发</li>
+<li><strong>三种路径</strong>：</li>
+<li>同一 Switch 下 P2P：Switch 本地转发，1 跳</li>
+<li>跨 Switch P2P：必须上行到 RC，再下行，3 跳</li>
+<li>上行到 RC：常规 CPU → Device 访问</li>
+<li><strong>ACS（Access Control Services）</strong>：可显式阻断 P2P，强制事务经过 RC</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>"所有事务都经过 RC"只适用于上行或跨 Switch 场景，不适用于同一 Switch 的 P2P</li>
+<li>Switch 具有独立路由能力，这是 PCIe 支持 P2P 的基础</li>
+<li>ACS 配置会影响 P2P 是否可用</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>PCI-SIG PCIe 路由规范</li>
+<li>项目中对 PCIE.html 的修正记录</li>
+</ul>
+<hr />
+<h3 id="12-deepseek-v3">12. DeepSeek V3 综合分析</h3>
+<ul>
+<li><strong>分类</strong>：AI</li>
+<li><strong>问题描述</strong>：如何系统整理 DeepSeek V3 的架构、关键组件、代码、训练流程和推理流程？</li>
+</ul>
+<p><strong>回答要点</strong>：</p>
+<ul>
+<li><strong>总览</strong>：671B 参数 MoE 模型，每次前向激活 37B 参数</li>
+<li><strong>MLA（Multi-head Latent Attention）</strong>：低秩 KV 压缩，KV cache 从 655GB 降至 9.2GB（约 71x）</li>
+<li><strong>DeepSeekMoE</strong>：256 个路由专家 + 2 个共享专家，辅助损失无关的负载均衡</li>
+<li><strong>FP8 训练</strong>：E4M3 混合精度，误差低于 0.25%</li>
+<li><strong>DualPipe</strong>：双向流水线调度，重叠计算与通信</li>
+<li><strong>MTP（Multi-Token Prediction）</strong>：每个位置预测多个未来 token，提升生成效率</li>
+<li><strong>训练</strong>：PP16 + EP64 + ZeRO-1 并行，YaRN 长上下文扩展，GRPO 强化学习（无 Critic 模型）</li>
+<li><strong>推理</strong>：MLA absorb 模式、MTP 投机解码、分布式推理架构</li>
+</ul>
+<p><strong>关键结论</strong>：</p>
+<ul>
+<li>DeepSeek V3 通过 MLA + MoE + FP8 + DualPipe 在低成本下实现大模型训练与推理效率</li>
+<li>MLA 的 KV 压缩是其推理成本优化的核心</li>
+<li>辅助损失无关的负载均衡策略避免了传统 MoE 的负载均衡损失对模型性能的影响</li>
+<li>GRPO 不依赖 Critic 模型，显著降低 RL 训练内存开销</li>
+</ul>
+<p><strong>信息来源</strong>：</p>
+<ul>
+<li>DeepSeek V3 技术报告</li>
+<li>DeepSeek-V3 GitHub 仓库</li>
+<li>DeepWiki 代码分析</li>
+</ul>
+<hr />
+<h2 id="_2">今日统计</h2>
+<table>
+<thead>
+<tr>
+<th>分类</th>
+<th>数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Computer</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>合计</strong></td>
+<td><strong>11</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+</body>
+</html>

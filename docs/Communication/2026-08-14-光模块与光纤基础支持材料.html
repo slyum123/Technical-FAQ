@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>光模块与光纤基础支持材料</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 { color: #58a6ff; margin: 24px 0 16px; font-size: 1.8em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+h2 { color: #79c0ff; margin: 28px 0 12px; font-size: 1.4em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+h5, h6 { color: #8b949e; margin: 16px 0 8px; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../index.html">&larr; 返回索引</a>
+<h1 id="_1">光模块与光纤基础支持材料</h1>
+<p>面向数据中心 / AI 算力 / 通信网络的技术入门与速查手册</p>
+<p>模块一：光模块（普通 / LPO / NPO / CPO） 模块二：光纤与电缆 编制日期：2026-08-07 适用：培训 / 售前 / 方案参考</p>
+<p>一、光模块总览 二、四类光模块对比 三、速率命名与特点 四、光模块发展趋势 五、光纤的作用 六、光纤的种类 七、光纤发展趋势 八、电缆作用与分类 九、光纤 vs 电缆</p>
+<h2 id="_2">一、光模块基础知识总览</h2>
+<p>光模块是“电信号 ↔ 光信号”转换的核心器件，是数据中心内部及之间数据传输的“高速公路”。</p>
+<h3 id="11">1.1 它解决什么问题</h3>
+<p>服务器、交换机芯片内部处理的是<strong>电信号</strong> ，但数据在光纤里只能以<strong>光信号</strong> 传输。光模块就是把二者互相转换的“翻译官”。在 AI 大模型训练中，上万张 GPU 协同工作，芯片间数据交换量达到 TB 级，传统电互连出现三大瓶颈：<strong>带宽不够、能耗过高、距离越远损耗越大</strong> ——这正是光模块价值凸显的地方。</p>
+<h3 id="12">1.2 传统（普通）可插拔光模块</h3>
+<p>这是目前最成熟、占市场主导的方案。模块插在交换机前面板，内部通常含 <strong>DSP（数字信号处理器）+ 驱动器 + 激光器 + 接收器</strong> 。</p>
+<p><strong>工作原理（电-光-电三级转换）：</strong><br />
+交换芯片发出电信号 → DSP 整形/纠错 → 激光器转成光信号 → 光纤传输 → 对端转回电信号。<br />
+以典型 <code>400G FR4</code> 为例，功耗约 <strong>10W</strong> ，一台 51.2T 交换机配 128 个模块，仅光模块功耗就接近 <strong>3000W</strong> ，占比超 40%。</p>
+<p>优点：标准化程度高、可热插拔、维护方便、供应链成熟（支撑全球 80%+ 的 400G 部署）。缺点：DSP 功耗随速率攀升，<code>1.6T</code> 可插拔功耗预计突破 20W；<code>3.2T</code> 可能达 50W，逼近风冷极限。</p>
+<h3 id="13">1.3 演进的四条技术路线</h3>
+<p>为突破“功耗墙”与“带宽密度墙”，业界形成 <strong>可插拔 → LPO → NPO → CPO</strong> 的渐进式演进，而非一夜切换的替代关系：</p>
+<p>当前主力</p>
+<h4 id="dsp">可插拔（含 DSP）</h4>
+<p>标准化、可热插拔，400G/800G 成熟量产，是当下绝对主力。</p>
+<p>性价比之选</p>
+<h4 id="lpo">LPO</h4>
+<p>去掉 DSP，功耗降约 50%，成本低、部署快，适合 800G/1.6T 中短距。</p>
+<p>过渡桥梁</p>
+<h4 id="npo">NPO</h4>
+<p>光引擎贴近 ASIC，密度 2~3 倍，平衡性能与可维护性。</p>
+<p>终极方向</p>
+<h4 id="cpo">CPO</h4>
+<p>光电共封装，功耗最低、密度最高，但维护难、尚在试点。</p>
+<h2 id="lpo-npo-cpo">二、普通 / LPO / NPO / CPO 详细对比</h2>
+<p>四者并非“谁取代谁”，而是分阶段、分场景的共生关系。</p>
+<h3 id="21">2.1 各自的核心特征</h3>
+<h4 id="pluggable">普通可插拔光模块（Pluggable）</h4>
+<ul>
+<li>前面板标准端口（SFP/QSFP-DD/OSFP 等）</li>
+<li>内置 DSP，可修复长距离 PCB 走线信号</li>
+<li>成熟量产，即插即用，维护极好</li>
+<li>短板：功耗高、信号路径长、抖动累积</li>
+</ul>
+<h4 id="lpolinear-pluggable-optics">LPO（Linear Pluggable Optics，线性可插拔）</h4>
+<ul>
+<li>去掉模块内 DSP，信号处理交还交换芯片 ASIC</li>
+<li>模块只剩线性驱动器 + TIA + 光器件</li>
+<li>功耗降约 50%（400G 约 5W），成本降 15~20%</li>
+<li>短板：依赖 ASIC 线性驱动能力，传输距离 &lt;500m，生态仍在完善</li>
+</ul>
+<h4 id="nponear-package-optics">NPO（Near-Package Optics，近封装光学）</h4>
+<ul>
+<li>光引擎从前面板移到交换芯片封装附近（同一基板/PCB）</li>
+<li>电走线缩短到 2~15cm，信道损耗 ≤13dB</li>
+<li>互联密度提升 2~3 倍，光引擎可独立更换</li>
+<li>定位：LPO 到 CPO 的关键过渡形态</li>
+</ul>
+<h4 id="cpoco-packaged-optics">CPO（Co-Packaged Optics，共封装光学）</h4>
+<ul>
+<li>光引擎与交换 ASIC 共封装在同一基板/中介层</li>
+<li>电距离 &lt;50mm，信道损耗 &lt;7dB</li>
+<li>3.2T CPO 约 18W，比可插拔整体降功耗 77%+</li>
+<li>短板：不可插拔、故障影响面大、依赖外置光源(ELS)、良率要求高</li>
+</ul>
+<h3 id="22">2.2 核心指标对比表</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>普通可插拔</th>
+<th>LPO</th>
+<th>NPO</th>
+<th>CPO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>是否含 DSP</td>
+<td>内置 DSP</td>
+<td>无 DSP（线性直驱）</td>
+<td>部分/外部 DSP</td>
+<td>无 DSP（高度集成）</td>
+</tr>
+<tr>
+<td>信号处理器位置</td>
+<td>模块内</td>
+<td>交换芯片 ASIC</td>
+<td>近 ASIC 板载</td>
+<td>与 ASIC 同基板</td>
+</tr>
+<tr>
+<td>相对功耗</td>
+<td>高</td>
+<td>较低（↓约50%）</td>
+<td>较低</td>
+<td>最低</td>
+</tr>
+<tr>
+<td>带宽密度</td>
+<td>低</td>
+<td>较低</td>
+<td>较高</td>
+<td>最高</td>
+</tr>
+<tr>
+<td>传输距离</td>
+<td>长（&gt;10km）</td>
+<td>短（&lt;500m）</td>
+<td>中短</td>
+<td>超短（板内/机柜内）</td>
+</tr>
+<tr>
+<td>技术成熟度</td>
+<td>完全商用</td>
+<td>商用初期/起量</td>
+<td>试验/试点</td>
+<td>研发/试点</td>
+</tr>
+<tr>
+<td>可维护性</td>
+<td>极好（热插拔）</td>
+<td>好（可插拔）</td>
+<td>较差（引擎可换）</td>
+<td>差（不可插拔）</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>中等</td>
+<td>较低</td>
+<td>中等</td>
+<td>高（封装复杂）</td>
+</tr>
+<tr>
+<td>部署灵活性</td>
+<td>极高</td>
+<td>高</td>
+<td>中低</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23">2.3 适配场景与时间线</h3>
+<table>
+<thead>
+<tr>
+<th>技术</th>
+<th>目标速率</th>
+<th>典型场景</th>
+<th>规模化时间窗</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通可插拔</td>
+<td>400G / 800G / 1.6T</td>
+<td>通用数据中心、长距互联</td>
+<td>当前（主导）</td>
+</tr>
+<tr>
+<td>LPO</td>
+<td>800G / 1.6T</td>
+<td>AI 推理集群、机柜间短距、存量改造</td>
+<td>2025–2027（短期主流）</td>
+</tr>
+<tr>
+<td>NPO</td>
+<td>1.6T / 3.2T</td>
+<td>中型 AI 训练、机柜内高性能互联</td>
+<td>2026–2029（中期主力）</td>
+</tr>
+<tr>
+<td>CPO</td>
+<td>3.2T / 6.4T+</td>
+<td>万卡级超算、极致能效场景</td>
+<td>2027+（长期方向，2027–2028 起试点放量）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>补充：LRO（线性接收）</strong> —— LPO 的折中版，仅接收端去 DSP、发射端保留 DSP，传输距离优于 LPO、功耗低于全 DSP，但产业链成熟度低，尚未成主流。</p>
+<h2 id="_3">三、不同速率光模块的命名与特点</h2>
+<p>命名 = 速率档位 + 封装形式 + 距离/波长代码，读懂名字即可知关键参数。</p>
+<h3 id="31">3.1 速率档位与典型封装</h3>
+<table>
+<thead>
+<tr>
+<th>速率</th>
+<th>常见封装</th>
+<th>内部通道构成</th>
+<th>特点 / 状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1G (GE)</td>
+<td>SFP</td>
+<td>1×1G</td>
+<td>老牌接入，仍广泛使用</td>
+</tr>
+<tr>
+<td>10G</td>
+<td>SFP+</td>
+<td>1×10G</td>
+<td>数据中心接入层主力</td>
+</tr>
+<tr>
+<td>25G</td>
+<td>SFP28</td>
+<td>1×25G</td>
+<td>服务器接入主流</td>
+</tr>
+<tr>
+<td>40G</td>
+<td>QSFP+</td>
+<td>4×10G</td>
+<td>逐步被 100G 替代</td>
+</tr>
+<tr>
+<td>100G</td>
+<td>QSFP28</td>
+<td>4×25G</td>
+<td>大量部署，成熟</td>
+</tr>
+<tr>
+<td>200G</td>
+<td>QSFP56 / QSFP-DD</td>
+<td>4×50G</td>
+<td>过渡档位</td>
+</tr>
+<tr>
+<td>400G</td>
+<td>QSFP-DD / OSFP</td>
+<td>8×50G（或 4×100G）</td>
+<td>当前 AI 集群主力，FR4 约 10W</td>
+</tr>
+<tr>
+<td>800G</td>
+<td>QSFP-DD800 / OSFP</td>
+<td>8×100G</td>
+<td>2025 起规模部署，AI 训练标配</td>
+</tr>
+<tr>
+<td>1.6T</td>
+<td>OSFP / QSFP-DD（8×200G）</td>
+<td>8×200G</td>
+<td>2026 量产爬坡，英伟达主导</td>
+</tr>
+<tr>
+<td>3.2T</td>
+<td>在研（OSFP-XD 等）</td>
+<td>预计 8×400G</td>
+<td>预研/早期开发，2027+ 逐步上市</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32">3.2 封装名称速记</h3>
+<ul>
+<li><code>SFP</code>：Small Form-factor Pluggable，小型可插拔（1G）</li>
+<li><code>SFP+ / SFP28</code>：升级版，分别对应 10G / 25G</li>
+<li><code>QSFP</code>：Quad SFP，四通道（40G QSFP+，100G QSFP28）</li>
+<li><code>QSFP-DD</code>：Double Density，双排 8 通道，兼容 QSFP，支持 200/400/800G</li>
+<li><code>OSFP</code>：Octal SFP，八通道，尺寸略大于 QSFP-DD，支持 400G~1.6T</li>
+<li><code>CFP / CFP2 / CFP4 / CFP8</code>：早期大尺寸高速封装，CFP8 支持 400G（16×25G 或 8×50G）</li>
+</ul>
+<h3 id="33">3.3 “距离 / 波长”代码规则（以太网命名）</h3>
+<p>格式如 <code>100GBASE-SR4</code>、<code>400GBASE-FR4</code>、<code>800GBASE-DR4</code>：数字=速率，BASE=基带，后缀=距离/介质。</p>
+<table>
+<thead>
+<tr>
+<th>代码</th>
+<th>含义</th>
+<th>光纤 / 距离</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SR（Short Reach）</td>
+<td>短距，多模</td>
+<td>多模光纤，数百米（如 OM4 约 100m，OM5 更长）</td>
+</tr>
+<tr>
+<td>DR（Data Center Reach）</td>
+<td>数据中心距</td>
+<td>单模，约 500m</td>
+</tr>
+<tr>
+<td>FR（Far Reach）</td>
+<td>远距</td>
+<td>单模，约 2km</td>
+</tr>
+<tr>
+<td>LR（Long Reach）</td>
+<td>长距</td>
+<td>单模，约 10km</td>
+</tr>
+<tr>
+<td>ER / ZR</td>
+<td>超长 / 极长距</td>
+<td>单模，40km / 80km</td>
+</tr>
+<tr>
+<td>4 / 8（后缀数字）</td>
+<td>波分通道数</td>
+<td>如 FR4 = 4 个波长合波，提升总带宽</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">四、光模块的发展趋势</h2>
+<p>速率每 2~3 年翻倍，形态沿“可插拔 → NPO → CPO”渐进演进。</p>
+<p><strong>800G → 1.6T</strong> 2026 进入 1.6T 量产爬坡，英伟达为最大推手</p>
+<p><strong>~50%</strong> LPO 相对可插拔的功耗降幅</p>
+<p><strong>77%+</strong> 3.2T CPO 相对可插拔的整体功耗降幅</p>
+<p><strong>2027–2028</strong> 行业预计 CPO 规模化商用窗口</p>
+<h3 id="41">4.1 速率持续翻倍</h3>
+<ul>
+<li><strong>800G 成主流</strong> ：2024 起被 AI 训练集群大规模采购，2026 出货持续攀升。</li>
+<li><strong>1.6T 商用元年</strong> ：2025 完成技术验证到小规模商用，2026 随 Blackwell 架构服务器规模部署放量。</li>
+<li><strong>3.2T 在路上</strong> ：已进入预研与早期开发，预计 2027 后逐步上市；单波 400G 光引擎是关键技术。</li>
+</ul>
+<h3 id="42">4.2 形态演进：从“可插拔”走向“共封装”</h3>
+<ul>
+<li><strong>LPO 先落地</strong> ：去除 DSP 降本降耗，是当前最具性价比、最易部署的选项。</li>
+<li><strong>NPO 承前启后</strong> ：光引擎贴近 ASIC，在性能、功耗、可维护性间取平衡，是 CPO 落地的工程铺垫。</li>
+<li><strong>CPO 是终局</strong> ：光电同封装，突破前面板端口密度物理极限；但需解决可靠性、故障影响面、供应链依赖等问题。</li>
+</ul>
+<h3 id="43">4.3 材料与工艺创新</h3>
+<ul>
+<li><strong>硅光（SiPh）</strong> ：用硅基集成降低高速模块成本，800G 中硅光方案占比已近 50%。</li>
+<li><strong>单波 200G / 400G</strong> ：提升单通道速率，支撑 1.6T / 3.2T。</li>
+<li><strong>外置光源（ELS）</strong> ：CPO 将激光器外置，提升可维护性。</li>
+</ul>
+<p><strong>产业格局一句话：</strong> “中系掌控制造，美系主导核心芯片”。中国大陆厂商占全球光模块供应约 70% 份额（中际旭创、新易盛、华工科技等），上游 DSP/激光芯片仍由博通、Marvell、Lumentum、Coherent 等主导。</p>
+<h2 id="_5">五、光纤的作用</h2>
+<p>光纤是“用光传数据”的介质，是信息时代的“高速公路”。</p>
+<h3 id="51">5.1 基本结构与原理</h3>
+<p>光纤由三层构成：<strong>纤芯</strong> （极细高纯度玻璃丝，光在此传输）→ <strong>包层</strong> （折射率低于纤芯，使光在纤芯内全反射前进）→ <strong>涂覆层</strong> （保护增韧）。发送端把电信号转成光信号注入纤芯，接收端再转回电信号。</p>
+<h3 id="52">5.2 它解决了什么</h3>
+<ul>
+<li><strong>超大带宽</strong> ：传输容量巨大，单纤理论带宽近乎无限。</li>
+<li><strong>极低衰减</strong> ：单模 1550nm 衰减约 0.22 dB/km，数十至上百公里无需中继。</li>
+<li><strong>完全抗电磁干扰</strong> ：光信号不受雷电、电力设备影响，适合工厂、电力等恶劣环境。</li>
+<li><strong>高安全</strong> ：难以在不破坏光纤的情况下窃听。</li>
+<li><strong>轻、细</strong> ：同等带宽下比铜缆轻便，利于高密度敷设。</li>
+</ul>
+<p>光纤本身不贵，但<strong>熔接、端接需精密工具与专业人员</strong> ，光电转换设备（光模块、光口交换机）成本高于电口；传统光纤也无法像双绞线那样 PoE 供电（PoE over Fiber 新兴技术正在解决）。</p>
+<h2 id="_6">六、光纤的种类</h2>
+<p>按“传输模式”分单模/多模；按“波长/颜色”分灰光/彩光。</p>
+<h3 id="61-vs">6.1 按传输模式：单模 vs 多模</h3>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>单模光纤 SMF</th>
+<th>多模光纤 MMF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纤芯直径</td>
+<td>9 μm</td>
+<td>50 μm 或 62.5 μm</td>
+</tr>
+<tr>
+<td>传输模式</td>
+<td>单一光路（直线传播）</td>
+<td>多条光路（多次反射）</td>
+</tr>
+<tr>
+<td>光源</td>
+<td>激光器（LD / DFB）</td>
+<td>LED 或 VCSEL</td>
+</tr>
+<tr>
+<td>典型波长</td>
+<td>1310nm / 1550nm</td>
+<td>850nm（部分 1300nm）</td>
+</tr>
+<tr>
+<td>传输距离</td>
+<td>几十至上百公里</td>
+<td>通常 &lt;550m</td>
+</tr>
+<tr>
+<td>带宽</td>
+<td>极高（带宽×距离积近乎无限）</td>
+<td>有限（受模式色散限制）</td>
+</tr>
+<tr>
+<td>成本结构</td>
+<td>光纤便宜、光模块贵</td>
+<td>光纤稍贵、光模块便宜</td>
+</tr>
+<tr>
+<td>外皮颜色</td>
+<td>黄色</td>
+<td>橙色(OM1/2) / 水蓝(OM3/4) / 柠檬绿(OM5)</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>长距、干线、FTTH、跨机房</td>
+<td>机房内、楼宇内短距高密度</td>
+</tr>
+</tbody>
+</table>
+<p><strong>多模等级演进：</strong> OM1(62.5/125) → OM2(50/125) → OM3(支持 10G) → OM4(支持 100G/短 400G) → OM5(宽波段，支持 SWDM 多波长)。新一代 OM4 PRO 将工作窗口从 850nm 扩展到 850–870nm，支持 800G eSR 在 150m 稳定传输。</p>
+<h3 id="62-vs">6.2 按“颜色/波长”：灰光 vs 彩光</h3>
+<h4 id="grey">灰光（黑白光 / Grey）</h4>
+<ul>
+<li>中心波长单一：常见 850nm / 1310nm / 1550nm</li>
+<li>一路光对应一个波长，简单直接</li>
+<li>用于点对点短/中距互联</li>
+<li>绝大多数普通光模块属于灰光</li>
+</ul>
+<h4 id="color-wdm">彩光（Color / WDM）</h4>
+<ul>
+<li>承载多个不同中心波长的光，“合起来五颜六色”</li>
+<li>分 <strong>CWDM</strong> （粗波分）与 <strong>DWDM</strong> （密集波分）</li>
+<li>无源合波器把多路彩光合一路，远端分波，<strong>节省光纤</strong></li>
+<li>主要用于长距离、大容量线路</li>
+</ul>
+<p>一句话：<strong>灰光=单波长点对点；彩光=多波长复用、省光纤、扩容量。</strong></p>
+<h2 id="_7">七、光纤的未来发展趋势</h2>
+<ul>
+<li><strong>空分复用（多芯/少模光纤）</strong> ：单纤内并行多根纤芯，突破单芯容量极限。例如超大容量多芯光纤已创下 <strong>5.29 Pbps</strong> （约 66 万 GB/s）世界纪录传输容量。</li>
+<li><strong>宽波段多模光纤</strong> ：扩展工作窗口（如 OM4 PRO 850–870nm），支撑 800G eSR 等 AI 集群短距组网。</li>
+<li><strong>硅光子与光电共封装</strong> ：硅光降低光模块成本，CPO 把光引擎靠近芯片，拉动“芯片—光”一体化光纤互联。</li>
+<li><strong>全光交换（OCS）</strong> ：光路交换替代部分电交换，降低时延与功耗，支撑超大规模 AI 集群组网。</li>
+<li><strong>PoE over Fiber</strong> ：解决光纤无法远端供电的短板，拓展光纤在接入层的应用。</li>
+<li><strong>更低损耗、更耐弯</strong> ：新型涂层与弯曲不敏感光纤，便于高密度数据中心布线。</li>
+</ul>
+<h2 id="_8">八、电缆的作用与分类</h2>
+<p>电缆以“电信号 / 电流”为载体，是短距通信与电力传输的基础。</p>
+<h3 id="81">8.1 电缆的作用</h3>
+<ul>
+<li><strong>通信传输</strong> ：在短距、低成本场景承载数据（如网线、同轴线）。</li>
+<li><strong>电力供应</strong> ：输送电能（电力电缆），并可经 PoE 为远端设备供电。</li>
+<li><strong>抗干扰与兼容</strong> ：屏蔽型电缆在部分场景比光纤更易部署、成本更低。</li>
+</ul>
+<h3 id="82">8.2 主要分类</h3>
+<h4 id="twisted-pair">双绞线（Twisted Pair）</h4>
+<ul>
+<li>铜线两两绞合，常见 4 对 8 芯（如 Cat5e/6/6a/7/8）</li>
+<li>差分传输抗串扰，成本低、易部署</li>
+<li>Cat6 支持 10G（55m 内）；Cat8 支持 40G（约 30m）</li>
+<li>可 PoE 供电；弱点：易受电磁干扰、距离受限</li>
+<li>用于办公网、电话、服务器短距接入</li>
+</ul>
+<h4 id="coaxial">同轴电缆（Coaxial）</h4>
+<ul>
+<li>中心铜导体 + 绝缘层 + 金属屏蔽层</li>
+<li>天然屏蔽、抗干扰较强，可传数百米~500m</li>
+<li>典型 RG-6 用于有线电视/广电，速率可达百 Mbps~Gb 级</li>
+<li>笨重、安装复杂，逐步被光纤替代</li>
+</ul>
+<h4 id="dac">铜缆（DAC / 高速铜缆）</h4>
+<ul>
+<li>DAC（直连铜缆）：交换机/服务器间无源/有源短距互连</li>
+<li>224G 高速铜缆用于 AI 机柜内 Scale-up 短距</li>
+<li>成本极低、时延小，但距离短（通常 &lt;3m~7m）、功耗随速率升</li>
+</ul>
+<h4 id="power-cable">电力电缆（Power Cable）</h4>
+<ul>
+<li>输送电能，按电压等级分级（低压/中压/高压）</li>
+<li>与通信电缆物理分离敷设，避免干扰</li>
+<li>数据中心供配电、市电引入的核心介质</li>
+</ul>
+<p>补充：<strong>AOC（有源光缆）</strong> 介于铜缆与光模块之间——两端集成光电器件、中间为光纤，速率覆盖 10G~800G，距离 1~100m，兼具光纤带宽与易用性，常用于 AI 集群设备联动。</p>
+<h2 id="vs">九、光纤 vs 电缆 对比</h2>
+<p>“光纤是马拉松冠军，电缆是短跑运动员”——各有所长，按场景选择。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>光纤（光缆）</th>
+<th>电缆（双绞线/同轴/铜缆）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传输介质</td>
+<td>玻璃/塑料纤维（光信号）</td>
+<td>铜/铝导体（电信号 / 电流）</td>
+</tr>
+<tr>
+<td>信号载体</td>
+<td>光子</td>
+<td>电子</td>
+</tr>
+<tr>
+<td>带宽/速率</td>
+<td>极高（Tbps 级）</td>
+<td>高（双绞线 10~40G；同轴 Gb 级）</td>
+</tr>
+<tr>
+<td>传输距离</td>
+<td>极长（单模 100km+ 无中继）</td>
+<td>短~中（双绞线百米级，同轴数百米）</td>
+</tr>
+<tr>
+<td>抗干扰</td>
+<td>极强，完全免疫 EMI</td>
+<td>弱（需屏蔽），易受雷电/电磁影响</td>
+</tr>
+<tr>
+<td>安全性</td>
+<td>高，难窃听</td>
+<td>较低，可能被搭线</td>
+</tr>
+<tr>
+<td>供电能力</td>
+<td>传统不能（PoE over Fiber 在研）</td>
+<td>可（PoE 供电）</td>
+</tr>
+<tr>
+<td>体积重量</td>
+<td>轻、细</td>
+<td>笨重（同轴尤甚）</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>线缆中低，但光模块/熔接成本高</td>
+<td>整体成本低，短距性价比高</td>
+</tr>
+<tr>
+<td>安装维护</td>
+<td>需专业熔接，弯曲半径要求严</td>
+<td>水晶头/BNC 易做，部署简单</td>
+</tr>
+<tr>
+<td>典型应用</td>
+<td>长途干线、数据中心互联、FTTH、5G 前传</td>
+<td>办公网、电话、PoE 设备、机柜内短距</td>
+</tr>
+</tbody>
+</table>
+<p><strong>选型口诀：</strong> 长距离、大带宽、抗干扰、要安全 → 选<strong>光纤</strong> ；短距离、低预算、要供电、易部署 → 选<strong>铜缆/双绞线</strong> 。AI 集群里二者长期共存：机柜内短距用高速铜缆/DAC，机柜间与长距用光纤/光模块。</p>
+<p>本材料为光模块与光纤基础支持文档 · 内容综合公开行业资料与 2025–2026 年产业动态整理 · 仅供内部培训与方案参考使用</p>
+</div>
+</body>
+</html>
