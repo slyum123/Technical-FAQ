@@ -257,6 +257,9 @@ Stage3: [  ][  ][  ][F1][F2][F3][F4][  ][  ][  ][B1][B2][B3][B4]
 
     <h2>四、1F1B（One Forward One Backward）</h2>
 
+    <img class="doc-image" src="images/1f1b-schedule.png" alt="1F1B 流水线调度示意图">
+    <p class="img-caption">1F1B 调度：4 个 device、8 个 micro-batch（F0-F7）。每个 micro-batch 完成前向后立即进入反向，激活值无需长时间堆积，显存峰值显著低于 GPipe。</p>
+
     <h3>4.1 思想与调度</h3>
     <p>1F1B 的核心是<strong>让每个 micro-batch 尽早进行反向传播</strong>，不必等待所有 micro-batch 前向完成。这样前向保留的激活可以尽早释放，从而降低设备的峰值显存。</p>
 
