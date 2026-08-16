@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG 基础知识手册</title>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--card:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--accent2:#3fb950;
+  --accent3:#d2a8ff;--accent4:#f78166;--accent5:#ffa657;--accent6:#39c5cf;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.75;font-size:15px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ============ 侧边栏 ============ */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:300px;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:20px 0;z-index:100}
+.sidebar .logo{padding:0 20px 16px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.sidebar .logo h1{font-size:18px;color:var(--accent)}
+.sidebar .logo .sub{font-size:12px;color:var(--muted)}
+.sidebar .dir{font-size:12px;color:var(--accent3);padding:10px 20px 4px;font-family:Consolas,monospace}
+.sidebar a.item{display:block;padding:6px 20px 6px 32px;color:var(--muted);font-size:13px;border-left:2px solid transparent}
+.sidebar a.item:hover{color:var(--text);background:rgba(88,166,255,.08);text-decoration:none}
+.sidebar a.item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(88,166,255,.08)}
+.sidebar .top{display:block;padding:8px 20px;color:var(--text);font-size:14px;font-weight:600}
+
+/* ============ 主内容 ============ */
+.main{margin-left:300px;padding:32px 48px;max-width:1100px}
+.part-header{border-bottom:2px solid var(--border);padding-bottom:14px;margin:56px 0 24px}
+.part-header:first-child{margin-top:0}
+.part-header .path{font-family:Consolas,monospace;font-size:13px;color:var(--accent3)}
+.part-header h2{font-size:26px;margin-top:4px}
+h3.sec{font-size:20px;color:var(--accent);margin:36px 0 14px;padding-left:12px;border-left:4px solid var(--accent)}
+h4{font-size:16px;color:var(--accent5);margin:22px 0 10px}
+p{margin:10px 0}
+ul,ol{margin:10px 0 10px 26px}
+li{margin:5px 0}
+
+/* ============ 组件 ============ */
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px;background:var(--card)}
+th{background:#21262d;color:var(--accent6);text-align:left;padding:9px 12px;border:1px solid var(--border);font-weight:600;white-space:nowrap}
+td{padding:8px 12px;border:1px solid var(--border);vertical-align:top}
+tr:nth-child(even) td{background:rgba(255,255,255,.02)}
+code{font-family:Consolas,"Courier New",monospace;background:rgba(110,118,129,.25);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--accent5)}
+pre{background:#0a0d12;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;margin:14px 0;font-size:13px;line-height:1.6}
+pre code{background:none;padding:0;color:var(--text)}
+
+/* 代码高亮 */
+.kw{color:#ff7b72}.fn{color:#d2a8ff}.str{color:#a5d6ff}.num{color:#79c0ff}
+.cm{color:#8b949e;font-style:italic}.cls{color:#ffa657}.var{color:#7ee787}.op{color:#ff7b72}
+
+.callout{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;padding:14px 18px;margin:16px 0}
+.callout.warn{border-left-color:var(--accent4)}
+.callout.good{border-left-color:var(--accent2)}
+.callout.info{border-left-color:var(--accent6)}
+.callout strong{color:var(--accent6)}
+
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11.5px;font-weight:600}
+.badge-blue{background:rgba(56,139,253,.2);color:var(--accent)}
+.badge-green{background:rgba(63,185,80,.18);color:var(--accent2)}
+.badge-purple{background:rgba(210,168,255,.18);color:var(--accent3)}
+.badge-orange{background:rgba(255,161,87,.18);color:var(--accent5)}
+.badge-red{background:rgba(248,81,106,.18);color:#f85149}
+.badge-cyan{background:rgba(57,197,207,.18);color:var(--accent6)}
+
+.frame-diagram{background:#0a0d12;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;font-family:Consolas,monospace;font-size:12.5px;line-height:1.5;white-space:pre;color:var(--text);margin:14px 0}
+
+.tag-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.file-tag{font-family:Consolas,monospace;font-size:12px;background:rgba(210,168,255,.12);color:var(--accent3);border:1px solid rgba(210,168,255,.3);padding:2px 8px;border-radius:4px}
+
+@media (max-width: 900px){
+  .sidebar{display:none}
+  .main{margin-left:0;padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= 侧边栏 ================= -->
+<nav class="sidebar">
+  <div class="logo">
+    <h1>RAG 基础知识手册</h1>
+    <div class="sub">Retrieval-Augmented Generation</div>
+  </div>
+  <a class="top" href="#top">📘 RAG手册/</a>
+  <div class="dir">📁 01-基础概念/</div>
+  <a class="item" href="#ch1-1">1.1 什么是 RAG</a>
+  <a class="item" href="#ch1-2">1.2 为什么需要 RAG</a>
+  <a class="item" href="#ch1-3">1.3 RAG vs 微调 vs 长上下文</a>
+  <a class="item" href="#ch1-4">1.4 RAG 的三阶段演进</a>
+  <div class="dir">📁 02-核心组件与流程/</div>
+  <a class="item" href="#ch2-1">2.1 总体架构：两条流水线</a>
+  <a class="item" href="#ch2-2">2.2 文档加载与分块 Chunking</a>
+  <a class="item" href="#ch2-3">2.3 Embedding 向量化</a>
+  <a class="item" href="#ch2-4">2.4 向量数据库</a>
+  <a class="item" href="#ch2-5">2.5 检索策略：稠密/稀疏/混合</a>
+  <a class="item" href="#ch2-6">2.6 Rerank 重排序</a>
+  <a class="item" href="#ch2-7">2.7 生成阶段与 Prompt 组装</a>
+  <a class="item" href="#ch2-8">2.8 组件对接关系全景</a>
+  <div class="dir">📁 03-开源源码解析/</div>
+  <a class="item" href="#ch3-1">3.1 rag_demo 项目结构</a>
+  <a class="item" href="#ch3-2">3.2 config.py 配置中心</a>
+  <a class="item" href="#ch3-3">3.3 document_loader.py 加载器</a>
+  <a class="item" href="#ch3-4">3.4 text_splitter.py 分块器</a>
+  <a class="item" href="#ch3-5">3.5 embedder.py 向量化</a>
+  <a class="item" href="#ch3-6">3.6 vector_store.py 向量库</a>
+  <a class="item" href="#ch3-7">3.7 retriever.py 混合检索</a>
+  <a class="item" href="#ch3-8">3.8 llm_client.py 模型客户端</a>
+  <a class="item" href="#ch3-9">3.9 rag.py 编排器</a>
+  <a class="item" href="#ch3-10">3.10 运行演示</a>
+  <div class="dir">📁 04-RAG与大模型对接案例/</div>
+  <a class="item" href="#ch4-1">4.1 对接的本质：上下文注入</a>
+  <a class="item" href="#ch4-2">4.2 完整案例：DeepSeek + FAISS</a>
+  <a class="item" href="#ch4-3">4.3 实际发送的 HTTP 报文</a>
+  <a class="item" href="#ch4-4">4.4 Prompt 全文还原</a>
+  <a class="item" href="#ch4-5">4.5 一套代码对接任意模型</a>
+  <a class="item" href="#ch4-6">4.6 对接的工程问题</a>
+  <div class="dir">📁 05-进阶与评估/</div>
+  <a class="item" href="#ch5-1">5.1 高级分块与上下文化检索</a>
+  <a class="item" href="#ch5-2">5.2 查询改写技术</a>
+  <a class="item" href="#ch5-3">5.3 GraphRAG 图增强检索</a>
+  <a class="item" href="#ch5-4">5.4 Agentic RAG</a>
+  <a class="item" href="#ch5-5">5.5 RAG 评估体系 RAGAS</a>
+  <a class="item" href="#ch5-6">5.6 生产化检查清单</a>
+</nav>
+
+<div class="main" id="top">
+
+<!-- ============================================================= -->
+<!-- 01 基础概念 -->
+<!-- ============================================================= -->
+<div class="part-header" id="part1">
+  <div class="path">RAG手册/01-基础概念/</div>
+  <h2>第一章 基础概念</h2>
+</div>
+
+<h3 class="sec" id="ch1-1">1.1 什么是 RAG</h3>
+<p>
+<strong>RAG（Retrieval-Augmented Generation，检索增强生成）</strong>是一种把"外部知识检索"与"大模型生成"结合的技术范式：
+在模型回答问题<strong>之前</strong>，先从外部知识库中检索出与问题相关的资料片段，把这些片段注入模型的上下文窗口，
+让模型<strong>基于给定的资料</strong>生成回答，而不是仅依赖训练时记住的参数化知识。
+</p>
+<div class="frame-diagram">                 +-----------------+
+   User Query -->|  Retriever      |--> Top-K relevant chunks
+                 |  (检索器)        |    (向量库/BM25/知识图谱)
+                 +-----------------+            |
+                                                | inject into context
+                                                v
+                 +-----------------+
+   Answer   <-- |  LLM (生成器)    |<-- "参考资料 + 问题" Prompt
+                 |  DeepSeek/GPT..  |
+                 +-----------------+</div>
+<p>
+可以把 RAG 理解为<strong>"开卷考试"</strong>：大模型本身的参数知识是"闭卷"记忆，会过时、会记错、会编造；
+RAG 相当于考试时临时递给它几页相关资料，让它照着资料答题并标注出处。
+</p>
+<div class="callout info">
+<strong>一句话定义</strong>：RAG = 非参数化知识（外部知识库）+ 参数化知识（大模型）的运行时融合，
+通过检索把正确答案的"证据"送进上下文，把生成约束在证据范围内。
+</div>
+
+<h3 class="sec" id="ch1-2">1.2 为什么需要 RAG：四大痛点</h3>
+<table>
+<tr><th>大模型固有问题</th><th>表现</th><th>RAG 如何解决</th></tr>
+<tr><td><span class="badge badge-red">知识截止</span></td><td>模型只认识训练截止日期之前的世界，问新发布的产品规格、新政策一无所知</td><td>知识库可随时增量更新，重新索引即可，模型无需重训</td></tr>
+<tr><td><span class="badge badge-red">幻觉</span></td><td>一本正经地编造不存在的 API、参数、数据</td><td>提示词强制"只依据参考资料回答"，无依据时明确拒答</td></tr>
+<tr><td><span class="badge badge-red">私有知识缺失</span></td><td>企业内部文档、代码库、工单从未进入训练集</td><td>私有数据本地向量化，检索后送模型，数据不出域</td></tr>
+<tr><td><span class="badge badge-red">不可溯源</span></td><td>无法验证答案从哪来，金融/医疗/法律场景不可接受</td><td>答案附带引用来源（文档名+页码+块编号）</td></tr>
+</table>
+
+<h4>成本视角：为什么不是"直接微调"或"塞满上下文"</h4>
+<ul>
+<li><strong>微调（Fine-tuning）</strong>：一次全参微调 7B 模型需要数十万元算力；知识更新一次就要重训一次；且微调擅长改<strong>行为风格</strong>而非注入<strong>事实</strong>——事实类知识用微调效果差且易灾难性遗忘</li>
+<li><strong>长上下文（Long Context）</strong>：把 100 万 token 全塞进窗口技术上可行，但每次请求的成本是检索的几十倍；且存在"lost in the middle"——模型对窗口中部内容注意力显著下降</li>
+<li><strong>RAG</strong>：只检索最相关的 3~5 个块（几千 token）送入模型，成本可控、精度可控、知识可随时更新</li>
+</ul>
+
+<h3 class="sec" id="ch1-3">1.3 RAG vs 微调 vs 长上下文</h3>
+<table>
+<tr><th>维度</th><th><span class="badge badge-blue">RAG</span></th><th><span class="badge badge-purple">微调 Fine-tuning</span></th><th><span class="badge badge-orange">长上下文 Long Context</span></th></tr>
+<tr><td>注入知识类型</td><td><strong>事实/知识</strong>（文档、手册、数据库）</td><td><strong>行为/风格</strong>（格式、语气、领域话术）</td><td>临时上下文（本次会话相关材料）</td></tr>
+<tr><td>知识更新</td><td>重新索引即可，分钟级</td><td>需重训，天~周级</td><td>换一份上下文即可</td></tr>
+<tr><td>单次成本</td><td>低（只送 top-k 块，约 2k token）</td><td>一次性高（训练算力）</td><td>高（每次送全量，10k~1M token）</td></tr>
+<tr><td>可溯源</td><td>✅ 天然支持引用</td><td>❌ 知识熔入参数，无法溯源</td><td>✅ 可溯源</td></tr>
+<tr><td>数据隐私</td><td>✅ 向量库可完全本地化</td><td>训练数据集需专门保管</td><td>数据需随请求发送</td></tr>
+<tr><td>典型场景</td><td>企业知识库问答、客服、文档助手</td><td>领域风格适配、结构化输出训练</td><td>单本书/单仓库分析</td></tr>
+</table>
+<div class="callout good">
+<strong>实践结论</strong>：三者不是互斥关系。生产系统的常见组合是
+<strong>RAG 注入事实 + 少量微调（或 prompt 约束）统一输出风格 + 长上下文兜底长文档</strong>。
+知识频繁变化 → RAG；行为需要改变 → 微调；单文档深度分析 → 长上下文。
+</div>
+
+<h3 class="sec" id="ch1-4">1.4 RAG 的三阶段演进</h3>
+<table>
+<tr><th>阶段</th><th>时间</th><th>核心思想</th><th>代表技术</th></tr>
+<tr><td><span class="badge badge-cyan">Naive RAG</span></td><td>2020-2023</td><td>索引 → 检索 → 生成 三步流水线，一次检索一次生成</td><td>原论文（Lewis et al., 2020）、LangChain QA chain</td></tr>
+<tr><td><span class="badge badge-blue">Advanced RAG</span></td><td>2023-2024</td><td>检索前后优化：查询改写、混合检索、重排、上下文压缩</td><td>HyDE、Multi-Query、BM25+向量融合、Cross-Encoder Rerank</td></tr>
+<tr><td><span class="badge badge-purple">Modular/Agentic RAG</span></td><td>2024-至今</td><td>模块化编排，Agent 自主决定是否检索、检索什么、迭代几轮</td><td>Self-RAG、CRAG、GraphRAG、LangGraph 多智能体</td></tr>
+</table>
+<div class="frame-diagram">Naive:       Query ---> Retrieve ---> Generate ---> Answer        (one-shot)
+
+Advanced:    Query --> Rewrite --> Hybrid Retrieve --> Rerank --> Generate
+                (HyDE/MultiQuery)  (BM25+Dense)     (CrossEncoder)
+
+Agentic:     Query --> [Agent: plan] --> retrieve? --yes--> evaluate
+                          ^                                 |
+                          |____ refine query <--- low confidence
+                          |
+                          v
+                     multi-hop / graph / tool calls --> Generate</div>
+<p>
+本手册第 2、3 章覆盖 Naive + Advanced 的完整工程实现（这也是当前生产系统的主体），
+第 5 章介绍 GraphRAG 与 Agentic RAG 前沿方向。
+</p>
+
+<!-- ============================================================= -->
+<!-- 02 核心组件与流程 -->
+<!-- ============================================================= -->
+<div class="part-header" id="part2">
+  <div class="path">RAG手册/02-核心组件与流程/</div>
+  <h2>第二章 核心组件与流程</h2>
+</div>
+
+<h3 class="sec" id="ch2-1">2.1 总体架构：离线 + 在线两条流水线</h3>
+<p>任何 RAG 系统都由两条流水线组成：<strong>离线索引流水线</strong>（构建知识库，数据更新时执行）和<strong>在线问答流水线</strong>（用户每次提问时执行）。</p>
+<div class="frame-diagram">========== OFFLINE: Indexing Pipeline (run on data update) ==========
+
+  Raw Docs          Loader            Splitter          Embedder        Vector DB
+ (pdf/md/txt) --> (parse+meta) --> (chunk+overlap) --> (text->vector) --> (FAISS/Milvus)
+                     |                  |                  |
+                     v                  v                  v
+                {source,page}     {chunk_id,idx}     512-dim float32
+                 metadata          metadata           normalized
+
+========== ONLINE: Query Pipeline (per question) ==========
+
+  User Query --> [Query Transform] --> [Hybrid Retrieve] --> [Rerank]
+               (rewrite/expand)      (BM25 + Vector)      (CrossEncoder)
+                                                                |
+                                                                v
+                 Answer <-- [LLM Generate] <-- [Prompt Assemble]
+                (+citations)   (stream)        (context+question)</div>
+
+<h3 class="sec" id="ch2-2">2.2 文档加载与分块（Chunking）</h3>
+<p>
+分块是 RAG 中<strong>对检索质量影响最大的单一环节</strong>。检索的最小单位是"块"，
+块的粒度直接决定了向量语义的纯度和上下文的完整性。
+</p>
+<h4>为什么必须分块</h4>
+<ul>
+<li>Embedding 模型输入长度有限（BGE 512 token、BGE-M3 8192 token）</li>
+<li>块太大 → 一个向量要表达多个主题，<strong>语义稀释</strong>，检索不精准</li>
+<li>块太小 → 命中的块缺乏上下文，LLM 拿到的是碎片，答不完整</li>
+<li>经验区间：<strong>300~800 token，重叠 10%~20%</strong></li>
+</ul>
+<h4>主流分块策略对比</h4>
+<table>
+<tr><th>策略</th><th>原理</th><th>优点</th><th>缺点</th><th>适用</th></tr>
+<tr><td><span class="badge badge-cyan">固定长度</span></td><td>按字符/token 滑窗切割，带重叠</td><td>实现最简单，块大小均匀</td><td>可能切断句子/表格</td><td>快速原型</td></tr>
+<tr><td><span class="badge badge-blue">递归分隔符</span></td><td>优先按 \n\n 切，超长降级到 \n、句号、字符</td><td>块边界落在自然语义边界</td><td>块大小不均</td><td><strong>默认首选</strong>（LangChain 默认）</td></tr>
+<tr><td><span class="badge badge-purple">结构感知</span></td><td>按 Markdown 标题/HTML 标签/代码函数切</td><td>保留文档结构语义</td><td>依赖文档规范</td><td>技术文档、代码库</td></tr>
+<tr><td><span class="badge badge-orange">语义分块</span></td><td>计算相邻句向量距离，在语义突变处切</td><td>块内语义最纯</td><td>需额外 embedding 计算</td><td>高质量问答</td></tr>
+<tr><td><span class="badge badge-green">父子块</span></td><td>小块用于检索命中，命中后返回所属大块</td><td>兼顾检索精度与上下文完整</td><td>索引结构复杂</td><td>生产系统常用</td></tr>
+</table>
+<div class="callout warn">
+<strong>工程要点</strong>：元数据（source 文件名、page 页码、heading 章节）必须随块保存，
+否则检索命中后无法生成引用来源；表格和代码不要用通用分块器硬切，
+应整块保留或走专门的多模态索引通道。
+</div>
+
+<h3 class="sec" id="ch2-3">2.3 Embedding 向量化</h3>
+<p>
+Embedding 模型是<strong>双塔架构（Bi-Encoder）</strong>：查询和文档分别独立编码为定长向量，
+向量间的余弦相似度代表语义相关度。因为两塔独立，文档向量可以<strong>离线预计算</strong>，
+在线只需编码一次查询 + 一次近邻搜索，代价极低——这是 RAG 可扩展到亿级文档的根基。
+</p>
+<div class="frame-diagram">           Bi-Encoder (dual tower)
+
+  "What is NVLink bandwidth?"            "NVLink 4.0 provides 900GB/s..."
+        |                                       |
+        v  Query Encoder                  Doc Encoder v
+  [Transformer]                        [Transformer]     (weights shared)
+        |                                       |
+        v                                       v
+   q_vec (512-d) ---- cosine(q,d) ----  d_vec (512-d)
+                                 |
+                                 v
+                        similarity score</div>
+<table>
+<tr><th>模型</th><th>来源</th><th>维度</th><th>最大长度</th><th>特点</th></tr>
+<tr><td><code>bge-small-zh-v1.5</code></td><td>智源 BAAI</td><td>512</td><td>512</td><td>中文小模型，CPU 可跑，适合演示</td></tr>
+<tr><td><code>bge-m3</code></td><td>智源 BAAI</td><td>1024</td><td>8192</td><td>多语言+多粒度（稠密/稀疏/多向量三合一），当前开源主流</td></tr>
+<tr><td><code>text-embedding-3-large</code></td><td>OpenAI</td><td>3072</td><td>8191</td><td>商用 API，支持降维</td></tr>
+<tr><td><code>jina-embeddings-v3</code></td><td>Jina</td><td>1024</td><td>8192</td><td>多任务 LoRA 适配</td></tr>
+</table>
+<div class="callout info">
+<strong>BGE 系列使用细节</strong>：中文检索任务中，<strong>查询端</strong>需加指令前缀
+<code>为这个句子生成表示以用于检索相关文章：</code>，<strong>文档端不加</strong>；
+向量使用前应 L2 归一化，归一化后内积 = 余弦相似度。
+</div>
+
+<h3 class="sec" id="ch2-4">2.4 向量数据库</h3>
+<table>
+<tr><th>选型</th><th>类型</th><th>索引算法</th><th>规模</th><th>适用场景</th></tr>
+<tr><td><code>FAISS</code></td><td>库（嵌入式）</td><td>Flat / IVF / HNSW</td><td>百万~亿</td><td>单机原型、本地部署，本手册示例使用</td></tr>
+<tr><td><code>Chroma</code></td><td>嵌入式 DB</td><td>HNSW</td><td>十万级</td><td>个人项目、LangChain 教程标配</td></tr>
+<tr><td><code>Milvus</code></td><td>分布式</td><td>多种可插拔</td><td>十亿级</td><td>企业生产、公有云（Zilliz）</td></tr>
+<tr><td><code>Qdrant</code></td><td>Rust 服务</td><td>HNSW</td><td>亿级</td><td>过滤条件检索（payload filter）强</td></tr>
+<tr><td><code>Weaviate</code></td><td>服务</td><td>HNSW</td><td>亿级</td><td>内置混合检索与模块化向量化</td></tr>
+<tr><td><code>Elasticsearch</code></td><td>搜索引擎</td><td>HNSW+BM25</td><td>亿级</td><td>已有 ES 设施的团队，混合检索一站式</td></tr>
+</table>
+<div class="frame-diagram">Index algorithms: accuracy vs speed vs memory
+
+  Flat (brute force)   : 100% recall, O(N) search  -- small scale (&lt;100k)
+  IVF (inverted file)  : cluster into cells, probe nearby cells
+  HNSW (graph)         : multi-layer skip graph, log(N)-ish search
+                          * default choice for production *</div>
+
+<h3 class="sec" id="ch2-5">2.5 检索策略：稠密 / 稀疏 / 混合</h3>
+<table>
+<tr><th>方式</th><th>原理</th><th>擅长</th><th>弱项</th></tr>
+<tr><td><span class="badge badge-blue">稠密检索 Dense</span></td><td>Embedding 向量近邻（语义匹配）</td><td>同义改写、跨语言、模糊语义</td><td>精确术语/型号/缩写易漏</td></tr>
+<tr><td><span class="badge badge-cyan">稀疏检索 Sparse/BM25</span></td><td>词频统计打分（关键词匹配）</td><td>专有名词、错误代码、版本号</td><td>不懂同义词</td></tr>
+<tr><td><span class="badge badge-green">混合检索 Hybrid</span></td><td>双路召回 + 融合</td><td>两者取长补短，<strong>生产主流</strong></td><td>需要融合策略</td></tr>
+</table>
+<h4>BM25 核心公式</h4>
+<div class="frame-diagram">score(q, d) = Σ IDF(qi) · f(qi,d)·(k1+1) / ( f(qi,d) + k1·(1-b+b·|d|/avgdl) )
+
+  IDF(qi)  : rare term -> high idf (discriminative)
+  f(qi,d)  : term frequency in doc, saturating via k1
+  b        : length normalization (0.75 typical)
+  No training needed. Pure statistics.</div>
+<h4>两路结果如何融合：RRF（Reciprocal Rank Fusion）</h4>
+<p>BM25 分值（无界）和余弦相似度（0~1）量纲不同，直接加权需要精细调参。
+<strong>RRF 只看每路的排名</strong>，天然免调参：</p>
+<div class="frame-diagram">RRF_score(doc) = Σ_routes  1 / (k + rank_route(doc))     (k=60 default)
+
+  Example: doc A ranked #1 in BM25, #4 in vector
+           doc B ranked #3 in BM25, #2 in vector
+  A: 1/61 + 1/64 = 0.01639 + 0.01563 = 0.03202
+  B: 1/63 + 1/62 = 0.01587 + 0.01613 = 0.03200
+  -> A wins (appears high in both routes)</div>
+
+<h3 class="sec" id="ch2-6">2.6 Rerank 重排序</h3>
+<p>
+Embedding（双塔）为了效率牺牲了精度：query 和 doc <strong>从未见过彼此</strong>，各自独立编码。
+Reranker（<strong>Cross-Encoder 单塔</strong>）把 query 和 doc <strong>拼接后一起送入模型</strong>，
+在注意力层做深度交互，精度显著更高——但每个 (q,d) 对都要跑一次前向，无法预计算，只能用在<strong>小候选集</strong>上。
+</p>
+<div class="frame-diagram">Bi-Encoder (recall stage)          Cross-Encoder (rerank stage)
+
+  q --> [Enc] --> q_vec             q + [SEP] + d --> [Transformer] --> score
+  d --> [Enc] --> d_vec                                             |
+        |                                                           v
+        v                                          precise relevance score
+  cosine(q_vec, d_vec)             slow: one forward pass PER PAIR
+  fast: precompute d_vec offline   usage: rerank top-20 -> keep top-5
+       |
+       v
+  coarse relevance</div>
+<table>
+<tr><th>阶段</th><th>模型类型</th><th>代表</th><th>候选量</th><th>延迟量级</th></tr>
+<tr><td>粗召回 Recall</td><td>Bi-Encoder</td><td>bge-m3</td><td>全库 → top-20/50</td><td>毫秒级</td></tr>
+<tr><td>精排 Rerank</td><td>Cross-Encoder</td><td>bge-reranker-v2-m3</td><td>20 → 5</td><td>百毫秒级</td></tr>
+</table>
+
+<h3 class="sec" id="ch2-7">2.7 生成阶段与 Prompt 组装</h3>
+<p>生成阶段的核心是把检索结果<strong>结构化地注入 Prompt</strong>，并通过系统提示词<strong>约束模型行为</strong>：</p>
+<pre><code><span class="cm"># RAG Prompt 的三个要素</span>
+<span class="num">1.</span> <span class="kw">系统约束</span>: 只依据参考资料回答 / 无依据时明确拒答 / 标注引用编号
+<span class="num">2.</span> <span class="kw">上下文区</span>: [1] (来源: xxx.pdf, p.3) \n 检索块文本...  [2] ...
+<span class="num">3.</span> <span class="kw">问题区</span>: 用户原始问题（或改写后的问题）</code></pre>
+<div class="callout warn">
+<strong>防幻觉关键设置</strong>：① temperature 调低（0~0.3），RAG 要"忠实"不要"创意"；
+② 显式给出拒答出口（"知识库中未找到相关内容"是合法答案）；
+③ 要求标注引用编号，让幻觉无处藏身——没有来源编号的论断即可疑。
+</div>
+
+<h3 class="sec" id="ch2-8">2.8 组件对接关系全景</h3>
+<table>
+<tr><th>上游组件</th><th>→ 下游组件</th><th>传递的数据结构</th><th>失败会怎样</th></tr>
+<tr><td>Loader</td><td>→ Splitter</td><td><code>[(text, {source, page})]</code></td><td>元数据丢失 → 无法溯源</td></tr>
+<tr><td>Splitter</td><td>→ Embedder</td><td><code>[(chunk, {chunk_id, ...})]</code></td><td>切断语义 → 检索命中但答不完整</td></tr>
+<tr><td>Embedder</td><td>→ VectorStore</td><td><code>float32[dim]</code> 归一化向量</td><td>维度/归一化不一致 → 相似度全错</td></tr>
+<tr><td>VectorStore</td><td>→ Retriever</td><td><code>[(score, text, meta)]</code></td><td>索引与原文错位 → 张冠李戴</td></tr>
+<tr><td>Retriever(BM25)</td><td>→ RRF 融合</td><td>排名列表</td><td>单路故障 → 召回率下降</td></tr>
+<tr><td>Retriever</td><td>→ Prompt 组装</td><td>top-k 块 + 来源</td><td>混入噪声块 → 干扰模型判断</td></tr>
+<tr><td>Prompt 组装</td><td>→ LLM API</td><td><code>messages=[system, user]</code></td><td>超长 → 截断/报错；无约束 → 幻觉</td></tr>
+<tr><td>LLM</td><td>→ 用户/前端</td><td>流式 token + 引用映射</td><td>无引用展示 → 不可信</td></tr>
+</table>
+
+<!-- ============================================================= -->
+<!-- 03 开源源码解析 -->
+<!-- ============================================================= -->
+<div class="part-header" id="part3">
+  <div class="path">RAG手册/03-开源源码解析/</div>
+  <h2>第三章 开源源码解析：rag_demo</h2>
+</div>
+
+<div class="callout info">
+<strong>源码位置</strong>：工作区 <code>rag_demo/</code> 目录（MIT 协议）。
+这是一个<strong>不依赖 LangChain / LlamaIndex</strong>、用原生 Python 实现的完整 RAG 项目，
+约 500 行代码覆盖 RAG 全部核心环节——框架只是把这些环节封装了，理解裸实现之后再学框架事半功倍。
+依赖仅 5 个：<code>faiss-cpu / numpy / httpx / sentence-transformers / pymupdf</code>。
+</div>
+
+<h3 class="sec" id="ch3-1">3.1 项目结构</h3>
+<div class="frame-diagram">rag_demo/
+├── README.md              # 项目说明
+├── requirements.txt       # 5 个依赖
+├── config.py              # 全局配置：分块/检索/LLM/Prompt 超参数
+├── document_loader.py     # 文档加载：txt/md/pdf -> (text, meta)
+├── text_splitter.py       # 分块：固定长度 + 递归分隔符两种策略
+├── embedder.py            # 向量化：本地 BGE / API 两种模式
+├── vector_store.py        # FAISS 向量库：建索引/检索/持久化
+├── retriever.py           # BM25 + RRF 混合检索 + CrossEncoder 重排
+├── llm_client.py          # OpenAI 兼容客户端：流式/非流式
+├── rag.py                 # 编排器：build_index / query 两个入口
+├── main.py                # CLI: index / ask 子命令
+└── docs/
+    └── sample-knowledge.txt   # 示例知识库
+
+数据流: docs -> loader -> splitter -> embedder -> vector_store
+                                              (离线)
+query -> retriever(混合召回+rerank) -> prompt组装 -> llm_client -> answer
+                                              (在线)</div>
+
+<h3 class="sec" id="ch3-2">3.2 config.py：配置中心</h3>
+<p>所有超参数集中在一个 dataclass 里，这是工程上最重要的习惯——分块大小、top_k、温度这些参数需要反复实验调优，集中管理才能快速迭代。</p>
+<pre><code><span class="kw">@dataclass</span>
+<span class="kw">class</span> <span class="cls">RAGConfig</span>:
+    <span class="cm"># ---------- 分块参数 ----------</span>
+    chunk_size: <span class="cls">int</span> = <span class="num">512</span>          <span class="cm"># 每块目标 token 数</span>
+    chunk_overlap: <span class="cls">int</span> = <span class="num">64</span>        <span class="cm"># 相邻块重叠，避免语义被切断</span>
+    separators: <span class="cls">list</span> = field(default_factory=<span class="kw">lambda</span>: [
+        <span class="str">"\n\n"</span>, <span class="str">"\n"</span>, <span class="str">"。"</span>, <span class="str">"！"</span>, <span class="str">"？"</span>, <span class="str">"."</span>, <span class="str">"!"</span>, <span class="str">"?"</span>, <span class="str">" "</span>, <span class="str">""</span>
+    ])                             <span class="cm"># 递归分块层级分隔符（从粗到细）</span>
+
+    <span class="cm"># ---------- 检索参数 ----------</span>
+    top_k: <span class="cls">int</span> = <span class="num">5</span>                 <span class="cm"># 最终送入 LLM 的块数</span>
+    recall_k: <span class="cls">int</span> = <span class="num">20</span>             <span class="cm"># 粗召回数量（rerank 前）</span>
+    rrf_k: <span class="cls">int</span> = <span class="num">60</span>                <span class="cm"># RRF 融合常数</span>
+
+    <span class="cm"># ---------- LLM 参数 ----------</span>
+    llm_api_base: <span class="cls">str</span> = os.getenv(<span class="str">"LLM_API_BASE"</span>, <span class="str">"https://api.deepseek.com"</span>)
+    llm_model: <span class="cls">str</span> = os.getenv(<span class="str">"LLM_MODEL"</span>, <span class="str">"deepseek-chat"</span>)
+    temperature: <span class="cls">float</span> = <span class="num">0.1</span>       <span class="cm"># RAG 要"忠实"，温度调低</span>
+
+    <span class="cm"># ---------- Prompt 模板 ----------</span>
+    system_prompt: <span class="cls">str</span> = (
+        <span class="str">"你是一个严谨的知识库问答助手。请只根据下面提供的【参考资料】回答问题。"</span>
+        <span class="str">"如果参考资料中没有相关信息，请直接回答'知识库中未找到相关内容'，"</span>
+        <span class="str">"禁止编造。回答时请标注信息来源编号，例如 [1]。"</span>
+    )
+    user_prompt_template: <span class="cls">str</span> = (
+        <span class="str">"【参考资料】\n{context}\n\n【问题】\n{question}\n\n请基于参考资料回答。"</span>
+    )</code></pre>
+<p>还有两个辅助细节：<code>format_context()</code> 把检索块拼成带 <code>[1] (来源: xxx.pdf)</code> 编号的上下文——编号供模型引用、来源供前端展示；环境变量读取让切换模型/密钥不需要改代码。</p>
+
+<h3 class="sec" id="ch3-3">3.3 document_loader.py：加载器（注册表模式）</h3>
+<pre><code><span class="cm"># 装饰器注册表：新格式只需加一个函数，不改主流程（开闭原则）</span>
+LOADERS = {}
+
+<span class="kw">def</span> <span class="fn">register</span>(suffix):
+    <span class="kw">def</span> <span class="fn">deco</span>(fn):
+        LOADERS[suffix] = fn
+        <span class="kw">return</span> fn
+    <span class="kw">return</span> deco
+
+<span class="cm">@register</span>(<span class="str">".txt"</span>)
+<span class="cm">@register</span>(<span class="str">".md"</span>)
+<span class="kw">def</span> <span class="fn">load_text</span>(path):                          <span class="cm"># 整篇读入</span>
+    text = Path(path).read_text(encoding=<span class="str">"utf-8"</span>)
+    <span class="kw">return</span> [(text, {<span class="str">"source"</span>: path, <span class="str">"page"</span>: <span class="num">0</span>})]
+
+<span class="cm">@register</span>(<span class="str">".pdf"</span>)
+<span class="kw">def</span> <span class="fn">load_pdf</span>(path):                           <span class="cm"># 逐页提取 + 压缩空白</span>
+    <span class="kw">import</span> fitz
+    doc = fitz.open(path)
+    <span class="kw">return</span> [(<span class="str">" "</span>.join(p.get_text().split()),
+             {<span class="str">"source"</span>: path, <span class="str">"page"</span>: i + <span class="num">1</span>})
+            <span class="kw">for</span> i, p <span class="kw">in</span> enumerate(doc)]</code></pre>
+<div class="callout info">
+<strong>设计意图</strong>：加载器的输出统一为 <code>[(text, metadata)]</code>——
+<strong>元数据从第一站就跟着内容走</strong>，一直流到最后生成引用，这是可溯源 RAG 的前提。
+</div>
+
+<h3 class="sec" id="ch3-4">3.4 text_splitter.py：递归分块</h3>
+<p>核心是 <code>recursive_split</code>：用第 1 层分隔符（段落）切 → 相邻片段合并到不超上限 → 单片段仍超长就<strong>递归降级</strong>到下一层分隔符（句子→字符）。</p>
+<pre><code><span class="kw">def</span> <span class="fn">recursive_split</span>(text, cfg, separators=<span class="kw">None</span>):
+    seps = separators <span class="kw">if</span> separators <span class="kw">is not</span> <span class="kw">None</span> <span class="kw">else</span> cfg.separators
+    final_chunks = []
+    sep, rest = seps[<span class="num">0</span>], seps[<span class="num">1</span>:]
+    pieces = text.split(sep) <span class="kw">if</span> sep <span class="kw">else</span> <span class="fn">list</span>(text)
+
+    buf = <span class="str">""</span>
+    <span class="kw">for</span> piece <span class="kw">in</span> pieces:                       <span class="cm"># 1. 贪心合并小片段</span>
+        candidate = buf + sep + piece <span class="kw">if</span> buf <span class="kw">else</span> piece
+        <span class="kw">if</span> _len(candidate) <= cfg.chunk_size:
+            buf = candidate
+        <span class="kw">else</span>:
+            <span class="kw">if</span> buf: final_chunks.append(buf)
+            <span class="kw">if</span> _len(piece) > cfg.chunk_size <span class="kw">and</span> rest:
+                final_chunks.extend(recursive_split(piece, cfg, rest))  <span class="cm"># 2. 降级递归</span>
+            <span class="kw">else</span>:
+                buf = piece
+    <span class="kw">if</span> buf: final_chunks.append(buf)
+
+    <span class="cm"># 3. 加重叠：每块开头拼上一块的尾部</span>
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">1</span>, <span class="fn">len</span>(final_chunks)):
+        tail = final_chunks[i-<span class="num">1</span>][-cfg.chunk_overlap:]
+        final_chunks[i] = tail + final_chunks[i]
+    <span class="kw">return</span> final_chunks</code></pre>
+<div class="frame-diagram">Example: chunk_size=10, overlap=3, seps = ["\n\n", "\n", "。", ""]
+
+  Step1 split by "\n\n":   [P1(6)  P2(25)  P3(8)]
+  Step2 merge:             P1 ok | P2 > 10 -> split by "\n" -> still >10
+                           -> split by "。" -> sentences (4,9,7,5) -> merge
+  Step3 overlap:
+     chunk1 = "AAAAAA"
+     chunk2 = "AAA" + "BBBBB"      <- tail of chunk1 prepended
+     chunk3 = "BBB" + "CCCCC"</div>
+<p><strong>为什么要重叠</strong>：一个关键句子恰好跨块边界时，重叠保证它至少完整地出现在一个块里，检索才能命中。</p>
+
+<h3 class="sec" id="ch3-5">3.5 embedder.py：双模式向量化</h3>
+<pre><code><span class="kw">class</span> <span class="cls">Embedder</span>:
+    QUERY_PREFIX = <span class="str">"为这个句子生成表示以用于检索相关文章："</span>  <span class="cm"># BGE 查询端指令</span>
+
+    <span class="kw">def</span> <span class="fn">embed_documents</span>(self, texts):          <span class="cm"># 文档端：批量、不加前缀</span>
+        vecs = self.model.encode(texts, batch_size=<span class="num">32</span>,
+                                 normalize_embeddings=<span class="kw">True</span>)  <span class="cm"># L2 归一化</span>
+        <span class="kw">return</span> vecs.tolist()
+
+    <span class="kw">def</span> <span class="fn">embed_query</span>(self, text):                <span class="cm"># 查询端：加指令前缀</span>
+        vec = self.model.encode([self.QUERY_PREFIX + text],
+                                normalize_embeddings=<span class="kw">True</span>)
+        <span class="kw">return</span> vec[<span class="num">0</span>].tolist()</code></pre>
+<table>
+<tr><th>接口</th><th>调用时机</th><th>前缀</th><th>批量</th></tr>
+<tr><td><code>embed_documents</code></td><td>离线建索引（一次）</td><td>不加</td><td>✅ batch=32</td></tr>
+<tr><td><code>embed_query</code></td><td>在线每次提问</td><td>加 QUERY_PREFIX</td><td>单条</td></tr>
+</table>
+<div class="callout warn">
+<strong>常见坑</strong>：查询和文档必须用<strong>同一个模型</strong>编码（不同模型的向量空间不兼容）；
+归一化必须两端一致，否则相似度计算失真。
+</div>
+
+<h3 class="sec" id="ch3-6">3.6 vector_store.py：FAISS 向量库</h3>
+<pre><code><span class="kw">class</span> <span class="cls">VectorStore</span>:
+    <span class="kw">def</span> <span class="fn">build</span>(self, chunks, vectors):
+        mat = np.array(vectors, dtype=np.float32)
+        faiss.normalize_L2(mat)                     <span class="cm"># 双保险归一化</span>
+        self.index = faiss.IndexFlatIP(mat.shape[<span class="num">1</span>])  <span class="cm"># 内积索引</span>
+        self.index.add(mat)                         <span class="cm"># 归一化后 IP == cosine</span>
+        self.chunks = chunks                        <span class="cm"># 旁路存原文，序号对齐</span>
+
+    <span class="kw">def</span> <span class="fn">search</span>(self, query_vec, top_k):
+        q = np.array([query_vec], dtype=np.float32)
+        faiss.normalize_L2(q)
+        scores, ids = self.index.search(q, top_k)
+        <span class="kw">return</span> [(float(scores[<span class="num">0</span>][i]), *self.chunks[ids[<span class="num">0</span>][i]])
+                <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(ids[<span class="num">0</span>])) <span class="kw">if</span> ids[<span class="num">0</span>][i] != -<span class="num">1</span>]</code></pre>
+<p>
+FAISS 只存向量不存原文，所以原文和元数据放在旁路列表 <code>self.chunks</code> 里，靠<strong>序号一一对应</strong>（第 i 条向量 ↔ chunks[i]）。
+<code>IndexFlatIP</code> 是暴力精确检索，100 万条以内延迟毫秒级；规模再大换 <code>IndexIVFFlat</code> 或 <code>IndexHNSWFlat</code>。
+</p>
+
+<h3 class="sec" id="ch3-7">3.7 retriever.py：BM25 + RRF 混合检索 + 重排</h3>
+<h4>BM25 纯手写实现（30 行）</h4>
+<pre><code><span class="kw">class</span> <span class="cls">BM25</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, docs, k1=<span class="num">1.5</span>, b=<span class="num">0.75</span>):
+        self.doc_tokens = [self._tokenize(d) <span class="kw">for</span> d <span class="kw">in</span> docs]  <span class="cm"># 中文按字+英文按词</span>
+        self.avgdl = <span class="fn">sum</span>(self.doc_len) / <span class="fn">max</span>(<span class="fn">len</span>(docs), <span class="num">1</span>)
+        df = Counter(tok <span class="kw">for</span> toks <span class="kw">in</span> self.doc_tokens <span class="kw">for</span> tok <span class="kw">in</span> <span class="fn">set</span>(toks))
+        self.idf = {t: math.log((<span class="fn">len</span>(docs) - n + <span class="num">0.5</span>) / (n + <span class="num">0.5</span>) + <span class="num">1</span>)
+                    <span class="kw">for</span> t, n <span class="kw">in</span> df.items()}                <span class="cm"># 稀有词 IDF 高</span>
+
+    <span class="kw">def</span> <span class="fn">score</span>(self, query, doc_idx):
+        tf = Counter(self.doc_tokens[doc_idx])
+        s = <span class="num">0.0</span>
+        <span class="kw">for</span> q <span class="kw">in</span> self._tokenize(query):
+            <span class="cm"># IDF · tf·(k1+1) / (tf + k1·(1-b+b·|d|/avgdl))</span>
+            s += self.idf[q] * tf[q] * (self.k1+<span class="num">1</span>) / (
+                 tf[q] + self.k1*(<span class="num">1</span>-self.b + self.b*self.doc_len[doc_idx]/self.avgdl))
+        <span class="kw">return</span> s</code></pre>
+<h4>两阶段检索主流程</h4>
+<pre><code><span class="kw">def</span> <span class="fn">retrieve</span>(self, query):
+    <span class="cm"># ---- 阶段1: 双路召回 ----</span>
+    q_vec = self.embedder.embed_query(query)
+    vec_hits = self.store.search(q_vec, self.cfg.recall_k)       <span class="cm"># 向量 top-20</span>
+    bm25_rank = <span class="fn">sorted</span>(<span class="fn">range</span>(<span class="fn">len</span>(...)), key=..., reverse=<span class="kw">True</span>)[:recall_k]
+
+    <span class="cm"># ---- RRF 融合: score(d) = Σ 1/(k + rank(d)) ----</span>
+    rrf = {}
+    <span class="kw">for</span> rank, hit <span class="kw">in</span> <span class="fn">enumerate</span>(vec_hits):
+        rrf.setdefault(hit_id, [<span class="num">0</span>, hit])[<span class="num">0</span>] += <span class="num">1</span> / (rrf_k + rank + <span class="num">1</span>)
+    <span class="kw">for</span> rank, doc_idx <span class="kw">in</span> <span class="fn">enumerate</span>(bm25_rank):
+        rrf[doc_id][<span class="num">0</span>] += <span class="num">1</span> / (rrf_k + rank + <span class="num">1</span>)
+    candidates = <span class="fn">sorted</span>(rrf.values(), key=<span class="kw">lambda</span> x: x[<span class="num">0</span>], reverse=<span class="kw">True</span>)
+
+    <span class="cm"># ---- 阶段2: 可选 CrossEncoder 精排, 20 -> 5 ----</span>
+    <span class="kw">if</span> self.cfg.use_rerank:
+        ranked = self.reranker.rerank(query, [c[<span class="num">1</span>] <span class="kw">for</span> c <span class="kw">in</span> candidates], top_k)
+        candidates = [candidates[i] <span class="kw">for</span> _, i <span class="kw">in</span> ranked]
+    <span class="kw">return</span> candidates[:self.cfg.top_k]</code></pre>
+<div class="frame-diagram">                recall_k=20                    top_k=5
+  Vector top-20  --\                            /--> [1] score=0.94
+                    \-- RRF merge --(rerank?)--/ --> [2] score=0.91
+  BM25   top-20  --/                            \--> [3] score=0.87 ...
+
+  rerank off : RRF order kept              (fast, ~ms)
+  rerank on  : CrossEncoder re-scores 20    (+~200ms, higher precision)</div>
+
+<h3 class="sec" id="ch3-8">3.8 llm_client.py：OpenAI 兼容客户端</h3>
+<pre><code><span class="kw">class</span> <span class="cls">LLMClient</span>:
+    <span class="kw">def</span> <span class="fn">chat_stream</span>(self, system, user):
+        <span class="cm"># OpenAI 兼容协议: POST {base}/chat/completions</span>
+        <span class="kw">with</span> self.http.stream(<span class="str">"POST"</span>,
+            f<span class="str">"{self.cfg.llm_api_base}/chat/completions"</span>,
+            headers={<span class="str">"Authorization"</span>: f<span class="str">"Bearer {self.cfg.llm_api_key}"</span>},
+            json={<span class="str">"model"</span>: self.cfg.llm_model,
+                  <span class="str">"messages"</span>: [
+                      {<span class="str">"role"</span>: <span class="str">"system"</span>, <span class="str">"content"</span>: system},
+                      {<span class="str">"role"</span>: <span class="str">"user"</span>,   <span class="str">"content"</span>: user}],
+                  <span class="str">"temperature"</span>: self.cfg.temperature,
+                  <span class="str">"stream"</span>: <span class="kw">True</span>}) <span class="kw">as</span> resp:   <span class="cm"># SSE 流式</span>
+            <span class="kw">for</span> line <span class="kw">in</span> resp.iter_lines():
+                <span class="kw">if not</span> line.startswith(<span class="str">"data: "</span>): <span class="kw">continue</span>
+                payload = line[<span class="num">6</span>:]
+                <span class="kw">if</span> payload == <span class="str">"[DONE]"</span>: <span class="kw">break</span>
+                delta = json.loads(payload)[<span class="str">"choices"</span>][<span class="num">0</span>][<span class="str">"delta"</span>]
+                <span class="kw">if</span> content := delta.get(<span class="str">"content"</span>):
+                    <span class="kw">yield</span> content              <span class="cm"># 逐 token 吐给上层</span></code></pre>
+<p>
+这就是与大模型"对接"的全部代码——一个 HTTP POST + SSE 解析。第 4 章将用这个客户端做一个完整的 DeepSeek 对接案例。
+</p>
+
+<h3 class="sec" id="ch3-9">3.9 rag.py：编排器（总指挥）</h3>
+<pre><code><span class="kw">class</span> <span class="cls">RAGPipeline</span>:
+    <span class="cm"># ===== 离线入口：建索引 =====</span>
+    <span class="kw">def</span> <span class="fn">build_index</span>(self, docs_dir):
+        docs   = load_documents(docs_dir)          <span class="cm"># 1. 加载</span>
+        chunks = split_documents(docs, self.cfg)   <span class="cm"># 2. 分块</span>
+        <span class="kw">for</span> i, (_, meta) <span class="kw">in</span> <span class="fn">enumerate</span>(chunks):
+            meta[<span class="str">"chunk_id"</span>] = f<span class="str">"chunk-{i}"</span>   <span class="cm"># 3. 稳定ID(RRF去重用)</span>
+        vectors = self.embedder.embed_documents([c[<span class="num">0</span>] <span class="kw">for</span> c <span class="kw">in</span> chunks])
+        self.store.build(chunks, vectors)          <span class="cm"># 4. 入库</span>
+        self.store.save()
+
+    <span class="cm"># ===== 在线入口：问答 =====</span>
+    <span class="kw">def</span> <span class="fn">query</span>(self, question, stream=<span class="kw">False</span>):
+        hits = self.retriever.retrieve(question)   <span class="cm"># 1. 混合检索 top-5</span>
+        context = format_context(hits)             <span class="cm"># 2. 拼带编号上下文</span>
+        user_msg = self.cfg.user_prompt_template.format(
+            context=context, question=question)    <span class="cm"># 3. 组装 Prompt</span>
+        answer = self.llm.chat(self.cfg.system_prompt, user_msg)  <span class="cm"># 4. 调LLM</span>
+        <span class="kw">return</span> {<span class="str">"answer"</span>: answer,
+                <span class="str">"hits"</span>: [...],              <span class="cm"># 引用来源给前端</span>
+                <span class="str">"latency"</span>: {...}}           <span class="cm"># 检索/生成分段计时</span></code></pre>
+
+<h3 class="sec" id="ch3-10">3.10 运行演示</h3>
+<pre><code><span class="cm"># 安装依赖</span>
+pip install -r requirements.txt
+
+<span class="cm"># 1) 建索引（把 ./docs 下的 txt/md/pdf 向量化入库）</span>
+export DEEPSEEK_API_KEY=sk-xxx
+python main.py index --docs ./docs
+<span class="cm"># [loader] sample-knowledge.txt: 1 个片段</span>
+<span class="cm"># [rag] 索引完成: 4 块, 耗时 2.1s</span>
+
+<span class="cm"># 2) 问答（流式输出 + 引用来源 + 延迟统计）</span>
+python main.py ask <span class="str">"NVLink 和 PCIe 的带宽差距是怎么来的？"</span> --rerank
+<span class="cm"># ===== 引用来源 =====</span>
+<span class="cm">#   score=0.94  ./docs/sample-knowledge.txt (chunk 0)</span>
+<span class="cm">#   score=0.88  ./docs/sample-knowledge.txt (chunk 1)</span>
+<span class="cm"># ===== 延迟: 检索 0.31s | 生成 2.4s =====</span></code></pre>
+
+<!-- ============================================================= -->
+<!-- 04 RAG与大模型对接案例 -->
+<!-- ============================================================= -->
+<div class="part-header" id="part4">
+  <div class="path">RAG手册/04-RAG与大模型对接案例/</div>
+  <h2>第四章 RAG 与大模型对接：完整案例</h2>
+</div>
+
+<h3 class="sec" id="ch4-1">4.1 对接的本质：上下文注入点</h3>
+<p>
+RAG 系统和大模型之间<strong>没有魔法接口</strong>——对接就是一次普通的 <strong>OpenAI 兼容 HTTP API 调用</strong>。
+RAG 系统在 <code>messages</code> 数组里完成"知识注入"：
+</p>
+<div class="frame-diagram">messages = [
+  {role: "system", content: 约束规则},        <-- RAG 写入行为约束
+  {role: "user",   content: 参考资料 + 问题},  <-- RAG 注入检索结果 <<<< 对接点
+]
+
+  Knowledge Base --(retrieve)--> context --(inject)--> LLM prompt window
+                                                        |
+  LLM 不知道也不需要知道数据来自向量库/BM25/图谱          v
+                                        it just reads and follows
+                                       "answer based on context"</div>
+<table>
+<tr><th>对接要素</th><th>说明</th><th>本案例取值</th></tr>
+<tr><td>API 协议</td><td>OpenAI 兼容 <code>/chat/completions</code></td><td>DeepSeek 官方 API</td></tr>
+<tr><td>模型</td><td>生成器</td><td><code>deepseek-chat</code>（V3）</td></tr>
+<tr><td>知识库</td><td>检索侧</td><td>rag_demo 的 FAISS 索引（示例文档：NVLink/PCIe/RAG）</td></tr>
+<tr><td>注入位置</td><td>user message 上下文区</td><td>【参考资料】{context}【问题】{question}</td></tr>
+<tr><td>行为约束</td><td>system message</td><td>只依据资料回答 + 拒答出口 + 引用编号</td></tr>
+<tr><td>解码参数</td><td>temperature</td><td>0.1（忠实优先）</td></tr>
+</table>
+
+<h3 class="sec" id="ch4-2">4.2 完整案例：DeepSeek + FAISS 问答全流程</h3>
+<p>以真实问题 <code>"NVLink 和 PCIe 的带宽差距是怎么来的？"</code> 走完整个链路，每一步的输入输出都展开：</p>
+<div class="frame-diagram">STEP 1  Embed query (bge-small-zh-v1.5)
+  in : "为这个句子生成表示以用于检索相关文章：NVLink 和 PCIe 的带宽差距是怎么来的？"
+  out: [0.031, -0.117, 0.082, ... ]   (512-dim, L2-normalized)
+
+STEP 2  Hybrid retrieve
+  vector route : top-20 via FAISS IndexFlatIP
+  bm25   route : top-20 via Okapi BM25
+  RRF fusion   : merged -> candidates
+  rerank (opt) : bge-reranker-base scores 20 pairs -> keep top-5
+  out:
+    #1 0.94  "NVLink 是 NVIDIA 的 GPU 专用互连协议。NVLink 4.0...72 条 SerDes..."
+    #2 0.88  "PCIe 5.0 x16 单向带宽 64 GB/s...16 条 SerDes...32 GT/s..."
+    #3 0.71  "两者的差距来源可以分解为两个因子：单 SerDes 速率差约 3.2 倍..."
+
+STEP 3  Assemble prompt (see 4.4 for full text)
+  system: 严谨知识库问答助手约束...
+  user  : 【参考资料】[1](来源:sample-knowledge.txt)... 【问题】...
+
+STEP 4  Call DeepSeek API (see 4.3 for raw HTTP)
+  POST https://api.deepseek.com/chat/completions  stream:true
+  SSE: data:{"choices":[{"delta":{"content":"根"}}]} ...
+
+STEP 5  Render answer + citations to user</div>
+
+<h3 class="sec" id="ch4-3">4.3 实际发送的 HTTP 报文</h3>
+<p><code>rag_demo/llm_client.py</code> 发出的真实请求（抓包视角）：</p>
+<pre><code><span class="cm">POST /chat/completions HTTP/1.1</span>
+<span class="cm">Host: api.deepseek.com</span>
+<span class="cm">Authorization: Bearer sk-xxxxxxxx</span>
+<span class="cm">Content-Type: application/json</span>
+
+{
+  <span class="str">"model"</span>: <span class="str">"deepseek-chat"</span>,
+  <span class="str">"messages"</span>: [
+    {<span class="str">"role"</span>: <span class="str">"system"</span>,
+     <span class="str">"content"</span>: <span class="str">"你是一个严谨的知识库问答助手。请只根据下面提供的【参考资料】回答问题。..."</span>},
+    {<span class="str">"role"</span>: <span class="str">"user"</span>,
+     <span class="str">"content"</span>: <span class="str">"【参考资料】\n[1] (来源: ./docs/sample-knowledge.txt)\nNVLink 是 ..."</span>}
+  ],
+  <span class="str">"temperature"</span>: <span class="num">0.1</span>,
+  <span class="str">"max_tokens"</span>: <span class="num">2048</span>,
+  <span class="str">"stream"</span>: <span class="kw">true</span>
+}</code></pre>
+<p>流式响应（SSE，逐 token 下发）：</p>
+<pre><code><span class="cm">HTTP/1.1 200 OK</span>
+<span class="cm">Content-Type: text/event-stream</span>
+
+data: {"choices":[{"delta":{"content":""},"index":0}]}
+data: {"choices":[{"delta":{"content":"根据"},"index":0}]}
+data: {"choices":[{"delta":{"content":"参考资料"},"index":0}]}
+data: {"choices":[{"delta":{"content":"[1]"},"index":0}]}
+data: {"choices":[{"delta":{"content":"，单"},"index":0}]}
+<span class="cm">... (数百条，每条 1-3 个 token)</span>
+data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+data: [DONE]</code></pre>
+<div class="callout info">
+<strong>为什么用流式</strong>：生成 500 token 约需 5~10 秒，非流式用户要盯着空白等；
+流式首 token 只需几百毫秒，体验差距巨大。SSE 解析只需处理 <code>data: </code> 前缀和 <code>[DONE]</code> 结束标记。
+</div>
+
+<h3 class="sec" id="ch4-4">4.4 Prompt 全文还原</h3>
+<p>把 <code>format_context()</code> + 模板 format 之后的<strong>完整 user message</strong> 展开如下——这就是大模型实际"看到"的全部：</p>
+<div class="frame-diagram">【参考资料】
+[1] (来源: ./docs/sample-knowledge.txt)
+NVLink 是 NVIDIA 的 GPU 专用互连协议。NVLink 4.0（H100）单向带宽 450 GB/s，
+双向 900 GB/s，由 18 条 link 组成，每条 link 含 4 条 SerDes，共 72 条 SerDes，
+单 SerDes 速率 112 Gbps（PAM4 调制）。
+
+[2] (来源: ./docs/sample-knowledge.txt)
+PCIe 5.0 x16 单向带宽 64 GB/s，使用 16 条 SerDes，单 SerDes 速率 32 GT/s
+（NRZ 调制）。
+
+[3] (来源: ./docs/sample-knowledge.txt)
+两者的差距来源可以分解为两个因子：单 SerDes 速率差约 3.2 倍（PAM4 vs NRZ），
+SerDes 数量差 4.5 倍（72 vs 16），合计约 7 倍的双向带宽差距。
+
+【问题】
+NVLink 和 PCIe 的带宽差距是怎么来的？
+
+请基于参考资料回答。</div>
+<p>DeepSeek 的实际回答（示例）：</p>
+<div class="frame-diagram">根据参考资料 [3]，带宽差距来自两个因子的乘积：
+1. 单 SerDes 速率差距：NVLink 4.0 为 112 Gbps（PAM4 调制），
+   PCIe 5.0 为 32 GT/s（NRZ 调制），相差约 3.2 倍 [1][2]；
+2. SerDes 数量差距：NVLink 部署 72 条（18 link x 4）[1]，
+   PCIe x16 只有 16 条 [2]，相差 4.5 倍。
+两者相乘即得到约 7 倍的双向带宽差距（900 GB/s vs 128 GB/s）。来源：[1][2][3]</div>
+<div class="callout good">
+<strong>对照实验</strong>：把同样的问题直接问裸模型（不注入上下文），模型只能靠参数记忆回答，
+细节（SerDes 数量、调制方式）极易出错或编造；而注入上下文后，所有数字都可以在资料中找到出处——
+这就是 RAG 对接大模型的价值：把"记忆题"变成"阅读理解题"。
+</div>
+
+<h3 class="sec" id="ch4-5">4.5 一套代码对接任意模型</h3>
+<p>因为走的是 OpenAI 兼容协议，<strong>只改两个环境变量</strong>就能切换生成器：</p>
+<table>
+<tr><th>目标</th><th>LLM_API_BASE</th><th>LLM_MODEL</th><th>说明</th></tr>
+<tr><td>DeepSeek 云端</td><td><code>https://api.deepseek.com</code></td><td><code>deepseek-chat</code></td><td>默认配置</td></tr>
+<tr><td>Qwen 云端</td><td><code>https://dashscope.aliyuncs.com/compatible-mode/v1</code></td><td><code>qwen-plus</code></td><td>阿里云兼容模式</td></tr>
+<tr><td>Ollama 本地</td><td><code>http://localhost:11434/v1</code></td><td><code>qwen2.5:7b</code></td><td>完全离线，隐私场景</td></tr>
+<tr><td>vLLM 自建</td><td><code>http://your-gpu:8000/v1</code></td><td>自部署模型名</td><td>私有化部署</td></tr>
+</table>
+<pre><code><span class="cm"># 本地 Ollama 运行（数据完全不出机器）</span>
+export LLM_API_BASE=http://localhost:11434/v1
+export LLM_MODEL=qwen2.5:7b
+export DEEPSEEK_API_KEY=ollama          <span class="cm"># Ollama 不校验 key，占位即可</span>
+python main.py ask <span class="str">"..."</span></code></pre>
+<div class="callout warn">
+<strong>注意</strong>：生成器可以随便换，但 <strong>Embedding 模型换了就必须重建全部索引</strong>——
+向量空间随模型改变，新旧向量互相不可比。这是"生成侧热切换、检索侧冷切换"的不对称性。
+</div>
+
+<h3 class="sec" id="ch4-6">4.6 对接的工程问题</h3>
+<table>
+<tr><th>问题</th><th>量化分析</th><th>对策</th></tr>
+<tr><td><span class="badge badge-orange">上下文预算</span></td><td>system ~100 tok + 5 块 x 500 tok + 问题 ~50 tok ≈ 2.6k tok；块数×块大小需 &lt; 模型窗口的一半（留足输出空间）</td><td>top_k 和 chunk_size 联合调优；超预算时做上下文压缩</td></tr>
+<tr><td><span class="badge badge-orange">Token 成本</span></td><td>输入 token 数 ≈ 检索块总长；按 DeepSeek 定价每百万 token 输入约 ¥1~2 级别，10 万次问答 ≈ 2.6 亿 tok 输入</td><td>缓存重复问题（语义缓存）；压缩上下文；小问题路由到小模型</td></tr>
+<tr><td><span class="badge badge-orange">检索噪声</span></td><td>top_k 过大时混入无关块，模型可能被带偏（lost in the middle）</td><td>相似度阈值过滤；rerank；重要块放上下文首尾</td></tr>
+<tr><td><span class="badge badge-orange">延迟组成</span></td><td>embed ~10ms + 检索 ~10ms + rerank ~200ms + 生成 2~10s（占 95%）</td><td>生成用流式；rerank 按需开启；知识库预热连接</td></tr>
+<tr><td><span class="badge badge-orange">拒答率</span></td><td>知识库覆盖不足 → 频繁"未找到" → 用户流失</td><td>监控拒答 query，反向驱动知识库补文档（RAG 运营闭环）</td></tr>
+</table>
+
+<!-- ============================================================= -->
+<!-- 05 进阶与评估 -->
+<!-- ============================================================= -->
+<div class="part-header" id="part5">
+  <div class="path">RAG手册/05-进阶与评估/</div>
+  <h2>第五章 进阶方向与评估体系</h2>
+</div>
+
+<h3 class="sec" id="ch5-1">5.1 高级分块与上下文化检索（Contextual Retrieval）</h3>
+<ul>
+<li><strong>Contextual Retrieval（Anthropic, 2024）</strong>：分块时先用 LLM 给每个块生成一句"该块在全文中的位置说明"（如"本块出自《NVLink 手册》第 3 章，讨论 SerDes 配置"）拼在块前再向量化。块脱离原文后语义不自足的问题被显著缓解，检索失败率下降约 35%（配合 BM25+Rerank 可达 67%）</li>
+<li><strong>父子块（Small-to-Big）</strong>：用 128 token 小块做检索（语义纯），命中后返回其所属的 1024 token 父块给 LLM（上下文全）</li>
+<li><strong>多模态索引</strong>：表格、图片、代码各自走专门通道——表格用 LLM 生成自然语言摘要后入库，图片用多模态 embedding 或 VLM 生成描述</li>
+</ul>
+
+<h3 class="sec" id="ch5-2">5.2 查询改写技术（检索前优化）</h3>
+<table>
+<tr><th>技术</th><th>原理</th><th>解决的问题</th></tr>
+<tr><td><span class="badge badge-blue">Query Rewrite</span></td><td>LLM 把口语化/有歧义的问题改写为检索友好形式</td><td>口语 query 与书面文档的词汇鸿沟</td></tr>
+<tr><td><span class="badge badge-blue">Multi-Query</span></td><td>一个 query 生成 3~5 个不同角度的变体，分别检索后合并</td><td>单一表述召回覆盖面窄</td></tr>
+<tr><td><span class="badge badge-purple">HyDE</span></td><td>先让 LLM 编一个"假想答案"，用<strong>假答案</strong>（而非问题）去检索</td><td>答案与文档的相似度天然高于问题与文档的相似度</td></tr>
+<tr><td><span class="badge badge-green">Decomposition</span></td><td>复杂问题拆成子问题依次检索（多跳）</td><td>"A 和 B 哪个更快"需要分别查 A、B</td></tr>
+<tr><td><span class="badge badge-cyan">Step-back</span></td><td>先问更抽象的上位问题获取背景</td><td>细节问题缺乏背景知识支撑</td></tr>
+</table>
+<div class="frame-diagram">HyDE example:
+  query : "怎么让 GPU 之间传数据更快?"
+  LLM hallucinates a plausible answer:
+          "使用 NVLink 代替 PCIe 可以提升 GPU 间带宽... 900GB/s vs 64GB/s..."
+  embed the HYPOTHETICAL ANSWER (not the query)
+  -> retrieves real docs about NVLink bandwidth  (high similarity)</div>
+
+<h3 class="sec" id="ch5-3">5.3 GraphRAG：图增强检索</h3>
+<p>
+向量检索只能回答"局部事实查询"，无法回答<strong>全局性问题</strong>（"这个数据集里所有实体之间的共性是什么"）。
+Microsoft GraphRAG（2024）的思路：索引阶段用 LLM 抽取实体关系构建知识图谱，再做社区聚类（Leiden 算法）并为每个社区生成摘要；查询时既可以走局部（实体邻域）也可以走全局（社区摘要 map-reduce）。
+</p>
+<div class="frame-diagram">Indexing:  docs -> LLM entity/relation extraction -> knowledge graph
+           -> Leiden community clustering
+           -> community summaries (hierarchical)
+
+Query:
+  local  : entity neighborhood subgraph -> context
+  global : "what are the main themes?" -> map-reduce over
+           community summaries -> context -> LLM
+
+  vs plain vector RAG: answers questions needing cross-doc
+  synthesis (relationships, trends, global themes)</div>
+<p>国内实践案例：蚂蚁集团将 GraphRAG 思路用于金融风控，跨文档证据链整合使风控问答准确率从约 60% 提升到 95%+（来源：公开技术分享）。代价：索引成本高（每篇文档都要过 LLM 抽取），适合高价值静态语料。</p>
+
+<h3 class="sec" id="ch5-4">5.4 Agentic RAG：从流水线到智能体</h3>
+<p>传统 RAG 是<strong>固定流水线</strong>（无论问题难易都走一遍检索），Agentic RAG 让 LLM 自己决策：</p>
+<ul>
+<li><strong>是否需要检索</strong>——闲聊/常识问题直接回答，省时省钱</li>
+<li><strong>检索什么</strong>——自主生成搜索词、选择工具（向量库/图谱/搜索引擎/SQL）</li>
+<li><strong>何时停止</strong>——评估检索结果置信度，不足则改写 query 再来一轮（Self-RAG / CRAG 思想）</li>
+</ul>
+<div class="frame-diagram">            +------------------+
+   query -->|  LLM as Planner  |
+            +------------------+
+             |      |      |
+        no need   vague   multi-hop
+             |      |      |
+             v      v      v
+          answer  rewrite  decompose --> retrieve #1 --> evaluate
+                                                     |  low conf
+                                                     v
+                                                  retrieve #2 (refined)
+             +------------------------------------+
+             v
+          synthesize answer with citations</div>
+<table>
+<tr><th>范式</th><th>代表</th><th>适用</th></tr>
+<tr><td>Naive RAG</td><td>基础 QA 链</td><td>简单事实问答，成本敏感</td></tr>
+<tr><td>Advanced RAG</td><td>混合检索 + Rerank + 查询改写</td><td>生产主力，性价比最优</td></tr>
+<tr><td>Agentic RAG</td><td>Self-RAG、CRAG、LangGraph</td><td>复杂多跳问题、多源工具</td></tr>
+</table>
+
+<h3 class="sec" id="ch5-5">5.5 评估体系：RAGAS 四指标</h3>
+<p>RAG 优化不能靠体感，需要量化指标。RAGAS 框架定义了四个维度（用 LLM 评审）：</p>
+<table>
+<tr><th>指标</th><th>衡量</th><th>通俗解释</th><th>理想值</th></tr>
+<tr><td><span class="badge badge-green">Faithfulness 忠实度</span></td><td>答案中的论断能否被检索上下文支持</td><td>有没有编造（幻觉率的反面）</td><td>&gt; 0.9</td></tr>
+<tr><td><span class="badge badge-blue">Answer Relevance 答案相关性</span></td><td>答案是否切题回应了问题</td><td>有没有答非所问</td><td>&gt; 0.85</td></tr>
+<tr><td><span class="badge badge-purple">Context Precision 上下文精确率</span></td><td>检索到的块中有多少真正相关、排序是否合理</td><td>检索有没有捞进噪声</td><td>&gt; 0.8</td></tr>
+<tr><td><span class="badge badge-orange">Context Recall 上下文召回率</span></td><td>回答所需的信息有多少被检索到了</td><td>该捞的是不是都捞到了</td><td>&gt; 0.85</td></tr>
+</table>
+<div class="callout info">
+<strong>诊断路由</strong>：Context Recall 低 → 检索侧问题（分块/Embedding/召回策略）；
+Faithfulness 低 → 生成侧问题（Prompt 约束/温度/模型能力）；
+两者都高但 Answer Relevance 低 → 查询理解问题（改写/分解）。
+先用评估定位瓶颈，再针对性优化，避免盲目堆技术。
+</div>
+
+<h3 class="sec" id="ch5-6">5.6 生产化检查清单</h3>
+<table>
+<tr><th>类别</th><th>检查项</th></tr>
+<tr><td rowspan="3"><span class="badge badge-cyan">数据治理</span></td><td>✅ 文档有版本管理与增量更新机制（避免全量重建索引）</td></tr>
+<tr><td>✅ 敏感数据脱敏后才入库；权限隔离（不同用户检索范围不同）</td></tr>
+<tr><td>✅ 元数据完整（来源/时间/作者），支持时间衰减与失效标注</td></tr>
+<tr><td rowspan="3"><span class="badge badge-blue">检索质量</span></td><td>✅ 混合检索 + Rerank 两阶段架构</td></tr>
+<tr><td>✅ 相似度阈值过滤低置信块；拒答出口真实可用</td></tr>
+<tr><td>✅ 建立评估集（100+ 真实问题），每次改动跑 RAGAS 回归</td></tr>
+<tr><td rowspan="3"><span class="badge badge-purple">服务工程</span></td><td>✅ 检索/生成分段打点延迟；流式输出；超时与重试</td></tr>
+<tr><td>✅ 语义缓存（相似问题命中缓存直接返回）；并发限流</td></tr>
+<tr><td>✅ 引用来源前端可点击跳转到原文位置</td></tr>
+<tr><td rowspan="2"><span class="badge badge-orange">运营闭环</span></td><td>✅ 记录拒答/低分 query，定期分析知识缺口并补文档</td></tr>
+<tr><td>✅ 监控线上 Faithfulness 抽样评审，模型/索引变更灰度发布</td></tr>
+</table>
+
+<div class="callout good">
+<strong>总结</strong>：RAG = 把大模型从"闭卷考试"变成"开卷考试"。工程链条上，
+<strong>分块质量</strong>决定检索上限，<strong>混合检索+Rerank</strong>决定召回精度，
+<strong>Prompt 约束</strong>决定生成忠实度，<strong>评估体系</strong>决定迭代方向。
+本手册的 <code>rag_demo/</code> 用 500 行原生代码覆盖了前三个环节，可直接作为二次开发的起点。
+</div>
+
+</div></body></html>
