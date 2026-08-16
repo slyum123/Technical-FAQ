@@ -20,9 +20,7 @@
             margin-bottom: 8px;
         }
         .subtitle { color: #8b949e; margin-bottom: 40px; font-size: 1.05em; }
-        .category {
-            margin-bottom: 32px;
-        }
+        .category { margin-bottom: 32px; }
         .category-title {
             font-size: 1.3em;
             font-weight: 600;
@@ -71,7 +69,6 @@
         .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
         .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
         .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
-        .cat-other { color: #d2a8ff; }
         .footer {
             margin-top: 50px;
             padding-top: 20px;
@@ -91,29 +88,29 @@
     <!-- AI -->
     <div class="category">
         <h2 class="category-title cat-ai">AI 人工智能<span class="badge badge-ai">6 篇</span></h2>
-        <a class="doc-card" href="docs/AI/2026-08-14-Transformer架构详解.html">
-            <div class="doc-title">Transformer 架构详解</div>
-            <div class="doc-date">2026-08-14 · Transformer 架构原理与组件详解</div>
-        </a>
-        <a class="doc-card" href="docs/AI/2026-08-14-KV_Cache深度分析报告.html">
-            <div class="doc-title">推理场景 KV Cache 优化方案深度分析</div>
-            <div class="doc-date">2026-08-14 · 分级缓存 / MQA / GQA / MLA / 厂商方案速查</div>
+        <a class="doc-card" href="html/AI/2026-08-14-QKV_概念.html">
+            <div class="doc-title">QKV 概念</div>
+            <div class="doc-date">2026-08-14 · Query / Key / Value 基础概念 PDF 笔记</div>
         </a>
         <a class="doc-card" href="html/AI/2026-08-14-推理场景为什么要_KV_Cache_图形描述.html">
             <div class="doc-title">推理场景为什么要 KV Cache（图形描述）</div>
             <div class="doc-date">2026-08-14 · PDF 学习笔记转换，含图文说明</div>
         </a>
-        <a class="doc-card" href="html/AI/2026-08-14-QKV_概念.html">
-            <div class="doc-title">QKV 概念</div>
-            <div class="doc-date">2026-08-14 · Query / Key / Value 基础概念 PDF 笔记</div>
+        <a class="doc-card" href="docs/AI/2026-08-14-KV_Cache深度分析报告.html">
+            <div class="doc-title">推理场景 KV Cache 优化方案深度分析</div>
+            <div class="doc-date">2026-08-14 · 分级缓存 / MQA / GQA / MLA / 厂商方案速查</div>
         </a>
-        <a class="doc-card" href="html/AI/2026-08-13-transformer-architecture-analysis.html">
-            <div class="doc-title">Transformer 架构源代码逐段分析</div>
-            <div class="doc-date">2026-08-13 · 含多头注意力数据流图、Mask 机制深度对比</div>
+        <a class="doc-card" href="docs/AI/2026-08-14-Transformer架构详解.html">
+            <div class="doc-title">Transformer 架构详解</div>
+            <div class="doc-date">2026-08-14 · Transformer 架构原理与组件详解</div>
         </a>
         <a class="doc-card" href="html/AI/2026-08-13-deepseek分析.html">
             <div class="doc-title">DeepSeek V3 综合分析</div>
             <div class="doc-date">2026-08-13 · 架构/组件/代码/训练/推理五大主题，2303行</div>
+        </a>
+        <a class="doc-card" href="html/AI/2026-08-13-transformer-architecture-analysis.html">
+            <div class="doc-title">Transformer 架构源代码逐段分析</div>
+            <div class="doc-date">2026-08-13 · 含多头注意力数据流图、Mask 机制深度对比</div>
         </a>
     </div>
 
@@ -128,37 +125,37 @@
             <div class="doc-title">UAlink 协议学习笔记</div>
             <div class="doc-date">2026-08-14 · PDF 学习笔记转换，13 页</div>
         </a>
-        <a class="doc-card" href="docs/Communication/2026-08-14-SUE协议完整技术文档.html">
-            <div class="doc-title">SUE 协议完整技术文档</div>
-            <div class="doc-date">2026-08-14 · Scale-Up Ethernet 协议完整技术指南</div>
-        </a>
-        <a class="doc-card" href="docs/Communication/2026-08-14-RDMA实现原理.html">
-            <div class="doc-title">RDMA 实现原理</div>
-            <div class="doc-date">2026-08-14 · 传统网络痛点 / RDMA 零拷贝 / 地址搬移流程</div>
-        </a>
-        <a class="doc-card" href="docs/Communication/2026-08-14-光模块与光纤基础支持材料.html">
-            <div class="doc-title">光模块与光纤基础支持材料</div>
-            <div class="doc-date">2026-08-14 · 光模块/光纤/连接器基础知识与选型参考</div>
+        <a class="doc-card" href="html/Communication/2026-08-14-并行算法知识.html">
+            <div class="doc-title">并行算法知识：PP 流水线并行</div>
+            <div class="doc-date">2026-08-14 · GPipe / 1F1B / Interleaved-1F1B / Zero Bubble 调度与显存分析</div>
         </a>
         <a class="doc-card" href="docs/Communication/2026-08-14-CXL协议技术手册.html">
             <div class="doc-title">CXL 协议技术手册</div>
             <div class="doc-date">2026-08-14 · CXL 1.0~4.0 全版本技术指南：协议分层/设备类型/拓扑/内存池编址/各厂商产品</div>
         </a>
-        <a class="doc-card" href="html/Communication/2026-08-14-并行算法知识.html">
-            <div class="doc-title">并行算法知识：PP 流水线并行</div>
-            <div class="doc-date">2026-08-14 · GPipe / 1F1B / Interleaved-1F1B / Zero Bubble 调度与显存分析</div>
+        <a class="doc-card" href="docs/Communication/2026-08-14-RDMA实现原理.html">
+            <div class="doc-title">RDMA 实现原理</div>
+            <div class="doc-date">2026-08-14 · 传统网络痛点 / RDMA 零拷贝 / 地址搬移流程</div>
+        </a>
+        <a class="doc-card" href="docs/Communication/2026-08-14-SUE协议完整技术文档.html">
+            <div class="doc-title">SUE 协议完整技术文档</div>
+            <div class="doc-date">2026-08-14 · Scale-Up Ethernet 协议完整技术指南</div>
+        </a>
+        <a class="doc-card" href="docs/Communication/2026-08-14-光模块与光纤基础支持材料.html">
+            <div class="doc-title">光模块与光纤基础支持材料</div>
+            <div class="doc-date">2026-08-14 · 光模块/光纤/连接器基础知识与选型参考</div>
         </a>
         <a class="doc-card" href="html/Communication/2026-08-13-CBFC-LLR-PFC.html">
             <div class="doc-title">PFC / CBFC / LLR 链路层技术深度解析</div>
             <div class="doc-date">2026-08-13 · IEEE 802.1Qbb + UEC v1.0，无损链路三大机制</div>
         </a>
-        <a class="doc-card" href="html/Communication/2026-08-13-ScaleUp-Protocol-Analysis.html">
-            <div class="doc-title">Scale-Up 网络协议全景分析</div>
-            <div class="doc-date">2026-08-13 · NVLink/UB/MTLink/GLink/OLink/Alink/SUE/UALink/OISA 九大协议</div>
-        </a>
         <a class="doc-card" href="html/Communication/2026-08-13-PCIE.html">
             <div class="doc-title">PCIe 在 Scale-Up 网络中的劣势分析</div>
             <div class="doc-date">2026-08-13 · 12项根本劣势 + 带宽公平对比 + P2P路由机制</div>
+        </a>
+        <a class="doc-card" href="html/Communication/2026-08-13-ScaleUp-Protocol-Analysis.html">
+            <div class="doc-title">Scale-Up 网络协议全景分析</div>
+            <div class="doc-date">2026-08-13 · NVLink/UB/MTLink/GLink/OLink/Alink/SUE/UALink/OISA 九大协议</div>
         </a>
     </div>
 
@@ -177,14 +174,18 @@
 
     <!-- Other -->
     <div class="category">
-        <h2 class="category-title cat-other">Other 综合<span class="badge badge-other">2 篇</span></h2>
+        <h2 class="category-title cat-other">Other 综合<span class="badge badge-other">3 篇</span></h2>
+        <a class="doc-card" href="html/Other/名词解释.html">
+            <div class="doc-title">名词解释 Glossary</div>
+            <div class="doc-date">持续更新 · 技术名词统一解释（低秩投影压缩等）</div>
+        </a>
         <a class="doc-card" href="html/Other/2026-08-14-FAQ.html">
             <div class="doc-title">每日技术 FAQ · 2026-08-14</div>
             <div class="doc-date">2026-08-14 · 12 条问答：DeepSeek/Transformer/PP并行/CXL/RDMA/低秩投影压缩</div>
         </a>
-        <a class="doc-card" href="html/Other/名词解释.html">
-            <div class="doc-title">名词解释 Glossary</div>
-            <div class="doc-date">持续更新 · 技术名词统一解释（低秩投影压缩等）</div>
+        <a class="doc-card" href="docs/2026-08/2026-08-13-FAQ.html">
+            <div class="doc-title">每日技术 FAQ · 2026-08-13</div>
+            <div class="doc-date">2026-08-13 · 每日技术 FAQ 问答合集</div>
         </a>
     </div>
 
