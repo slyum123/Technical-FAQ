@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>每日技术 FAQ · 2026-08-16</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0d1117;
+    color: #c9d1d9;
+    line-height: 1.7;
+    padding: 40px 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #58a6ff;
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover { text-decoration: underline; }
+h1 { color: #58a6ff; margin: 24px 0 8px; font-size: 1.9em; border-bottom: 1px solid #30363d; padding-bottom: 8px; }
+.subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+h2 { color: #79c0ff; margin: 32px 0 12px; font-size: 1.45em; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+h3 { color: #d2a8ff; margin: 24px 0 8px; font-size: 1.2em; }
+h4 { color: #f0883e; margin: 20px 0 8px; font-size: 1.05em; }
+p { margin: 8px 0; }
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { margin: 8px 0 8px 24px; }
+li { margin: 4px 0; }
+code {
+    background: #1c2128;
+    color: #f0883e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.9em;
+}
+pre {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+pre code {
+    background: none;
+    color: #c9d1d9;
+    padding: 0;
+    font-size: 0.875em;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 0.92em;
+}
+th, td {
+    border: 1px solid #30363d;
+    padding: 8px 12px;
+    text-align: left;
+}
+th { background: #161b22; color: #58a6ff; font-weight: 600; }
+tr:nth-child(even) { background: #161b22; }
+blockquote {
+    border-left: 3px solid #f0883e;
+    background: rgba(240,136,62,0.06);
+    padding: 8px 16px;
+    margin: 12px 0;
+    color: #b1bac4;
+}
+hr { border: none; border-top: 1px solid #30363d; margin: 24px 0; }
+strong { color: #f0f6fc; }
+.meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+.tag {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+.tag-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+.tag-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+.tag-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+.tag-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+.faq-item { margin: 20px 0; padding: 0; }
+.faq-answer { margin: 12px 0; }
+.conclusion {
+    background: rgba(88,166,255,0.06);
+    border-left: 3px solid #58a6ff;
+    padding: 10px 16px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+}
+.conclusion strong { color: #58a6ff; }
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="../../index.html">&larr; 返回索引</a>
+
+<h1 id="faq">每日技术 FAQ</h1>
+<p class="subtitle">2026-08-16 · 涵盖前端工程化 / AI Agent 框架 / 本地模型部署 / 自动化构建等领域的 8 条技术问答与沉淀</p>
+<div class="meta">
+  <span class="tag tag-comp">Computer ×4</span>
+  <span class="tag tag-ai">AI ×2</span>
+  <span class="tag tag-other">Other ×2</span>
+</div>
+<hr/>
+
+<h2 id="toc">目录</h2>
+<ul>
+  <li><a href="#comp-1">Vite + React + TypeScript 项目搭建最佳实践</a>（Computer）</li>
+  <li><a href="#comp-2">Tailwind CSS + shadcn/ui 暗色主题组件体系</a>（Computer）</li>
+  <li><a href="#comp-3">GitHub Pages 自动部署：构建产物直接推送方案</a>（Computer）</li>
+  <li><a href="#comp-4">Framer Motion 滚动动画与卡片悬浮效果实现</a>（Computer）</li>
+  <li><a href="#ai-1">DeepSeek Harness (dsh)：全插件化 Agent 框架架构解析</a>（AI）</li>
+  <li><a href="#ai-2">Ollama Modelfile 配置：Qwen 3.5 关闭思考模式</a>（AI）</li>
+  <li><a href="#other-1">RSS Feed 自动生成：从数据文件到 XML</a>（Other）</li>
+  <li><a href="#other-2">跨仓库技术文章自动提取与整合</a>（Other）</li>
+</ul>
+<hr/>
+
+<h2 id="computer">Computer · 前端工程化与部署</h2>
+
+<div class="faq-item">
+<h3 id="comp-1">Vite + React + TypeScript 项目搭建最佳实践</h3>
+<p><strong>分类：</strong> Computer · 前端工程化</p>
+<p><strong>问题描述：</strong> 如何快速搭建一个现代 React 项目，兼顾开发体验、类型安全和构建性能？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>脚手架选择：</strong>使用 <code>npx create-vite@latest --template react-ts</code> 创建项目，自动配置 TypeScript + Vite + React 基础结构</li>
+  <li><strong>核心依赖栈：</strong>
+    <ul>
+      <li><code>react@18</code> + <code>react-dom@18</code> — UI 框架</li>
+      <li><code>typescript@5</code> — 类型系统</li>
+      <li><code>vite@5</code> — 构建工具（ESM 原生开发服务器 + Rollup 生产打包）</li>
+      <li><code>tailwindcss@3</code> — 原子化 CSS 框架</li>
+      <li><code>framer-motion</code> — 声明式动画库</li>
+      <li><code>lucide-react</code> — 图标库</li>
+    </ul>
+  </li>
+  <li><strong>路径别名配置：</strong>在 <code>tsconfig.json</code> 和 <code>vite.config.ts</code> 中同步配置 <code>@/</code> 指向 <code>src/</code></li>
+  <li><strong>开发命令：</strong>
+    <pre><code>npm install        # 安装依赖
+npm run dev        # 启动开发服务器 (默认 5173 端口)
+npm run build      # 构建到 dist/
+npm run preview    # 预览构建产物</code></pre>
+  </li>
+  <li><strong>项目结构约定：</strong>
+    <ul>
+      <li><code>src/data/</code> — 内容数据层（纯数据文件，便于维护）</li>
+      <li><code>src/sections/</code> — 页面区块组件</li>
+      <li><code>src/components/</code> — 可复用 UI 组件</li>
+      <li><code>src/types/</code> — TypeScript 类型定义</li>
+      <li><code>src/hooks/</code> — 自定义 Hooks</li>
+      <li><code>scripts/</code> — 构建辅助脚本（CommonJS 格式）</li>
+    </ul>
+  </li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>Vite + React + TS 是当前前端项目的主流技术选型，核心优势在于 Vite 的 ESM 原生 HMR（毫秒级热更新）和 Rollup 生产打包。将内容数据与 UI 组件分离（<code>src/data/</code> vs <code>src/sections/</code>）可显著降低维护成本。
+</div>
+</div>
+
+<div class="faq-item">
+<h3 id="comp-2">Tailwind CSS + shadcn/ui 暗色主题组件体系</h3>
+<p><strong>分类：</strong> Computer · 前端样式</p>
+<p><strong>问题描述：</strong> 如何使用 Tailwind CSS 和 shadcn/ui 构建一致的暗色主题 UI？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>Tailwind 配置：</strong>在 <code>tailwind.config.js</code> 中扩展自定义颜色变量，映射到 CSS 变量以支持主题切换：
+    <pre><code>module.exports = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        primary: 'hsl(var(--primary))',
+      }
+    }
+  }
+}</code></pre>
+  </li>
+  <li><strong>shadcn/ui 初始化：</strong>运行 <code>npx shadcn-ui@latest init</code>，选择暗色主题，生成 <code>components.json</code> 配置文件和 CSS 变量</li>
+  <li><strong>CSS 变量体系：</strong>暗色主题使用深色背景 + 高对比度文字：
+    <ul>
+      <li>背景：<code>#0d1117</code>（GitHub Dark 风格）</li>
+      <li>文字：<code>#c9d1d9</code></li>
+      <li>强调色：蓝紫渐变 <code>#58a6ff → #bc8cff</code></li>
+      <li>边框：<code>#30363d</code></li>
+    </ul>
+  </li>
+  <li><strong>组件按需引入：</strong>shadcn/ui 采用 Copy-Paste 模式，组件代码直接复制到项目中，可自由修改</li>
+  <li><strong>PostCSS 配置：</strong>需安装 <code>autoprefixer</code> 和 <code>postcss</code>，配置 <code>postcss.config.js</code></li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>shadcn/ui 的 Copy-Paste 模式比传统 npm 组件库更灵活——组件源码在项目内，可完全控制样式和行为。配合 Tailwind CSS 变量系统，可轻松实现一致的暗色主题。
+</div>
+</div>
+
+<div class="faq-item">
+<h3 id="comp-3">GitHub Pages 部署：构建产物直接推送方案</h3>
+<p><strong>分类：</strong> Computer · 持续部署</p>
+<p><strong>问题描述：</strong> 如何将 Vite 构建的静态网站部署到 GitHub Pages？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>方案选择：</strong>采用构建产物直接推送方案——将 <code>dist/</code> 目录内容推送到 <code>&lt;username&gt;.github.io</code> 仓库的 <code>main</code> 分支</li>
+  <li><strong>部署流程：</strong>
+    <pre><code>npm run build
+cd dist
+git init -b main
+git add -A
+git commit -m "deploy"
+git remote add origin https://github.com/&lt;user&gt;/&lt;user&gt;.github.io.git
+git push -f origin main</code></pre>
+  </li>
+  <li><strong>源码仓库分离：</strong>源码托管在独立仓库（如 <code>portfolio</code>），部署仓库仅含构建产物，保持历史干净</li>
+  <li><strong>gh CLI 认证：</strong>使用 <code>gh auth login</code> 完成 GitHub CLI 认证，后续 git push 无需手动输入凭据</li>
+  <li><strong>Vite base 路径：</strong>若部署在子路径（如 <code>/repo-name/</code>），需在 <code>vite.config.ts</code> 中设置 <code>base: '/repo-name/'</code>；部署到 <code>&lt;user&gt;.github.io</code> 根域名则无需设置</li>
+  <li><strong>Pages 生效时间：</strong>推送后 GitHub Pages 约 1-2 分钟完成构建部署</li>
+  <li><strong>Windows 注意事项：</strong>Windows 下 <code>rm -rf dist</code> 可能被 safe-delete shim 拦截，需先手动删除或使用空目录策略再构建</li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>构建产物直接推送是最简单的 GitHub Pages 部署方案，无需 CI/CD 配置。源码仓库与部署仓库分离是最佳实践——源码在独立仓库版本管理，部署仓库仅含 <code>dist/</code> 产物。推送后用 <code>git push -f</code> 覆盖历史，保持部署仓库整洁。
+</div>
+</div>
+
+<div class="faq-item">
+<h3 id="comp-4">Framer Motion 滚动动画与卡片悬浮效果实现</h3>
+<p><strong>分类：</strong> Computer · 前端动画</p>
+<p><strong>问题描述：</strong> 如何使用 Framer Motion 实现页面滚动渐入动画和卡片悬浮发光效果？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>滚动渐入动画：</strong>使用 <code>whileInView</code> 属性配合 <code>viewport</code> 配置：
+    <pre><code>&lt;motion.div
+  initial={{ opacity: 0, y: 40 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  viewport={{ once: true, margin: "-100px" }}
+  transition={{ duration: 0.6, ease: "easeOut" }}
+&gt;
+  内容
+&lt;/motion.div&gt;</code></pre>
+  </li>
+  <li><strong>关键参数：</strong>
+    <ul>
+      <li><code>once: true</code> — 动画只触发一次，避免来回滚动重复播放</li>
+      <li><code>margin: "-100px"</code> — 元素进入视口 100px 后才触发，避免边缘突兀</li>
+      <li><code>ease: "easeOut"</code> — 缓出曲线，自然减速感</li>
+    </ul>
+  </li>
+  <li><strong>卡片悬浮发光效果：</strong>使用 Tailwind CSS 的 <code>hover:</code> 伪类 + <code>transition</code> + 自定义 <code>shadow</code>：
+    <pre><code>&lt;div class="transition-all duration-300
+     hover:border-blue-500/50
+     hover:shadow-[0_0_30px_rgba(88,166,255,0.15)]"&gt;
+  卡片内容
+&lt;/div&gt;</code></pre>
+  </li>
+  <li><strong>自定义 Hook 封装：</strong>可将动画配置封装为 <code>useScrollAnimation</code> Hook，统一管理动画参数</li>
+  <li><strong>性能注意：</strong>Framer Motion 使用 GPU 加速的 <code>transform</code> 和 <code>opacity</code> 属性，不触发重排，性能优于直接操作 DOM</li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>Framer Motion 的 <code>whileInView</code> 是实现滚动动画的最简方案，无需监听 scroll 事件。卡片悬浮发光用 Tailwind 的 <code>hover:shadow-[...]</code> 任意值语法即可，无需额外 CSS 文件。动画性能的关键是只操作 <code>transform</code> 和 <code>opacity</code>。
+</div>
+</div>
+
+<hr/>
+
+<h2 id="ai">AI · Agent 框架与本地模型</h2>
+
+<div class="faq-item">
+<h3 id="ai-1">DeepSeek Harness (dsh)：全插件化 Agent 框架架构解析</h3>
+<p><strong>分类：</strong> AI · Agent 框架</p>
+<p><strong>问题描述：</strong> DeepSeek 开源的 Harness (dsh) 是什么？其架构设计有何特点？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>项目定位：</strong>DeepSeek Harness（<code>dsh</code>）是 DeepSeek AI 开源的 Agent Harness 框架，目前处于 Developer Preview 阶段</li>
+  <li><strong>核心理念：</strong><strong>一切皆插件（Everything is a plugin）</strong>——所有功能模块（LLM 调用、工具集成、UI 组件）均以插件形式加载</li>
+  <li><strong>底层框架：</strong>基于 <a href="https://github.com/cordiverse/cordis">Cordis</a> 框架构建，Cordis 的设计理念源自论文 <em>"A Programming Paradigm for Spatiotemporal Composability"</em></li>
+  <li><strong>运行方式：</strong>
+    <ul>
+      <li>NPM 直接运行：<code>npx @deepseek-ai/dsh web</code>（启动 Web UI，默认 <code>http://127.0.0.1:3080</code>）</li>
+      <li>源码运行：<code>git clone</code> → <code>pnpm install</code> → <code>pnpm run build</code> → <code>pnpm dsh web</code></li>
+    </ul>
+  </li>
+  <li><strong>插件生态：</strong>插件仓库通过 <code>dsh-plugin</code> GitHub Topic 标记，社区可通过 GitHub Discussions 提交反馈</li>
+  <li><strong>注意事项：</strong>当前阶段迭代快速，<strong>存在兼容性破坏变更</strong>，不建议用于生产环境</li>
+  <li><strong>项目结构：</strong>包含完整的文档体系（README、CONTRIBUTING、BENCHMARK、THIRD_PARTY_NOTICES）、GitLab CI 配置、国际化支持（i18n YAML）</li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>DeepSeek Harness 采用"全插件化 + Cordis 时空可组合范式"的架构设计，区别于 LangChain 等传统 Agent 框架的硬编码方式。其核心创新在于 Cordis 的时空可组合性理论——插件可以在不同时间和空间维度自由组合。目前处于早期阶段，适合关注和实验但不适合生产使用。
+</div>
+</div>
+
+<div class="faq-item">
+<h3 id="ai-2">Ollama Modelfile 配置：Qwen 3.5 关闭思考模式</h3>
+<p><strong>分类：</strong> AI · 本地模型部署</p>
+<p><strong>问题描述：</strong> 如何通过 Ollama Modelfile 配置 Qwen 3.5 模型关闭 thinking 模式，加速推理？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>Modelfile 格式：</strong>Ollama 使用类似 Dockerfile 的声明式配置文件 <code>Modelfile</code>，定义模型来源和运行参数</li>
+  <li><strong>配置内容：</strong>
+    <pre><code>FROM qwen3.5:9B
+PARAMETER think false</code></pre>
+  </li>
+  <li><strong>指令说明：</strong>
+    <ul>
+      <li><code>FROM</code> — 指定基础模型（此处为通义千问 3.5 9B 参数版本）</li>
+      <li><code>PARAMETER think false</code> — 关闭模型的思考/推理链模式，直接输出答案</li>
+    </ul>
+  </li>
+  <li><strong>使用方式：</strong>
+    <pre><code># 创建自定义模型
+ollama create qwen35-nothink -f Modelfile.qwen35nothink
+
+# 运行模型
+ollama run qwen35-nothink</code></pre>
+  </li>
+  <li><strong>适用场景：</strong>关闭 thinking 模式适用于简单问答、代码补全等不需要复杂推理链的场景，可显著降低延迟和 token 消耗</li>
+  <li><strong>对比：</strong>开启 thinking 时模型会先输出 <code>&lt;think&gt;...&lt;/think&gt;</code> 推理过程再给答案，适合数学推导、逻辑分析等复杂任务</li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>Ollama Modelfile 的 <code>PARAMETER think false</code> 可一键关闭 Qwen 3.5 的思考模式。对于不需要推理链的日常问答场景，关闭 thinking 可减少约 50-80% 的 token 输出量，显著降低推理延迟。建议根据任务复杂度动态选择是否开启。
+</div>
+</div>
+
+<hr/>
+
+<h2 id="other">Other · 自动化与工具链</h2>
+
+<div class="faq-item">
+<h3 id="other-1">RSS Feed 自动生成：从数据文件到 XML</h3>
+<p><strong>分类：</strong> Other · 自动化工具</p>
+<p><strong>问题描述：</strong> 如何从项目的 TypeScript 数据文件自动生成 RSS Feed XML？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>设计思路：</strong>编写 Node.js 脚本（CommonJS 格式），读取 <code>src/data/</code> 下的文章数据文件，合并生成标准 RSS 2.0 XML</li>
+  <li><strong>数据源合并：</strong>支持多个数据源合并——如公众号文章（<code>articles.ts</code>）+ FAQ 知识库文章（<code>articles-faq.ts</code>），按日期排序取 Top N</li>
+  <li><strong>关键实现：</strong>
+    <ul>
+      <li>使用 <code>fs.writeFileSync</code> 写入 <code>public/feed.xml</code></li>
+      <li>RSS 2.0 标准字段：<code>&lt;channel&gt;</code>、<code>&lt;item&gt;</code>、<code>&lt;title&gt;</code>、<code>&lt;link&gt;</code>、<code>&lt;description&gt;</code>、<code>&lt;pubDate&gt;</code></li>
+      <li>日期格式：RFC 822 标准（如 <code>Sun, 16 Aug 2026 20:00:00 +0800</code>）</li>
+      <li>CDATA 包裹描述内容，避免 XML 转义问题</li>
+    </ul>
+  </li>
+  <li><strong>集成到构建流程：</strong>
+    <pre><code># package.json scripts
+{
+  "build": "node scripts/generate-rss.cjs && vite build"
+}</code></pre>
+  </li>
+  <li><strong>注意事项：</strong>XML 特殊字符（<code>&lt;</code>、<code>&amp;</code>、<code>&gt;</code>、<code>"</code>、<code>'</code>）必须转义或用 CDATA 包裹</li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>RSS Feed 自动生成的核心是"数据文件 → Node.js 脚本 → XML"流水线。将 RSS 生成集成到 <code>npm run build</code> 流程中，确保每次构建都有最新内容。关键坑点：XML 特殊字符必须转义，日期必须用 RFC 822 格式，描述内容用 CDATA 包裹最安全。
+</div>
+</div>
+
+<div class="faq-item">
+<h3 id="other-2">跨仓库技术文章自动提取与整合</h3>
+<p><strong>分类：</strong> Other · 自动化工具</p>
+<p><strong>问题描述：</strong> 如何从一个 Git 仓库（Technical-FAQ）自动提取文章列表并生成另一个仓库的 TypeScript 数据文件？</p>
+<div class="faq-answer">
+<h4>回答要点</h4>
+<ul>
+  <li><strong>场景：</strong>Technical-FAQ 仓库（<code>D:/workbuddyFile/Technical-FAQ/html/</code>）按分类目录存储 HTML 文章，需要自动提取标题、摘要、日期、URL 并生成 portfolio 网站的 <code>articles-faq.ts</code></li>
+  <li><strong>提取脚本设计：</strong>
+    <ul>
+      <li>遍历 4 个分类目录：<code>AI/</code>、<code>Communication/</code>、<code>Computer/</code>、<code>Other/</code></li>
+      <li>解析每个 HTML 文件的 <code>&lt;title&gt;</code> 标签获取标题</li>
+      <li>用正则去除 HTML 标签提取纯文本，取前 160 字符作为摘要</li>
+      <li>从文件名提取日期（<code>YYYY-MM-DD-*.html</code> 格式）</li>
+      <li>URL 编码：<code>encodeURIComponent</code> 处理中文文件名</li>
+    </ul>
+  </li>
+  <li><strong>摘要清洗：</strong>需要过滤导航面包屑、标题重复、来源元信息等噪声文本：
+    <pre><code>// 噪声模式过滤
+const noisePatterns = [
+  /^\s*[←&larr;]?\s*返回[\s\S]{0,20}?(索引|目录)\s*/,
+  /^\s*☰\s*(目录|导航)\s*/,
+  /^\s*目录\s*/,
+  /^\s*首页\s*/,
+];</code></pre>
+  </li>
+  <li><strong>输出格式：</strong>生成标准 TypeScript 数组，每条记录含 <code>id</code>、<code>title</code>、<code>summary</code>、<code>date</code>、<code>url</code>、<code>category</code>、<code>source</code>、<code>tags</code> 字段</li>
+  <li><strong>分类映射：</strong>目录名到中文标签的映射：AI→AI、Communication→通信网络、Computer→计算机基础、Other→其他</li>
+  <li><strong>排序策略：</strong>按日期降序排列，确保最新文章排在前面</li>
+  <li><strong>URL 构造：</strong>文章链接指向 GitHub Pages 地址：<code>https://slyum123.github.io/Technical-FAQ/html/&lt;分类&gt;/&lt;文件名&gt;.html</code></li>
+</ul>
+</div>
+<div class="conclusion">
+<strong>关键结论：</strong>跨仓库文章提取的核心是"目录遍历 → HTML 解析 → 文本清洗 → TS 生成"四步流水线。最大挑战是摘要清洗——HTML 文件中的导航、面包屑、元信息等噪声文本需要用正则模式过滤。文件名中包含中文时，URL 必须用 <code>encodeURIComponent</code> 编码。脚本设计为幂等可重复执行，每次运行覆盖生成结果。
+</div>
+</div>
+
+<hr/>
+
+<h2 id="summary">技术知识点沉淀</h2>
+
+<h3>Vite 构建工具核心优势</h3>
+<ul>
+  <li><strong>开发阶段：</strong>利用浏览器原生 ESM，按需加载模块，启动时间与项目规模解耦（冷启动 &lt;1s）</li>
+  <li><strong>HMR 机制：</strong>基于 ESM 的 HMR，只需通知变更模块及其依赖链，不是全量刷新</li>
+  <li><strong>生产构建：</strong>基于 Rollup，支持 Tree-Shaking、代码分割、懒加载</li>
+  <li><strong>配置简洁：</strong><code>vite.config.ts</code> 一个文件管理所有构建配置，无需 webpack 那样复杂的配置链</li>
+</ul>
+
+<h3>shadcn/ui vs 传统组件库</h3>
+<table>
+  <tr><th>维度</th><th>shadcn/ui</th><th>传统组件库（Ant Design / MUI）</th></tr>
+  <tr><td>分发方式</td><td>Copy-Paste（源码在项目内）</td><td>NPM 包安装</td></tr>
+  <tr><td>定制性</td><td>完全控制，直接修改源码</td><td>受限于 API 和主题系统</td></tr>
+  <tr><td>包体积</td><td>只包含使用的组件</td><td>Tree-shaking 后仍可能较大</td></tr>
+  <tr><td>版本管理</td><td>组件版本与项目一致</td><td>需手动升级 NPM 包</td></tr>
+  <tr><td>样式方案</td><td>Tailwind CSS 原生</td><td>CSS-in-JS / Less / SCSS</td></tr>
+</table>
+
+<h3>Ollama 常用 Modelfile 指令</h3>
+<table>
+  <tr><th>指令</th><th>作用</th><th>示例</th></tr>
+  <tr><td><code>FROM</code></td><td>指定基础模型</td><td><code>FROM qwen3.5:9B</code></td></tr>
+  <tr><td><code>PARAMETER</code></td><td>设置运行参数</td><td><code>PARAMETER think false</code></td></tr>
+  <tr><td><code>SYSTEM</code></td><td>设置系统提示词</td><td><code>SYSTEM "You are a helpful assistant"</code></td></tr>
+  <tr><td><code>TEMPLATE</code></td><td>自定义对话模板</td><td><code>TEMPLATE {{ .Prompt }}</code></td></tr>
+  <tr><td><code>ADAPTER</code></td><td>加载 LoRA 适配器</td><td><code>ADAPTER ./lora.gguf</code></td></tr>
+</table>
+
+<h3>Cordis 框架核心概念</h3>
+<ul>
+  <li><strong>时空可组合性（Spatiotemporal Composability）：</strong>一种编程范式，允许组件在时间维度（生命周期）和空间维度（上下文隔离）上自由组合</li>
+  <li><strong>插件架构：</strong>每个插件是一个独立的可组合单元，通过服务注册和依赖注入实现松耦合</li>
+  <li><strong>与 DeepSeek Harness 的关系：</strong>dsh 基于 Cordis 构建，所有功能（LLM、工具、UI）均以 Cordis 插件形式存在</li>
+</ul>
+
+<hr/>
+
+<div class="footer" style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #30363d; text-align: center; color: #484f58; font-size: 0.85em;">
+  <p>Technical-FAQ Knowledge Base · <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> · 每日自动更新</p>
+  <p>本日 FAQ 涵盖 8 条技术问答 · 2026-08-16</p>
+</div>
+
+</div>
+</body>
+</html>
