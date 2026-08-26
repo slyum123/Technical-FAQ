@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-08-26</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        h1 {
+            font-size: 2em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 32px; font-size: 1.05em; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 14px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #161b22;
+            transition: border-color 0.2s;
+        }
+        .back-link:hover { border-color: #58a6ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .faq-number {
+            background: #58a6ff;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 14px; }
+        .faq-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .faq-body { color: #c9d1d9; font-size: 0.95em; }
+        .faq-body p { margin-bottom: 10px; }
+        .faq-body ul { margin-left: 20px; margin-bottom: 10px; }
+        .faq-body li { margin-bottom: 4px; }
+        .faq-conclusion {
+            background: rgba(88,166,255,0.08);
+            border-left: 3px solid #58a6ff;
+            padding: 10px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.92em;
+        }
+        .faq-conclusion strong { color: #58a6ff; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.88em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #21262d; color: #e6edf3; font-weight: 600; }
+        td { color: #c9d1d9; }
+        tr:nth-child(even) td { background: #161b22; }
+        code {
+            background: #1c2331;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #f0883e;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+        a { color: #58a6ff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a href="../../index.html" class="back-link">&larr; 返回索引</a>
+    <h1>每日技术 FAQ &middot; 2026-08-26</h1>
+    <p class="subtitle">8 条问答 &middot; 涵盖 LLM 架构对比、Groq LPU 推理芯片架构、SRAM 内存墙、确定性执行、软件栈与生态</p>
+
+    <!-- FAQ 1 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">01</span>
+            <span class="faq-title">Prefix Decoder、Causal Decoder、Encoder-Decoder 三种 LLM 架构有什么区别？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>大语言模型的三种主流架构（Prefix Decoder、Causal Decoder、Encoder-Decoder）在注意力机制、适用场景和代表模型上有何本质差异？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <table>
+                    <tr><th>维度</th><th>Causal Decoder</th><th>Prefix Decoder</th><th>Encoder-Decoder</th></tr>
+                    <tr><th>注意力模式</th><td>纯因果掩码，每个 token 只能看到前面的 token</td><td>Prefix 部分双向可见，生成部分因果掩码</td><td>Encoder 双向 + Decoder 因果 + Cross-Attention</td></tr>
+                    <tr><th>训练目标</th><td>单向自回归（next-token prediction）</td><td>Prefix 部分去噪 + 生成部分自回归</td><td>Encoder 理解语义 + Decoder 生成</td></tr>
+                    <tr><th>代表模型</th><td>GPT 系列、LLaMA、Qwen、Mistral</td><td>GLM-130B、ChatGLM</td><td>T5、BART、mT5</td></tr>
+                    <tr><th>优势</th><td>架构简洁、scaling law 表现最优</td><td>理解+生成兼顾，NLU 任务更强</td><td>翻译/摘要等 seq2seq 任务效果好</td></tr>
+                    <tr><th>劣势</th><td>理解能力受限于单向注意力</td><td>生态不如 Causal Decoder 成熟</td><td>参数效率低、大规模 scaling 不如 Decoder-only</td></tr>
+                </table>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>业界共识是 Causal Decoder 架构在大规模预训练中 scaling law 表现最优，GPT/LLaMA 等主流模型均采用此架构。Prefix Decoder（GLM 系列）在中文理解和 NLU 任务上有独特优势，但在全球生态中属于少数路线。Encoder-Decoder 架构在 seq2seq 任务（翻译、摘要）中仍有价值，但在通用大模型 scaling 上已非主流。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 2 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">02</span>
+            <span class="faq-title">Groq LPU 是什么？与 GPU 相比有何根本差异？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>Groq LPU（Language Processing Unit）的定位是什么？它与传统 GPU 在设计哲学上有何本质不同？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>定位差异</strong>：GPU 是通用并行计算处理器（训练+推理），LPU 是<strong>专为 LLM 推理（Inference）从第一性原理重新设计</strong>的专用加速芯片</li>
+                    <li><strong>内存架构</strong>：GPU 用片外 HBM（~3.35 TB/s），LPU 用<strong>片上 SRAM（~80 TB/s）</strong>，带宽高约 24 倍</li>
+                    <li><strong>调度模型</strong>：GPU 运行时动态调度（硬件决定数据流），LPU <strong>编译期静态调度</strong>（编译器提前排好每个时钟周期的操作）</li>
+                    <li><strong>执行模型</strong>：GPU 有分支预测/乱序执行/缓存，LPU 去除所有反应式硬件组件，实现<strong>确定性执行</strong></li>
+                    <li><strong>命名历史</strong>：LPU 原名 TSP（Tensor Streaming Processor），后改名 LPU 以突出推理定位；创始人为 Google TPU 核心发明者 Jonathan Ross</li>
+                </ul>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>LPU 与 GPU 的根本差异不在于"更快"，而在于<strong>设计哲学的根本分歧</strong>——GPU 是"通用处理器被改去跑 AI"，LPU 是"只为把 LLM 推理跑到极致而生的专用芯片"。核心三角：片上 SRAM + 编译器静态调度 + 确定性单核数据流。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 3 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">03</span>
+            <span class="faq-title">LPU 如何解决推理阶段的"内存墙"问题？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>大模型推理 Decode 阶段为何受限于内存带宽？Groq LPU 的片上 SRAM 方案如何打破这一瓶颈？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>内存墙的本质</strong>：Decode 阶段每生成一个 Token 都需读全量模型权重，属 memory-bound 而非 compute-bound</li>
+                    <li><strong>GPU 瓶颈</strong>：70B 模型 FP8 约 70GB 权重，H100 HBM 带宽 ~3.35 TB/s，每 Token 搬运权重就耗数十毫秒</li>
+                    <li><strong>LPU 方案</strong>：权重常驻片上 SRAM（~230MB/芯），带宽 ~80 TB/s，同样权重搬运在微秒级完成</li>
+                    <li><strong>带宽倍数</strong>：SRAM 带宽较 HBM 高约 <strong>24 倍</strong>（80 TB/s vs 3.35 TB/s）</li>
+                    <li><strong>容量约束</strong>：SRAM 容量有限，超过单芯容量的模型需跨多芯分片（tensor/pipeline parallelism）</li>
+                </ul>
+                <table>
+                    <tr><th>指标</th><th>Groq LPU</th><th>NVIDIA H100</th></tr>
+                    <tr><td>内存类型</td><td>片上 SRAM</td><td>片外 HBM3</td></tr>
+                    <tr><td>内存带宽</td><td>~80 TB/s（LPX 150 TB/s）</td><td>~3.35 TB/s</td></tr>
+                    <tr><td>推理速度（70B）</td><td>300-750+ tok/s</td><td>100-150 tok/s</td></tr>
+                    <tr><td>每 Token 能耗</td><td>~1-3 J/tok</td><td>~10-30 J/tok</td></tr>
+                </table>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>GPU 卡在"内存墙"上——算力远超带宽，大量时间花在等数据。LPU 把内存放到片上 SRAM，从物理层面消除了片外访存往返，是"拆墙"而非"翻墙"。代价是 SRAM 容量受限（单芯 ~230MB），需多芯分片处理大模型。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 4 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">04</span>
+            <span class="faq-title">LPU 的确定性执行（Determinism）是如何实现的？有何工程价值？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>LPU 宣称"确定性执行、零抖动延迟"，这在硬件层面如何实现？对生产系统有何实际意义？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>去除反应式硬件</strong>：无分支预测器、无仲裁器、无重排缓冲（ROB）、无缓存——这些是 GPU 延迟波动的根源</li>
+                    <li><strong>编译期全静态调度</strong>：Groq 编译器在编译期分析整张计算图，生成确定性调度——每个 TSP 在每个时钟周期做什么都提前确定</li>
+                    <li><strong>VLIW + TISC</strong>：超长指令字（VLIW）+ 时序指令集计算机（TISC），指令执行顺序编译期确定，无运行时猜分支、无乱序执行</li>
+                    <li><strong>144 个独立指令队列</strong>：编译期可见，通过逻辑时间对齐生产者与消费者（插入 wait/nop 实现节拍对齐）</li>
+                    <li><strong>工程价值</strong>：P99 无尖峰抖动（vs GPU 随负载波动），首 Token 延迟 P50 &lt; 300ms 且不随并发变化，利于生产级 SLA 保障</li>
+                </ul>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>确定性执行的核心是"把复杂度从硬件搬到编译期"——GPU 用昂贵的运行时动态调度硬件换取灵活性，LPU 用编译器的编译期分析换取零运行时决策开销。对金融交易机器人、实时语音 Agent 等延迟敏感场景，确定性比"平均快"更关键。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 5 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">05</span>
+            <span class="faq-title">LPU 的功能切片式微架构是怎样的？各功能单元分别做什么？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>LPU 采用"功能切片式微架构"（Functionally Sliced Microarchitecture），其内部结构如何组织？各功能单元的职责是什么？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>组织方式</strong>：内存单元与向量/矩阵计算单元交错排布，利用深度学习负载固有的数据并行性</li>
+                    <li><strong>功能切片</strong>：一个 slice 含 20 个 tile，每个 tile 处理 16 个元素，最大向量长度 320 元素</li>
+                    <li><strong>片上 SRAM</strong>：~230 MB，不是缓存而是加速器本地工作存储，由编译器全局寻址调度</li>
+                </ul>
+                <table>
+                    <tr><th>单元</th><th>全称</th><th>职责</th></tr>
+                    <tr><td><strong>ICU</strong></td><td>Instruction Control Unit</td><td>取指与派发指令，提供同步操作</td></tr>
+                    <tr><td><strong>MEM</strong></td><td>Memory Unit</td><td>读写全局寻址的片上 SRAM</td></tr>
+                    <tr><td><strong>VXM</strong></td><td>Vector eXtension Module</td><td>逐元素算术、类型转换、激活函数</td></tr>
+                    <tr><td><strong>MXM</strong></td><td>Matrix eXtension Module</td><td>稠密矩阵乘加（GEMM）</td></tr>
+                    <tr><td><strong>SXM</strong></td><td>Switch eXtension Module</td><td>向量置换、移位、旋转、路由</td></tr>
+                    <tr><td><strong>C2C</strong></td><td>Chip-to-Chip</td><td>芯片间收发 320 字节向量</td></tr>
+                </table>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>功能切片式架构让数据像流水一样在计算单元间穿行，无需反复读写显存。Dragonfly 软件定义互联拓扑支持大规模系统扩展（论文达 10,400+ TSP、2 TB+ 全局内存），端到端系统延迟 &lt; 3ms。单 GroqRack 最多 576 颗 LPU。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 6 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">06</span>
+            <span class="faq-title">LPU vs GPU vs TPU 横向对比：各自适合什么场景？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>从定位、内存、调度、训练能力、生态等多个维度，LPU、GPU 和 TPU 各有什么优势和局限？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <table>
+                    <tr><th>维度</th><th>Groq LPU</th><th>NVIDIA GPU（H100/B200）</th><th>Google TPU</th></tr>
+                    <tr><th>定位</th><td>推理专用</td><td>通用 AI（训练+推理）</td><td>训练/推理（谷歌生态）</td></tr>
+                    <tr><th>内存</th><td>片上 SRAM ~230MB</td><td>片外 HBM 80-192GB</td><td>HBM + 脉动阵列</td></tr>
+                    <tr><th>调度</th><td>编译期静态</td><td>运行时动态</td><td>编译期 + 脉动阵列</td></tr>
+                    <tr><th>确定性</th><td>强（单核数据流）</td><td>弱（波动）</td><td>中</td></tr>
+                    <tr><th>训练支持</th><td>不支持</td><td>支持</td><td>支持</td></tr>
+                    <tr><th>推理速度</th><td>极高（300-750+ tok/s）</td><td>高（100-150 tok/s）</td><td>高</td></tr>
+                    <tr><th>能效</th><td>~1-3 J/tok</td><td>~10-30 J/tok</td><td>中等</td></tr>
+                    <tr><th>线性扩展</th><td>近似线性</td><td>非线性（通信开销增长）</td><td>中</td></tr>
+                    <tr><th>生态</th><td>中（开放权重模型）</td><td>极强（CUDA）</td><td>中（JAX/XLA）</td></tr>
+                </table>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>LPU 在"开放权重模型的低延迟推理"这一窄而关键的维度上无可替代；但通用性、训练能力、生态广度不及 GPU。技术选型建议：延迟敏感+开放权重+突发流量选 LPU；需训练/微调/本地部署/稳定高并发选 GPU；谷歌生态内选 TPU。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 7 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">07</span>
+            <span class="faq-title">Groq LPU 的软件栈（GroqWare）包含哪些核心组件？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>GroqWare 软件套件如何支撑从模型导入到部署运行的全流程？各组件的角色是什么？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>Groq Compiler（基于 MLIR）</strong>：与 TSP 架构协同设计，编译流程：模型导入 &rarr; 布局与向量化 &rarr; 多芯分片 &rarr; 映射到 ISA &rarr; 活状态规划 &rarr; 指令调度 &rarr; 汇编</li>
+                    <li><strong>GroqFlow 自动化工具链</strong>：一行 PyTorch/TensorFlow 代码即可把模型自动导入、转换、优化并运行——开发者"零摩擦"上 LPU 的关键</li>
+                    <li><strong>Groq API & 运行时</strong>：提供底层细粒度 API + 高级 REST API，官方 Python 客户端 <code>pip install groq</code>，OpenAI 兼容</li>
+                    <li><strong>GroqView 性能可视化</strong>：编译期可视化芯片计算与内存使用，Performance Estimator 可在编译前预测性能</li>
+                    <li><strong>框架支持</strong>：PyTorch、TensorFlow、ONNX；社区集成 LangChain、Vercel AI SDK、LiteLLM、Gradio</li>
+                </ul>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>Groq 的"软件定义硬件"理念意味着编译器与芯片架构深度协同设计——编译器承担了 GPU 由硬件运行时处理的调度复杂度。GroqFlow 是降低开发者门槛的关键入口，OpenAI 兼容 API 使迁移成本接近零（改一行 <code>base_url</code>）。
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 8 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">08</span>
+            <span class="faq-title">NVIDIA 与 Groq 的合作意味着什么？LPU 在 Vera Rubin 平台中的角色是什么？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-body">
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <p>2025-12 NVIDIA 据报道以约 200 亿美元非独占授权 Groq LPU 架构，2026-03 GTC 发布 Groq 3 LPU/LPX 机架。这对行业和推理芯片趋势意味着什么？</p>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>授权合作</strong>：NVIDIA 约 $20B 非独占授权 LPU 架构，引入 Jonathan Ross 及核心工程团队</li>
+                    <li><strong>Vera Rubin 平台</strong>：2026-03 GTC 发布 Groq 3 LPU/LPX 机架（256 颗 LPU），采用 <strong>AFD（Attention-FFN Disaggregation）</strong>架构</li>
+                    <li><strong>分工模式</strong>：Vera Rubin GPU 负责 Prefill/KV Cache/注意力计算；Groq 3 LPU 负责延迟敏感的 FFN、MoE 专家执行与逐点运算</li>
+                    <li><strong>行业意义</strong>：从侧面印证"GPU 在 Decode 阶段架构性错配"已成行业共识，推理专用化是不可逆趋势</li>
+                    <li><strong>监管关注</strong>：美参议员曾就"以授权规避反垄断审查"向 NVIDIA 提出质询</li>
+                    <li><strong>注意</strong>：上述事件来自公开报道，具体条款以官方披露为准</li>
+                </ul>
+            </div>
+            <div class="faq-conclusion">
+                <strong>关键结论：</strong>NVIDIA 授权 LPU 不是要替代 GPU，而是在 Vera Rubin 平台中做<strong>推理阶段的异构分工</strong>——GPU 干 Prefill（compute-bound），LPU 干 Decode（memory-bound）。这标志着"推理专用芯片"从边缘探索走向主流共识，对用户关注的 SUE 自研交换芯片方向具有行业趋势验证意义。
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base &middot; <a href="../../index.html">返回索引</a> &middot; <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> &middot; 2026-08-26 自动生成</p>
+    </div>
+</div>
+</body>
+</html>
