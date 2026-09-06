@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-06</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        h1 {
+            font-size: 2em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 32px; font-size: 1.05em; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 14px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #161b22;
+            transition: border-color 0.2s;
+        }
+        .back-link:hover { border-color: #58a6ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .faq-number {
+            background: #58a6ff;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 14px; }
+        .faq-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .faq-body { color: #c9d1d9; font-size: 0.95em; }
+        .faq-body p { margin-bottom: 10px; }
+        .faq-body ul { margin-left: 20px; margin-bottom: 10px; }
+        .faq-body li { margin-bottom: 4px; }
+        .faq-conclusion {
+            background: rgba(88,166,255,0.08);
+            border-left: 3px solid #58a6ff;
+            padding: 10px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.92em;
+        }
+        .faq-conclusion strong { color: #58a6ff; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.88em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #21262d; color: #e6edf3; font-weight: 600; }
+        td { color: #c9d1d9; }
+        tr:nth-child(even) td { background: #161b22; }
+        code {
+            background: #1c2331;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #f0883e;
+        }
+        .formula {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: "Times New Roman", Times, serif;
+            font-size: 1.02em;
+            color: #e6edf3;
+            overflow-x: auto;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+        a { color: #58a6ff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">&larr; 返回索引</a>
+    <h1>每日技术 FAQ &middot; 2026-09-06</h1>
+    <p class="subtitle">8 条问答 &middot; 主题：MetaInfer &mdash; 异构 AI 加速器上的 LLM-Agent 模型-硬件协同适配（执行-适配图 / 四不变式 / 三循环设计 / 跨 episode 知识迁移 / 跨硬件可移植性）&middot; 来源：arXiv:2607.12875 论文深度解读沉淀</p>
+
+    <!-- Q1 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q1</span>
+            <span class="faq-title">MetaInfer 解决的核心问题是什么？什么是"适配鸿沟"？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>大模型迭代速度越来越快（每月甚至每周发布新版本），但已部署的推理基础设施在硬件代次、框架分支、算子库、编译器后端方面高度异构。这两者之间存在什么问题？MetaInfer 如何定义和解决这一问题？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>适配鸿沟 (Adaptation Gap)：</strong> 新模型发布到生产推理系统就绪之间越来越宽的工程鸿沟，由模型层语义变化（MLA/GQA/Sliding Window 注意力变体、FP8/INT4/NVFP4 量化）、框架层派发缺失（vLLM/SGLang/TensorRT-LLM 对新算子支持滞后）、硬件层能力差异（A800/H100/国产 DCU 在 SM 架构、tensor core、通信库上差异巨大）三层叠加造成。</li>
+                    <li><strong>核心论断：</strong> 在异构加速器集群上服务新模型，本质是<strong>模型-框架-算子-硬件的协同适配问题 (co-adaptation problem)</strong>，而非单纯"写一行模型加载代码"。</li>
+                    <li><strong>MetaInfer 方案：</strong> 提出 <em>execution-adaptation-centric</em> 视角，将推理系统视为有运行时证据支撑的搜索问题，LLM agent 作为"推理优化编译器"自动完成适配。</li>
+                    <li><strong>论文出处：</strong> arXiv:2607.12875，黄埔实验室 + 清华大学，MIT 开源协议，GitHub: MetaInfer/MetaInfer。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"模型适配推理框架"的 framework-centric 模式在异构生产环境中已不可持续；MetaInfer 将适配从经验性工作提升为有形式化建模、可形式化验证的搜索问题，由 LLM-agent 在不变式约束下自动完成。</div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q2</span>
+            <span class="faq-title">执行-适配图 (MHCAG) 的结构是什么？路由搜索如何形式化？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>MetaInfer 将"模型-框架-硬件"的协同适配抽象为带成本有向图。这个图的结构是什么？节点和边分别代表什么？路由搜索如何形式化？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <p>执行-适配图定义为 <code>G = (V, E, c)</code>，包含六族节点：</p>
+                <table>
+                    <tr><th>节点族</th><th>语义</th><th>典型元素</th></tr>
+                    <tr><td>V_model</td><td>模型语义结构</td><td>attention 变体、LayerNorm、MoE gate、KV layout</td></tr>
+                    <tr><td>V_framework</td><td>框架派发能力</td><td>vLLM worker, SGLang scheduler, HF Transformers dispatcher</td></tr>
+                    <tr><td>V_kernel</td><td>算子实现选择</td><td>FlashAttention-2/3, fused MoE, paged attention</td></tr>
+                    <tr><td>V_hardware</td><td>硬件能力</td><td>SM 版本、显存、NVLink/NVSwitch、HCCS、带宽</td></tr>
+                    <tr><td>V_runtime</td><td>运行时证据</td><td>profiling trace、kernel error log、内存快照</td></tr>
+                    <tr><td>V_objective</td><td>服务目标</td><td>TTFT / TPOT / throughput / SLO budget</td></tr>
+                </table>
+                <p>边类型包括 dispatch、transform、allocate、execute、observe、validate，每条边附带成本 <code>c : E &rarr; &#8477;<sup>+</sup></code>（时间、显存、能耗、风险加权和）。</p>
+                <div class="formula">&pi;* = argmin<sub>&pi; &isin; &Pi;(v_src &rarr; v_tgt)</sub>  &Sigma;<sub>e &isin; &pi;</sub>  c(e)<br>subject to: &forall; e &isin; &pi;, Invariant(e) holds</div>
+                <p>由于图动态更新且成本函数非凸，精确求解不可行，论文采用 <strong>LLM-agent 引导的启发式搜索</strong>。</p>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>MHCAG 把"模型适配推理系统"从模糊的工程问题形式化为图上的路径搜索问题；六族节点 + 带成本有向边 + 不变式约束构成了 LLM-agent 可操作的形式化基础。</div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q3</span>
+            <span class="faq-title">MetaInfer 的四个不变式是什么？为什么重要？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>MetaInfer 在适配过程中定义了四个必须严格保持的不变式。这四个不变式分别是什么？它们如何约束 LLM-agent 的行为？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>不变式</th><th>含义</th><th>违反后果</th></tr>
+                    <tr><td>语义一致性 (Semantic Identity)</td><td>适配后模型在相同输入下输出与参考实现统计分布一致 (perplexity/accuracy drift &lt; &epsilon;)</td><td>模型产生错误输出</td></tr>
+                    <tr><td>状态保持 (State Preservation)</td><td>KV-Cache、权重加载状态、通信 buffer 在路径切换前后保持有效</td><td>运行时崩溃或静默错误</td></tr>
+                    <tr><td>可观测性 (Observability)</td><td>每步决策可追溯：输入证据、候选路由、最终选择、成本估算</td><td>无法调试和审计</td></tr>
+                    <tr><td>成本感知 (Cost Awareness)</td><td>所有路由附有显式成本估算（时间/显存/风险/重试预算）</td><td>适配成本失控</td></tr>
+                </table>
+                <ul>
+                    <li>四个不变式共同把"尝试一个改动"从<em>不可控的工程师直觉</em>变成<em>可验证、可回滚、可审计的系统行为</em>。</li>
+                    <li>LLM-agent 的每一步生成都被这四个不变式约束，任何一层验证失败都立即回滚并触发 RefinePatch。</li>
+                    <li>对应源码：<code>metainfer/core/invariants.py</code>。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>四个不变式是 LLM-agent 自动化适配的安全护栏——没有它们，LLM 生成的 patch 就是不可控的赌博；有了它们，每步操作都在最小范围内可验证、可回滚。</div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q4</span>
+            <span class="faq-title">MetaInfer 的三循环设计如何工作？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>MetaInfer 的核心运转逻辑是三个嵌套循环。每个循环的目标、输入输出和持续时间是什么？它们如何协作形成正向飞轮？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>循环</th><th>目标</th><th>输入 &rarr; 输出</th><th>持续时间</th></tr>
+                    <tr><td>Loop 1: 图构建</td><td>构建初始执行-适配图</td><td>model card / framework source / hardware spec &rarr; 节点集 V, 初始边集 E, 成本 c(e)</td><td>分钟级</td></tr>
+                    <tr><td>Loop 2: 适配-验证-优化</td><td>搜索更优路由并验证</td><td>失败信号 &rarr; patch 生成 &rarr; 三阶段验证 &rarr; 成本重估</td><td>数分钟到数十分钟</td></tr>
+                    <tr><td>Loop 3: 跨 episode 知识</td><td>提炼可复用知识</td><td>已完成 episode &rarr; 结构化知识库 (AdaptationTemplate)</td><td>episode 后异步</td></tr>
+                </table>
+                <ul>
+                    <li><strong>Loop 2 的四步：</strong> (1) Identify blocked route &mdash; 从 runtime evidence 提取失败信号; (2) Patch missing edge &mdash; LLM-agent 编写或调整代码/kernel; (3) Staged validation &mdash; 三段式验证; (4) Cost re-estimation &mdash; 更新边成本继续搜索。</li>
+                    <li>三循环形成"图&rarr;适配&rarr;知识"正向飞轮：Loop 3 产出的知识在下一个 episode 的 Loop 1 中作为热启动输入。</li>
+                    <li>系统架构：Orchestrator（单节点编排） + Worker Daemon（每台 GPU 机器一个） + LLM-Agent Pool（默认使用开源 Claude Code CLI）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>三循环设计把"一次性适配"升级为"持续学习型适配"——每个 episode 的成功经验自动沉淀为可复用模板，使后续适配的首次通过率和效率持续提升。</div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q5</span>
+            <span class="faq-title">MetaInfer 的三阶段验证机制如何工作？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>LLM-agent 生成的 patch 如何验证正确性？为什么不能直接跑端到端测试？MetaInfer 的分阶段验证策略是什么？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <p>MetaInfer 将每次适配验证拆为三层，避免"一次性跑端到端失败难定位"：</p>
+                <table>
+                    <tr><th>阶段</th><th>验证目标</th><th>判据</th><th>失败处理</th></tr>
+                    <tr><td>Unit Validation</td><td>patch 能否正确编译、加载</td><td>无编译错误、kernel 注册成功</td><td>立即回滚 &rarr; RefinePatch</td></tr>
+                    <tr><td>Module Validation</td><td>单层（attention/MoE 层）输出与参考一致</td><td>max |&Delta;y| &lt; &epsilon;_ref</td><td>回滚 &rarr; RefinePatch</td></tr>
+                    <tr><td>End-to-End Validation</td><td>完整推理路径在真实 workload 下达标</td><td>TTFT / TPOT / throughput 满足 SLO budget</td><td>回滚 &rarr; RefinePatch</td></tr>
+                </table>
+                <ul>
+                    <li><strong>设计意义：</strong> 分阶段验证把 LLM-agent 生成的 patch 从"一次性赌博"变成"逐步加锁"——任何一层失败都立即回滚，把不满足不变式的风险控制在最小范围。</li>
+                    <li><strong>Episode 1 实测效果：</strong> DeepSeek V4 Flash on A800 通过三条 patch + 三阶段验证，CUDA OOM 触发率从 12% 降至 0%，FP8 NaN 从 3.5% 降至 0%，端到端吞吐从基线 38% 提升至 92%（+2.4&times;）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>三阶段验证（Unit &rarr; Module &rarr; End-to-End）是 LLM-agent 自动生成代码安全落地的关键机制——逐步加锁、逐层过滤、失败即回滚，将不可控的代码生成变为可控的系统行为。</div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q6</span>
+            <span class="faq-title">跨 episode 知识迁移如何实现？效果如何？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>MetaInfer 声称可以跨 episode 复用适配经验。知识以什么形式存储？如何避免跨模型误用？实际效果如何？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <p>跨 episode 知识以<strong>结构化适配模板 (AdaptationTemplate)</strong> 形式存储，每个模板包含：</p>
+                <div class="formula">AdaptationTemplate { id, source_episode, invariant, applicability, patch_template, validation_recipe, cost_overhead }</div>
+                <ul>
+                    <li><strong>适用性匹配 (Applicability Matching)：</strong> 通过三元组 <code>(invariant + model_family + kernel_class)</code> 匹配，避免跨模型误用。</li>
+                    <li><strong>Episode 2 实测（GLM 5.3 Flash on A800，复用 Episode 1 的 DeepSeek V4 Flash 经验）：</strong></li>
+                </ul>
+                <table>
+                    <tr><th>指标</th><th>Episode 1（无热启动）</th><th>Episode 2（有热启动）</th><th>改进</th></tr>
+                    <tr><td>Loop 2 迭代次数</td><td>14</td><td>6</td><td>-57%</td></tr>
+                    <tr><td>端到端适配时间</td><td>~3.5 小时</td><td>~1.4 小时</td><td>-60%</td></tr>
+                    <tr><td>首次 End2End 通过率</td><td>21%</td><td>58%</td><td>+2.76&times;</td></tr>
+                </table>
+                <ul>
+                    <li>知识库统计：算子级 patch 17 个（命中率 53%）、模型级适配模板 4 个（命中率 75%）、硬件级 fallback 策略 6 个（命中率 67%）、调度策略模板 3 个（命中率 67%）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>结构化 AdaptationTemplate + 三元组适用性匹配实现了安全的知识迁移；Episode 2 实测显示适配时间降低 60%、首次通过率提升 2.76 倍，证明"适配经验可复用"这一核心假设成立。</div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q7</span>
+            <span class="faq-title">MetaInfer 如何处理跨硬件适配（CUDA &rarr; HIP / NCCL &rarr; HCCL）？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>将已在 NVIDIA A800 上跑通的 DeepSeek V4 Flash 部署到国产 Hygon K100AI DCU 上，面临 CUDA &rarr; HIP、NCCL &rarr; HCCL、FP8 不可用等挑战。MetaInfer 如何处理这些跨硬件适配问题？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <p>MetaInfer 在 Episode 3 中执行了<strong>硬件层节点替换</strong>：</p>
+                <table>
+                    <tr><th>挑战</th><th>MetaInfer 应对</th><th>最终方案</th></tr>
+                    <tr><td>CUDA-only kernel</td><td>Patch agent 自动生成 HIP port</td><td>90% 算子成功 HIP port</td></tr>
+                    <tr><td>FP8 硬件不可用</td><td>runtime evidence 触发 fallback</td><td>FP16 替代，成本记录到边</td></tr>
+                    <tr><td>HCCL vs NCCL 拓扑差异</td><td>重新 profiling，更新 V_hardware</td><td>集群内通信带宽下调 18%</td></tr>
+                    <tr><td>生态库缺失 (FA-2 DCU fork)</td><td>Agent 引导使用 ROCm 等价实现</td><td>替换为兼容 attention 后端</td></tr>
+                </table>
+                <ul>
+                    <li><strong>跨硬件结果对比：</strong> NVIDIA A800 吞吐基线 92% vs Hygon K100AI DCU 71%（-23%），但 TTFT p99 仍在 SLO 内（+12%）。</li>
+                    <li><strong>关键洞察：</strong> 跨硬件 episode 暴露了 MetaInfer 的<strong>硬件无关 vs 硬件相关</strong>分层抽象价值——Semantic Identity 通过 per-episode 重新校准，State Preservation 与 Observability 在硬件替换中保持，Cost Awareness 通过 runtime evidence 自动调整。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>MetaInfer 的硬件抽象层可以将 V_hardware 整体替换为国产加速器子图，通过 LLM-agent 自动生成 HIP port + runtime evidence 触发精度降级；对国产加速器生态（Hygon/海光 DCU）的部署门槛有显著降低作用。</div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q8</span>
+            <span class="faq-title">MetaInfer 与 TVM/Triton 等传统编译器有什么本质区别？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>已有 TVM、Triton、TensorRT 等编译器/优化工具，MetaInfer 与它们的本质区别是什么？MetaInfer 是要替代它们吗？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>维度</th><th>传统编译器 (TVM/Triton)</th><th>MetaInfer</th></tr>
+                    <tr><td>优化目标</td><td>单算子 / 单图 peak 性能</td><td>跨模型 + 跨框架 + 跨硬件的全栈协同适配</td></tr>
+                    <tr><td>知识来源</td><td>静态算子模板 + 离线 tuning</td><td>运行时证据 + 跨 episode 累积的可复用知识</td></tr>
+                    <tr><td>失败恢复</td><td>编译/执行报错 &rarr; 终止</td><td>识别受阻路由 &rarr; 通过 patch 重建缺失路径</td></tr>
+                    <tr><td>评估方式</td><td>基准测试峰值性能</td><td>分阶段验证 + 端到端 profiling + 服务目标达成</td></tr>
+                </table>
+                <ul>
+                    <li><strong>核心定位：</strong> MetaInfer <strong>不是替代</strong> TVM/Triton，而是在这些编译器之上的"推理优化编译器"。</li>
+                    <li>当底层编译器稳定算子 peak 性能已达极限，真正成为瓶颈的是"如何把新模型的语义映射到既有编译器/框架的能力空间"。MetaInfer 的 LLM-agent + 不变式 + 知识迁移正是填补这一空白。</li>
+                    <li><strong>vs 手工 fork-and-patch：</strong> Episode 1 手工需 ~2 天 vs MetaInfer ~3.5 小时（~14&times; 加速）；Episode 2 手工 ~1.5 天 vs ~1.4 小时（~26&times; 加速）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>MetaInfer 的定位是 TVM/Triton 之上的"推理适配层"——当编译器已优化到算子极限后，瓶颈转移到"模型语义 &rarr; 框架能力 &rarr; 硬件资源"的全栈映射；MetaInfer 用 LLM-agent + 不变式 + 知识迁移自动化了这一层。</div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base &middot; <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> &middot; 每日自动更新</p>
+        <p>来源：MetaInfer (arXiv:2607.12875) 论文深度解读 &middot; 开源代码 <a href="https://github.com/MetaInfer/MetaInfer">GitHub</a> &middot; MIT 许可证</p>
+    </div>
+</div>
+</body>
+</html>
