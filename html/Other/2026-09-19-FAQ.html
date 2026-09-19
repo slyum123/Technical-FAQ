@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-19</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        h1 {
+            font-size: 2em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 32px; font-size: 1.05em; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 14px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #161b22;
+            transition: border-color 0.2s;
+        }
+        .back-link:hover { border-color: #58a6ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .faq-number {
+            background: #58a6ff;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 14px; }
+        .faq-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .faq-body { color: #c9d1d9; font-size: 0.95em; }
+        .faq-body p { margin-bottom: 10px; }
+        .faq-body ul { margin-left: 20px; margin-bottom: 10px; }
+        .faq-body li { margin-bottom: 4px; }
+        .faq-conclusion {
+            background: rgba(88,166,255,0.08);
+            border-left: 3px solid #58a6ff;
+            padding: 10px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.92em;
+        }
+        .faq-conclusion strong { color: #58a6ff; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.88em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #21262d; color: #e6edf3; font-weight: 600; }
+        td { color: #c9d1d9; }
+        tr:nth-child(even) td { background: #161b22; }
+        code {
+            background: #1c2331;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #f0883e;
+        }
+        pre {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.85em;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+        pre code { background: none; padding: 0; }
+        .tips-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-top: 32px;
+        }
+        .tips-section h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 14px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+        a { color: #58a6ff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">&larr; 返回索引</a>
+    <h1>每日技术 FAQ &middot; 2026-09-19</h1>
+    <p class="subtitle">8 条问答 &middot; 主题：mKernel &mdash; 跨 GPU / 跨节点融合内核（SM 角色化 / 三粒度解耦 / 48B 命令队列 + host proxy / IBGDA 反直觉 / rail-optimized 层次化通信 / 实测加速）&middot; 来源：arXiv:2609.13585 论文深度解读沉淀</p>
+
+    <!-- Q1 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q1</span>
+            <span class="faq-title">mKernel 解决什么问题？为什么内核融合必须从节点内扩展到节点间？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>既有工作（如 FLUX 等节点内融合内核）已能在单机 8 卡内把计算与 NVLink 通信重叠，但一旦扩展到多机训练/推理，通信仍然被独立的集合通信库（NCCL 等）执行。为什么这会成为瓶颈？mKernel（arXiv:2609.13585，UC Berkeley UCCL 社区，MIT 开源）如何解决？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>带宽断崖：</strong> 论文 Table 1 指出，跨过一次节点边界带宽就掉一个数量级 &mdash;&mdash; 节点内 NVLink + NVSwitch 约 450 GB/s，跨节点 IB CX7 / AWS EFA 仅约 50 GB/s（每 GPU 400 Gb/s，约为 NVLink 的 1/9）。</li>
+                    <li><strong>既有方案的缺陷（a）节点内融合 + 独立跨节点集合通信：</strong> 网络段完全暴露在临界路径上，节点内再好的重叠也无法掩盖跨节点等待。</li>
+                    <li><strong>缺陷（b）纯通信侧优化：</strong> 只优化 RDMA 传输本身，无法与计算重叠，SM 空转等待网络。</li>
+                    <li><strong>mKernel 方案：</strong> 把"计算 + NVLink 节点内通信 + RDMA 节点间通信"三者统一调度进<strong>单个持久化 kernel</strong>，在 tile 粒度上融合，以 tile 就绪信号串联三段数据流，实现计算与两级通信全重叠。</li>
+                    <li><strong>覆盖算子：</strong> 五个融合内核 &mdash;&mdash; AllGather+GEMM、GEMM+ReduceScatter、GEMM+AllReduce（TP）、Ring Attention（SP）、MoE Dispatch+GEMM（EP）；在两个 2&times;8 H200 集群（CX7 IB 与 AWS EFA/SRD）上对比 7 个基线。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>跨过节点边界带宽掉一个数量级（450 GB/s &rarr; 50 GB/s），仅靠节点内融合或纯通信优化都无法消除跨节点暴露；mKernel 的答案是"三级融合" &mdash;&mdash; 在单个持久化 kernel 内统一调度计算、NVLink 与 RDMA 通信。</div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q2</span>
+            <span class="faq-title">什么是 SM 角色化？单个持久化 kernel 内如何分工？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>mKernel 的核心设计之一是在 GPU 内部把 thread block（SM）按角色分工。具体分几类角色？如何调度？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>按 index 承担四类角色：</strong> ① <code>compute</code>（计算 tile）、② 节点内 <code>comm</code>（NVLink 通信）、③ 节点间 <code>send</code>（RDMA 发送：组 chunk &rarr; staging &rarr; 压命令）、④ 节点间 <code>recv</code>（轮询 <code>arrived[]</code> &rarr; 累加 &rarr; multicast 发布）。</li>
+                    <li><strong>持久化 kernel：</strong> 整个算子生命周期只启动一个 kernel，SM 角色由 thread block 的线性 index 静态划分，避免重复 launch 与全局同步开销。</li>
+                    <li><strong>以就绪信号串联：</strong> compute 产出 tile &rarr; 节点内通信规约/分发 &rarr; 节点间 send/recv 搬运，全部由 tile readiness 信号驱动，无需 CPU 干预。</li>
+                    <li><strong>SM 分区比例可调：</strong> 各角色 SM 数量是编译期/运行期参数，为自适应分区（见 Q7）留下空间。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>SM 角色化把"计算与通信重叠"从 kernel 间协作降维成 kernel 内 index 分工 &mdash;&mdash; 四类角色（compute / 节点内 comm / 跨节点 send / recv）在单个持久化 kernel 内以 tile 就绪信号串联，这是全重叠的硬件基础。</div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q3</span>
+            <span class="faq-title">三粒度解耦指什么？为什么需要 tile / chunk / batch 三层？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>mKernel 提出 compute tile / network chunk / submission batch 三粒度独立可调。为什么要拆成三层？它们如何桥接"尽早发出"与"摊薄每消息开销"这对矛盾？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>粒度</th><th>语义</th><th>调节目标</th></tr>
+                    <tr><td>compute tile</td><td>计算调度的最小单元</td><td>越早算完越早可发，降低暴露</td></tr>
+                    <tr><td>network chunk</td><td>网络上传输的最小单元</td><td>越小越可流水（如 Ring Attention 的 128 行 KV tile），越早发出</td></tr>
+                    <tr><td>submission batch</td><td>提交给网卡的最小单元</td><td>越大越能摊薄每消息的 fence / doorbell 固定开销</td></tr>
+                </table>
+                <ul>
+                    <li><strong>矛盾点：</strong> "尽早发出"要求 chunk 小、随就绪随发；"摊薄开销"要求攒批提交。两者直接冲突。</li>
+                    <li><strong>桥接机制：</strong> 以<strong>tile readiness</strong> 与 <strong>message readiness</strong> 两级就绪语义解耦 &mdash;&mdash; tile 就绪即可组 chunk，message 就绪即可入 submission batch，三层互不阻塞。</li>
+                    <li><strong>算子差异化：</strong> 不同内核选不同 chunk 形状，例如 Ring Attention 以 128 行 KV tile 为 chunk，AllGather+GEMM 以 shard 为单位"每 shard 每节点只发一次"。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>三粒度解耦是 mKernel 的调度精髓 &mdash;&mdash; compute tile / network chunk / submission batch 独立可调，用两级就绪语义同时满足"尽早发出"（低暴露）与"攒批发送"（低开销）这两个本应矛盾的目标。</div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q4</span>
+            <span class="faq-title">48B 命令队列 + host proxy 是什么？为什么不依赖 NCCL / NVSHMEM？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>mKernel 的跨节点通信不走 NCCL/NVSHMEM，而是由 GPU 产出 48B 命令、host proxy 提交。这套机制如何工作？为什么这样设计？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>数据流：</strong> GPU 端 send 角色 SM 把 chunk 封装成 48B 命令（源/目的地址、长度、QP 信息等）写入命令队列 &rarr; <strong>host proxy</strong>（CPU 侧线程）轮询队列 &rarr; 基于 <code>libibverbs</code> 直接向网卡提交 RDMA 操作。</li>
+                    <li><strong>为什么绕开 NCCL/NVSHMEM：</strong> 两者都要求通信作为独立集合通信阶段，无法在 tile 粒度上与计算融合；且其内部协议栈对"海量小消息 + 攒批"模式不友好。自建命令层让通信时机完全由 kernel 的 tile 就绪信号驱动。</li>
+                    <li><strong>双后端可移植：</strong> IB（NVIDIA CX7）与 EFA（AWS SRD）共享<strong>同一 host API 与同一 on-GPU kernel</strong>，仅 host proxy 后端不同 &mdash;&mdash; 这是"可移植的跨节点通信"（&sect;3.3）的关键。</li>
+                    <li><strong>批量化收益：</strong> host proxy 可把多条命令攒成一个 post batch，与 GPU 计算继续重叠；这直接决定了 Q5 的 IBGDA 对比结果。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>48B 命令队列 + libibverbs host proxy 是"融合友好"的通信层 &mdash;&mdash; 把通信时机交给 kernel 的 tile 就绪信号，把提交开销交给 CPU 攒批，并以同一套 API 覆盖 IB 与 EFA 双后端，彻底摆脱对 NCCL/NVSHMEM 的依赖。</div>
+    </div>
+
+    <!-- Q5 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q5</span>
+            <span class="faq-title">反直觉结论：为什么 IBGDA（GPU 直发）没有一致的吞吐优势？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>直觉上，IBGDA（GPUDirect Async，GPU 直接触发 RDMA、绕过 CPU）应该比 host proxy 更快。mKernel 的实测为何给出相反结论？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>GPU 直发的每 chunk 固定成本：</strong> 每发一个 chunk 需要<strong>一次 system-scope GPU fence + 一次 doorbell</strong>（ring doorbell），这些是串行化开销，chunk 越小、消息越密，开销占比越高。</li>
+                    <li><strong>host proxy 的批量化能力：</strong> CPU 侧可把多个 chunk 命令合并为一次提交，且提交期间 GPU 完全继续计算 &mdash;&mdash; 提交延迟被计算时间吸收。</li>
+                    <li><strong>实测结论：</strong> 在完全相同的 on-GPU kernel 下，IBGDA 相对 host proxy <strong>无一致吞吐优势</strong>，部分配置反而更慢。</li>
+                    <li><strong>适用边界：</strong> 当消息粒度大（chunk 很大）且 CPU 已成瓶颈时，GPU 直发才可能占优；在 mKernel 的融合场景（海量中等粒度 chunk）中不成立。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"GPU 直发一定更快"是误区 &mdash;&mdash; 每 chunk 一次 system-scope fence + doorbell 的固定成本，使 IBGDA 在小消息密集场景输给可批量化、可与计算重叠的 host proxy。通信机制选型必须结合消息粒度分布，而非盲信"绕过 CPU"。</div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q6</span>
+            <span class="faq-title">层次化通信如何匹配 rail-optimized 拓扑？跨节点流量如何降到每卡 1/8？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>mKernel 强调"一切跨节点流量都经 rail peer"。以 GEMM+AllReduce（TP）为例，三步规约如何把跨节点流量从"每卡全量"降到"每卡 1/8"？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <pre><code>// 8 GPU/节点，2 节点；每 GPU 负责 1/8 输出 tile
+// Step 1（节点内，NVSwitch）：8 张本地卡对 tile t 的贡献做规约
+// Step 2（跨节点，rail peer）：只与"对端节点同编号 GPU"交换 1/8 的部分和
+// Step 3（节点内，NVSwitch）：把完成 tile 广播回本节点 8 张卡
+// ⇒ 跨节点流量从"每卡全量"降到"每卡 1/8"，正好匹配 rail-optimized 拓扑（C1）</code></pre>
+                <ul>
+                    <li><strong>rail-optimized 拓扑：</strong> 每张 GPU 的 NIC 连接独立的 rail 网段，同编号 GPU（同 rail）之间有一一对应的专线带宽。</li>
+                    <li><strong>设计原则 C1：</strong> 让跨节点流量形状恰好等于 rail peer 间的 1:1 带宽形状 &mdash;&mdash; 节点内先做 NVSwitch 规约（高带宽），再只在同编号 GPU 之间交换部分和，最后节点内广播。</li>
+                    <li><strong>计算 tile 排序：</strong> AllGather+GEMM 按"输入可得性"排序 &mdash;&mdash; 先算本地 shard，再算节点内其余 shard，最后算远端 shard，使计算始终有数据可算，通信提前在后台进行。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>融合内核的通信模式必须与物理拓扑同构 &mdash;&mdash; "节点内规约 &rarr; rail peer 1/8 交换 &rarr; 节点内广播"三步法把跨节点流量压到每卡 1/8，让 1/9 带宽的跨节点网络不再成为瓶颈。</div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q7</span>
+            <span class="faq-title">实测加速有多少？自适应 SM 分区带来多少收益？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>mKernel 在两个 2&times;8 H200 集群（CX7 IB / AWS EFA）上对比 7 个基线，主要算子的端到端加速比是多少？自适应 SM 分区效果如何？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>算子 / 机制</th><th>最好加速</th><th>关键来源</th></tr>
+                    <tr><td>GEMM+AllReduce（TP）</td><td><strong>1.72&times;</strong></td><td>三步 rail 规约 + tile 融合</td></tr>
+                    <tr><td>Ring Attention（SP）</td><td><strong>1.88&times;</strong></td><td>128 行 KV tile chunk，传输先行</td></tr>
+                    <tr><td>AllGather+GEMM（TP）</td><td><strong>1.41&times;</strong></td><td>每 shard 每节点只发一次</td></tr>
+                    <tr><td>自适应 SM 分区（节点内）</td><td><strong>1.18&times;</strong> 几何平均</td><td>21 个配置上相对最佳固定分区</td></tr>
+                </table>
+                <ul>
+                    <li><strong>自适应 SM 分区：</strong> 运行时根据算子形状与流量特征动态调整四类角色 SM 的数量，免去了为每个 workload 手工调 partition 的工作。</li>
+                    <li><strong>重要限制：</strong> 自适应 controller <strong>仅在单节点上验证</strong>（受 testbed 限制），跨节点场景下的动态分区收益尚未证实。</li>
+                    <li>所有五个融合算子在两种网络后端（IB / EFA）上趋势一致，验证了可移植性设计有效。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>三级融合实测收益显著 &mdash;&mdash; GEMM+AR 最高 1.72&times;、Ring Attention 1.88&times;、AG+GEMM 1.41&times;，自适应 SM 分区再叠加 1.18&times; 几何平均；但自适应控制器的跨节点收益仍属未证实部分，需谨慎解读。</div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q8</span>
+            <span class="faq-title">mKernel 带来哪些技术启示？有哪些局限？<span class="badge badge-other">Other</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>对做 LLM 训练/推理系统与集群通信优化的工程师，mKernel 的可借鉴思想是什么？它又有哪些明确的局限与未验证假设？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>启示 1 &mdash; 通信要内嵌进 kernel：</strong> 集合通信库作为"独立阶段"的时代正在过去；tile 粒度的计算-通信融合是把跨节点带宽短板藏进计算阴影里的根本手段。</li>
+                    <li><strong>启示 2 &mdash; 消息粒度决定机制选型：</strong> IBGDA vs host proxy 的结论说明，fence/doorbell 等固定开销与消息粒度分布共同决定最优通道，"绕过 CPU"不是普适答案。</li>
+                    <li><strong>启示 3 &mdash; 拓扑同构设计：</strong> 通信流量形状应匹配 rail-optimized 等物理拓扑的带宽形状（1:1 rail peer），层次化（节点内&rarr;跨节点&rarr;节点内）优于扁平全网状。</li>
+                    <li><strong>局限：</strong> ① 自适应 controller 未做跨节点验证；② testbed 仅 2&times;8 节点规模，更大集群下的 rail peer 模型是否仍最优待验证；③ host proxy 依赖 CPU 侧活跃线程，对 CPU 资源紧张的场景是额外负担。</li>
+                    <li><strong>值得跟踪：</strong> 命令队列向 GPU 直提交（doorbell on GPU）与自适应分区的跨节点泛化；开源仓库 <a href="https://github.com/uccl-project/mKernel">uccl-project/mKernel</a>（MIT，Hopper sm_90a，cx7/efa 双后端）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>mKernel 的最大价值是给出了一套可复用的方法论 &mdash;&mdash; SM 角色化 + 三粒度解耦 + 命令化通信 + 拓扑同构；但其自适应控制与规模泛化仍是开放问题，工程落地前应先在目标集群上复测固定分区的收益。</div>
+    </div>
+
+    <!-- 技术知识点沉淀 -->
+    <div class="tips-section">
+        <h2>附：当日技术知识点沉淀 &mdash; 论文解读工作流</h2>
+        <div class="faq-body">
+            <ul>
+                <li><strong>论文全文稳定获取：</strong> <code>curl -sL https://arxiv.org/html/&lt;id&gt;v1 -o x.html</code> + Python 正则转纯文本，比反复 WebFetch 更稳定；作者机构信息在 HTML 尾部的 <code>\metadata</code> 块中。</li>
+                <li><strong>仓库结构一次拿全：</strong> <code>curl https://api.github.com/repos/&lt;owner&gt;/&lt;repo&gt;/git/trees/main?recursive=1</code> 可一次性获取全量文件树（如 mKernel 142 个文件）。</li>
+                <li><strong>源码映射可信度：</strong> 用 <code>curl raw.githubusercontent.com/... | grep -n -E "关键字"</code> 抽取文件头注释与关键结构定义，比 WebFetch 目录页准确得多。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base &middot; <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> &middot; 每日自动更新</p>
+        <p>来源：mKernel (arXiv:2609.13585) 论文深度解读 &middot; 开源代码 <a href="https://github.com/uccl-project/mKernel">GitHub</a> &middot; MIT 许可证</p>
+    </div>
+</div>
+</body>
+</html>
