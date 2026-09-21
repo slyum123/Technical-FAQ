@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-21</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        h1 { font-size: 2em; color: #58a6ff; margin-bottom: 8px; }
+        .subtitle { color: #8b949e; margin-bottom: 32px; font-size: 1.05em; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 14px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #161b22;
+            transition: border-color 0.2s;
+        }
+        .back-link:hover { border-color: #58a6ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .faq-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .faq-number {
+            background: #58a6ff;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .faq-title { font-size: 1.15em; font-weight: 600; color: #e6edf3; }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 14px; }
+        .faq-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .faq-body { color: #c9d1d9; font-size: 0.95em; }
+        .faq-body p { margin-bottom: 10px; }
+        .faq-body ul { margin-left: 20px; margin-bottom: 10px; }
+        .faq-body li { margin-bottom: 4px; }
+        .faq-conclusion {
+            background: rgba(88,166,255,0.08);
+            border-left: 3px solid #58a6ff;
+            padding: 10px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.92em;
+        }
+        .faq-conclusion strong { color: #58a6ff; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.88em; }
+        th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+        th { background: #21262d; color: #e6edf3; font-weight: 600; }
+        td { color: #c9d1d9; }
+        tr:nth-child(even) td { background: #161b22; }
+        code {
+            background: #1c2331;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #f0883e;
+        }
+        pre {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.85em;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+        pre code { background: none; padding: 0; }
+        .tips-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-top: 32px;
+        }
+        .tips-section h2 { font-size: 1.2em; color: #d2a8ff; margin-bottom: 12px; }
+        .source-tag {
+            display: inline-block;
+            font-size: 0.78em;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 2px 8px;
+            margin-bottom: 10px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            color: #8b949e;
+            font-size: 0.85em;
+            text-align: center;
+        }
+        .footer a { color: #58a6ff; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">&larr; 返回索引</a>
+
+    <h1>每日技术 FAQ · 2026-09-21</h1>
+    <p class="subtitle">今日 10 条问答 &mdash; 主题 A：Groq TSP（张量流处理器）三论文深度解读（AI 硬件架构 / 确定性推理加速器）；主题 B：SemaCredit &mdash; 面向 Scale-Up Fabric 的完成路径多资源流控（arXiv:2608.17523）。</p>
+
+    <!-- ========== 主题 A：TSP ========== -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q1</span>
+            <span class="faq-title">TSP 的「功能切片微架构」如何颠覆传统多核 CMP？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>传统多核芯片（CMP）把「小可编程核」复制几十上百次，每个 tile 内含完整的取指/译码/执行/访存/写回五级流水，由硬件动态调度，通过片上网络互联。Groq《Think Fast》(ISCA 2020) 提出的 TSP 做了什么结构性反转？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>不复制小核，而造一个巨型单处理器</strong>：把核心五级流水按<strong>功能</strong>拆开并重组成纵向切片（slice），局部功能同构、全局异构 &mdash; 与传统 CMP 的「局部异构、全局同构」正好相反。</li>
+                    <li><strong>切片全集</strong>：ICU（指令控制与派发）、MEM（片上 SRAM 读写）、VXM（逐元素算术/激活）、MXM（稠密矩阵乘加，算力核心）、SXM（向量置换/路由）、C2C（芯片间收发 320 字节向量）。每个 slice 只支持自己角色的指令（如 MEM 只支持 Read）。</li>
+                    <li><strong>物理组织</strong>：一个 functional slice 含 20 个 tile，每 tile 处理 16 元素 &rarr; 最大向量长度 <strong>320 元素（320 字节向量）</strong>。</li>
+                    <li><strong>收益</strong>：数百功能单元共享一套被「展开」的指令流，大幅摊薄译码开销；邻近性 + 精简每操作指令数 + 高效数据流三者协同降低延迟。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>TSP 的本质是「按功能解聚合（disaggregate）而非按核复制」。它用单逻辑核心 + 数百功能单元 + 编译期静态调度，换掉了多核 + 运行时动态调度这一整套范式。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q2</span>
+            <span class="faq-title">「指令流 × 数据流相遇」的执行机制是什么？编译器看到的是什么？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>TSP 区别于 GPU「SIMD + 动态调度」的核心机制是什么？运算究竟在什么时刻发生？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>两条物理分离、编译期被安排「相遇」的流</strong>：指令流沿 slice 方向纵向传播；数据流（操作数流）作为流横向跨 slice 穿行。<strong>当一条指令与其被调度好的操作数流在某功能单元相遇时，运算执行</strong> &mdash; 运算不是「调用」出来的，而是「被调度相遇」出来的，硬件不做任何运行时决策。</li>
+                    <li><strong>编译器视角：144 个独立指令队列</strong>，每个队列维护一个<strong>逻辑时间（logical time）</strong>；生产者与消费者节拍不一致时，编译器插入 <code>wait</code> 或重复 <code>nop</code> 对齐。</li>
+                    <li><strong>ISA 暴露操作延迟与指令-操作数 skew</strong>，使调度做到 cycle-aware（时钟周期级精确）。</li>
+                    <li><strong>编程模型</strong>：生产者-消费者流式模型，PE 通过流（stream）而非缓存/共享内存通信与同步；SRAM 放置、张量流时序与路由全部编译期决定。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>复杂度没有被消除，而是被<strong>从运行时硬件转移到编译期软件</strong>。这是 TSP 能保证「编译期可精确预测延迟」的直接原因，也是它与 CUDA 心智模型差异最大的地方。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q3</span>
+            <span class="faq-title">TSP 的确定性（零方差延迟）从何而来？实测证据是什么？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>论文开篇指出传统架构三重困境：ALU 需近峰值利用率、运行时停顿不可推理、缓存/分支预测/预取器<strong>无法界定最坏情况延迟</strong>。TSP 如何破解？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>手段：在硬件中移除全部「反应式（reactive）」元件</strong> &mdash; 仲裁器（arbiter）、缓存（cache）、分支预测器、重排缓冲（ROB）、预取器。指令顺序完全由软件控制，底层硬件不能重排且必须在固定时间内完成。</li>
+                    <li><strong>系统级后果</strong>：零方差延迟 → 低延迟 → batch-1 高吞吐 → 面向多样 SLA 的可预测性能 → 降低数据中心 TCO。</li>
+                    <li><strong>BERT 实证（《Answer Fast》）</strong>：4000 次推理平均延迟 <strong>128.9 µs</strong>，标准差仅 <strong>3.8 µs</strong>，P1 = 128.5 µs、P99 = 129.5 µs；<strong>唯一波动来源是 PCIe 重传，片上执行本身无抖动</strong>。</li>
+                    <li><strong>可预测性量化（最强证据）</strong>：编译器部署前的延迟预估，仅比硬件实测<strong>长 1%</strong>。</li>
+                    <li><strong>吞吐侧</strong>：ResNet50 batch-1 <strong>20.4K IPS（约 4× GPU）</strong>；BERT-base batch-1 <strong>~130 µs（约 6× 同期 SOTA GPU）</strong>；首版 ASIC 计算密度 &gt; 1 TOPS/mm²（25×29 mm、14nm、900 MHz）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>在 SLA 严苛场景（实时推理、金融、自动驾驶），<strong>可预测的尾部延迟比平均吞吐更有价值</strong>。TSP 用「去反应式硬件」把最坏情况性能变成可界定的量 &mdash; 这是带缓存/乱序的 GPU 无法提供的。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q4</span>
+            <span class="faq-title">2022 系统论文如何把单芯片扩展为万级 TSP 系统？<span class="badge badge-ai">AI</span><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>《A Software-defined Tensor Streaming Multiprocessor》(ISCA 2022) 解决了单芯片「大模型放不下 / 算力不够」的问题，具体机制是什么？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>TSP 身兼二职：既是 endpoint，又是交换机</strong> &mdash; 无需外部网络设备即可搬移张量；软件控制网络避免动态链路竞争引入的延迟变化（回归确定性主线）。</li>
+                    <li><strong>软件定义的 Dragonfly 拓扑</strong>：商用软件定义方法覆盖封装、路由、流控，提供通信与同步原语，构建 bandwidth-rich 的全局通信基底。</li>
+                    <li><strong>全局内存：逻辑共享、物理分布的片上 SRAM</strong> &mdash; 每颗 TSP 贡献 <strong>220 MiB</strong>，容量仅受网络规模限制。</li>
+                    <li><strong>规模</strong>：最多 <strong>10,440 颗 TSP、超 2 TB 全局内存、端到端系统延迟 &lt; 3 µs</strong>；弹性支持训练与推理、数据并行与（流水式）模型并行。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>这一层把 TSP 从「单芯推理加速器」抬升为「可训练、可扩展的并行 ML 系统」，其「软件定义互连 + 分布式 SRAM 池」思路与今日 scale-up fabric（UALink / UB / CXL 内存池化）是同一条技术脉络。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q5</span>
+            <span class="faq-title">TSP vs GPU 的核心差异，以及它的客观局限？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>维度</th><th>TSP</th><th>GPU</th></tr>
+                    <tr><td>组织</td><td>单逻辑核心 + 数百功能单元</td><td>多核（many-core）复制</td></tr>
+                    <tr><td>调度</td><td>编译期静态调度</td><td>运行时动态调度</td></tr>
+                    <tr><td>内存</td><td>片上 SRAM（无缓存）</td><td>HBM + 多级缓存</td></tr>
+                    <tr><td>确定性</td><td>强（无反应式硬件）</td><td>弱（缓存未命中/竞争致抖动）</td></tr>
+                    <tr><td>最坏情况性能</td><td>可界定</td><td>难界定</td></tr>
+                    <tr><td>batch-1 推理</td><td>高吞吐</td><td>需大 batch 摊薄</td></tr>
+                    <tr><td>编程模型</td><td>生产者-消费者流</td><td>SIMT / CUDA</td></tr>
+                </table>
+                <p><strong>局限（客观审视）：</strong></p>
+                <ul>
+                    <li><strong>模型必须编译、覆盖受限</strong>：只有被编译器适配的模型能跑，自定义/微调架构无法直接部署，灵活性远逊 CUDA 生态。</li>
+                    <li><strong>SRAM 容量约束</strong>：单芯仅 ~220 MiB，超大模型必须跨多芯分片，系统复杂度与成本上升。</li>
+                    <li><strong>训练生态弱</strong>：2020 论文聚焦推理，训练能力 2022 才系统论述，实践生态明显弱于 GPU。</li>
+                    <li><strong>对比公平性</strong>：4×/6× 提速针对 batch-1 与特定模型；持续高并发批处理场景 GPU 利用率经济性或更优。</li>
+                    <li><strong>大 die 工程风险</strong>：725 mm² 大芯片、约 185 W，面积/良率/散热挑战显著。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>TSP 的独特标签是 <strong>batch-1 推理的确定性与编译期可预测性</strong>，而非通用算力领先。行业认可佐证：据报道 NVIDIA 于 2025-12 以约 200 亿美元<strong>非独占授权</strong> TSP/LPU 架构（具体条款以官方披露为准）。</div>
+    </div>
+
+    <!-- ========== 主题 B：SemaCredit ========== -->
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q6</span>
+            <span class="faq-title">SemaCredit 要解决 Scale-Up Fabric 中的什么「流控错配」？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body">
+                <p>Scale-Up 互连（UALink / UET / UB 等）正成为紧耦合 GPU 系统的内存访问基座，其流量绝非均匀字节流。现有传输层接收端 credit（UET receiver credit、Meta CTS、MRC）都以「字节」观测网络，会漏掉什么？</p>
+            </div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>错配本质</strong>：字节计价的 credit 能保护链路缓冲与 HBM 流式流量，但<strong>无法表达两类「字节数与占用时间相差数量级」的完成路径资源</strong> &mdash; ① Atomic 执行（固定成本、串行引擎）；② 响应注入（下游反向管线）。</li>
+                    <li><strong>核心区分</strong>：字节队列问「有多少数据在途」，服务队列问「目标端还要忙多久」。对流式 HBM 两者近等价，<strong>对固定成本操作可差数量级</strong>。</li>
+                    <li><strong>实测动机</strong>：RDCA(NSDI'23) 实测接收端内存带宽争用使 RDMA 吞吐下降约 15%；Harmonic(NSDI'24) 证明同包大小 verb 成本不同（ATOMIC ≈ 3× WRITE）；GPU Atomic 实测无争用 2.4–3.5 ns、争用时约 30 ns 地板（AMD 85–100 ns）&mdash; <strong>Atomic 服务既不是字节速率也不是常数</strong>。</li>
+                    <li><strong>三类典型负载</strong>：AllReduce 形态（大块流式写 + 小归约 Atomic）、远端参数/KV/元数据读（小请求产生反向响应流量）、MoE dispatch（倾斜专家写压 HBM 分区）。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>现有机制都在回答「接收端要不要接」，<strong>没人回答「接收端容量应如何在 HBM 分区、Atomic 引擎、响应注入之间分配」</strong>。这就是 SemaCredit 的切入点。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q7</span>
+            <span class="faq-title">需求向量 + 全有或全无准入 + 分阶段归还：机制如何运作？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <p><strong>需求向量分量</strong>（仅用端点已有字段，<strong>线上协议零改动</strong>）：</p>
+                <ul>
+                    <li><code>d_i,HBM_p = b_i / R_p</code> &mdash; 字节约当；<strong>HBM 保留字节计数、不加固定服务惩罚</strong>（否则 MoE 形态被无谓压制）。</li>
+                    <li><code>d_i,Atomic_e = t̂_atomic(op_i)</code> &mdash; 按 opcode 查表的<strong>纳秒债务</strong>。</li>
+                    <li><code>d_i,Response_j = t̂_0,j + b_i^resp / R_j</code> &mdash; 固定注入开销 + 响应字节约当。</li>
+                </ul>
+                <p><strong>准入与归还</strong>：∀r (d_i,r &gt; 0) 需满足 <code>D_r + d_i,r ≤ W_r</code>，一次<strong>全有或全无</strong>的向量预留（防止「一个命令拿走最后一份 HBM credit、另一个拿走最后一份响应 credit」的死锁面）；归还<strong>跟随接收端执行</strong> &mdash; HBM credit 在内存访问后还、Atomic 在执行后还、响应 credit 在注入后还。</p>
+                <p><strong>状态预算</strong>：10 个资源条目（160 B）+ 128 个在途命令扩展（2 KiB）≈ <strong>2.2 KiB</strong>；准入可并行（每分量一条 add-and-compare + AND 归约），不在关键路径串行化。窗口下限钳制到最坏路径 RTT（1 µs），串行 Atomic 引擎取 4×RTT。</p>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>归还时机消融证明了两种错误记账 &mdash; 「到达即还」使响应 P99 恶化 <strong>2.05×</strong>（下游无界）；「持有到端到端完成」使 P99 +6.4%、goodput −0.9%（把已完成的 HBM 工作与响应耦合）。<strong>分阶段归还是既保安全又最大化流水并行的唯一解。</strong></div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q8</span>
+            <span class="faq-title">为什么单一标量窗口不够？不可能性反例是什么？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>形式化反例</strong>：两个资源各安全窗口 W，两个操作需求为 (W, 0) 与 (0, W)。标量窗口 ≤ W 安全但<strong>无法并行放行两者</strong>（不 work-conserving）；标量窗口 2W 能放行该组合，但也会放行两个 (W, 0) 而<strong>击穿第一个资源</strong>（不安全）。故<strong>不存在同时满足逐资源安全与工作保持的固定标量</strong>。</li>
+                    <li><strong>实验侧证（Scalar service，Harmonic 式归一化成本）</strong>：scale=4 时 Atomic P99 低 10%，但 <strong>HBM P99 高 37%、响应高 17%</strong>；scale=2 时 HBM P99 仍为 SemaCredit 的 1.82×。<strong>标量必须猜当前瓶颈，向量直接点名瓶颈。</strong></li>
+                    <li><strong>反应式基线（UET 风格 resource exhaustion + 重试）远劣于事前准入</strong>：SemaCredit 相对其 Atomic/响应 P99 低 <strong>50.1% / 72.1%</strong>，平均少 92 / 34 次重试，goodput +4.5% / +3.9%。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>这是全篇最强的理论支撑 &mdash; <strong>向量准入不是工程优化偏好，而是由不可能性反例强制的必要性</strong>；且「事后禁用 + 重试」永远补不上「事前向量预留」的差距。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q9</span>
+            <span class="faq-title">实测收益有多大？在哪些场景才真正有效？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <table>
+                    <tr><th>场景（小操作 P99，以聚合字节 credit 归一）</th><th>逐资源字节</th><th>Primary service</th><th>SemaCredit</th></tr>
+                    <tr><td>HBM 热点（控制组）</td><td>0.81×</td><td>0.81×</td><td>0.81×（goodput +3.5%）</td></tr>
+                    <tr><td>Atomic 争用</td><td>1.00×（无用）</td><td>0.48×</td><td>0.48×（−52.4%）</td></tr>
+                    <tr><td>响应 incast</td><td>0.22×</td><td>1.00×（过早释放）</td><td>0.20×（−10.2%）</td></tr>
+                </table>
+                <p><strong>应用形态混合（5 组成对扰动均值）</strong>：AllReduce 形态 −57.7%；远端读形态对聚合 −83.3%、对逐资源字节 −14.5%、对 Primary service −71.1%；<strong>MoE 形态与逐资源字节打平</strong>（对聚合 −22.8%）&mdash; 论文诚实地把它作为控制组：热 HBM 分区被强字节窗口保护后，语义计费几无增益。</p>
+                <p><strong>敏感性</strong>：Atomic 延迟 3→200 ns，收益 50.3%→72.5%（100 ns 以上为交叉点）；响应固定开销 0/10/20/40 ns 时收益 0%/−1.2%/12.9%/24.2%（<strong>固定成本不可忽略后服务计费才体现价值</strong>）；端点 credit 32→256，Atomic 收益由打平升至 61.5%（<strong>在途预算越宽松，语义计费越关键</strong>）。</p>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>收益集中在<strong>「跨资源完成路径」场景</strong>（Atomic 串行引擎争用、响应 incast、远端读）；HBM 主导的 MoE 形态下与强字节基线打平。<strong>判断标准：负载是否含有「字节数小但占用时间长」的操作，以及下游反向管线是否成瓶颈。</strong></div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q10</span>
+            <span class="faq-title">如何落地部署？模型误差下如何保持鲁棒？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body">
+                <ul>
+                    <li><strong>两种接口</strong>：① <strong>显式</strong> &mdash; 接收端广播不透明资源类 credit，发起端在命令上挂资源类掩码（接收端仍以自身译码为准，仅作准入提示）；② <strong>隐式（评测采用）</strong> &mdash; <strong>线上协议完全不变</strong>，目标端分类器从 opcode / 地址 / 长度 / 响应大小本地映射，不暴露物理分区 ID。</li>
+                    <li><strong>可靠性组合规则</strong>：重传命令复用原预留；重复完成不归还 credit（用传输层操作 ID 判重）；准入只决定「何时进入」，<strong>序域（fence、write-then-notify）照常生效</strong>。</li>
+                    <li><strong>EWMA 自适应校准</strong>：<code>m ← 0.9375·m + 0.0625·(t_obs / t̂)</code>，逐资源一个乘子。50% 系统性低估时，静态版比字节基线<strong>差 9.2%</strong>，自适应版反转为<strong>好 6.1%</strong>；2× 高估时静态版 P99 好 22.7% 但 goodput 掉 8.2%，自适应把损失限到 2.0%。</li>
+                    <li><strong>部署教训（反直觉）</strong>：<strong>零均值双峰波动下，静态均值成本反而更好</strong> &mdash; EWMA 会被单个慢样本带偏。慢速校准治<strong>系统性偏差</strong>，勿逐操作追逐随机样本。</li>
+                    <li><strong>边界</strong>：确定性模型仅隔离「接收端完成路径计费」一层，未覆盖 kernel 执行与产品微架构；后续路线为 trace 回放 → 自适应控制理论 → 周期级/RTL/FPGA（验证 2.2 KiB 逻辑估计的 SRAM/面积/功耗）→ 端到端训练步/token 延迟验证。</li>
+                </ul>
+            </div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>对自研 scale-up 芯片最实用的一点是 &mdash; <strong>该机制可在不改动线上协议的前提下纯接收端实现</strong>（隐式接口），且总状态量仅约 2.2 KiB；代价是需求估计必须准确，需配慢速 EWMA 校准而非逐操作自适应。</div>
+    </div>
+
+    <!-- 技术知识点沉淀 -->
+    <div class="tips-section">
+        <h2>附：当日技术知识点沉淀</h2>
+        <div class="faq-body">
+            <p><strong>1. AI 加速器架构设计的两条正交路线</strong></p>
+            <ul>
+                <li><strong>反应式路径（GPU 主流）</strong>：缓存 + 乱序 + 分支预测 + 预取 + 仲裁 → 优化平均性能，但最坏情况不可界定。</li>
+                <li><strong>静态路径（TSP / 经典 VLIW / 部分 DSA）</strong>：移除全部反应式元件，把调度交编译器 → 零方差延迟、可界定最坏情况，代价是模型覆盖受限、编译门槛高。</li>
+                <li>选型判据：<strong>SLA 尾部延迟敏感 → 静态；生态/通用性/训练 → 反应式。</strong></li>
+            </ul>
+            <p><strong>2. Scale-Up 端点流控的三层计价对象</strong></p>
+            <ul>
+                <li><strong>字节（bytes）</strong> → 适合流式带宽资源（HBM 分区、链路缓冲）。</li>
+                <li><strong>服务时间（nanoseconds）</strong> → 适合固定成本/串行资源（Atomic 引擎）。</li>
+                <li><strong>固定开销 + 字节</strong> → 适合反向管线（响应注入）。</li>
+                <li>关键：<strong>计价单位必须匹配资源的占用度量</strong>；混用会造成数量级错配（字节计价对 Atomic 完全无效）。</li>
+            </ul>
+            <p><strong>3. Credit 归还时机的三条设计律</strong></p>
+            <ul>
+                <li>到达即还 → 下游无界（响应 P99 恶化 2.05×）。</li>
+                <li>端到端才还 → 独立资源被耦合（P99 +6.4%、goodput −0.9%）。</li>
+                <li><strong>按阶段归还（内存/Atomic/注入各自完成时）</strong> → 安全与流水并行兼得。</li>
+                <li>窗口下限必须 ≥ 最坏路径 RTT，否则 credit 环喂不饱资源（Atomic 引擎取 4×RTT 以容忍投递波动）。</li>
+            </ul>
+            <p><strong>4. 自适应控制的适用边界</strong></p>
+            <ul>
+                <li>EWMA 校准对<strong>系统性偏差</strong>（估计模型结构性错误）有效：50% 低估下由 −9.2% 反转为 +6.1%。</li>
+                <li>对<strong>零均值随机波动</strong>有害：会被单个慢样本带偏，静态均值反而更优。</li>
+                <li>推论：<strong>先判别偏差性质（系统 vs 随机），再决定是否上自适应环。</strong></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base &middot; <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> &middot; 每日自动更新</p>
+        <p>来源：① Groq TSP 三论文解读（《Think Fast》ISCA'20 /《Software-defined TSP》ISCA'22 /《Answer Fast》arXiv:2206.11062）；② SemaCredit（arXiv:2608.17523，中科院计算所，Completion-Path Credits for Scale-Up Fabrics）</p>
+    </div>
+</div>
+</body>
+</html>
