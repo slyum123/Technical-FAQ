@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-23</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        h1 { font-size: 2em; color: #58a6ff; margin-bottom: 8px; }
+        .subtitle { color: #8b949e; margin-bottom: 32px; font-size: 1.05em; }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 24px;
+            color: #58a6ff;
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 14px;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background: #161b22;
+            transition: border-color 0.2s;
+        }
+        .back-link:hover { border-color: #58a6ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .faq-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+        .faq-number {
+            background: #58a6ff;
+            color: #0d1117;
+            font-weight: 700;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .faq-title { font-size: 1.15em; font-weight: 600; color: #e6edf3; }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 14px; }
+        .faq-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .faq-body { color: #c9d1d9; font-size: 0.95em; }
+        .faq-body p { margin-bottom: 10px; }
+        .faq-body ul { margin-left: 20px; margin-bottom: 10px; }
+        .faq-body li { margin-bottom: 4px; }
+        .faq-conclusion {
+            background: rgba(88,166,255,0.08);
+            border-left: 3px solid #58a6ff;
+            padding: 10px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 10px;
+            font-size: 0.92em;
+        }
+        .faq-conclusion strong { color: #58a6ff; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.88em; }
+        th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+        th { background: #21262d; color: #e6edf3; font-weight: 600; }
+        td { color: #c9d1d9; }
+        tr:nth-child(even) td { background: #161b22; }
+        code {
+            background: #1c2331;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #f0883e;
+        }
+        pre {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 0.85em;
+            overflow-x: auto;
+            line-height: 1.6;
+        }
+        pre code { background: none; padding: 0; }
+        .tips-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-top: 32px;
+        }
+        .tips-section h2 { font-size: 1.2em; color: #d2a8ff; margin-bottom: 12px; }
+        .source-tag {
+            display: inline-block;
+            font-size: 0.78em;
+            color: #8b949e;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #30363d;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">← 返回索引</a>
+    <h1>每日技术 FAQ · 2026-09-23</h1>
+    <p class="subtitle">PTStore：面向高吞吐推理服务的分布式 Prefix Caching 与复制（arXiv:2607.22648，Johns Hopkins University + Argonne 国家实验室）· 10 条问答 + 技术知识点沉淀</p>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q1</span>
+            <span class="faq-title">PTStore 是什么？它要解决什么问题？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>PTStore（Prefix Tensor Store）是一个分布式 KV Cache 前缀存储与复制系统，由 Johns Hopkins 大学与 Argonne 国家实验室联合提出（arXiv:2607.22648，2026-06）。核心问题：当推理请求由分布在大量计算节点上的大量 GPU 服务时，如何跨节点可扩展地复用 KV cache 前缀。</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>设计灵感来自 CDN 的客户端缓存：对构成可复用 KV 前缀的"热门张量"进行<b>分布式存放 + 复制</b>。</li>
+                <li>两个收益：降低访问 KV cache 的延迟；缓解热门前缀集中在少数服务器上造成的负载不均。</li>
+                <li>去中心化设计使 KV cache 总容量可以跨节点聚合，扩大数个数量级。</li>
+                <li>实验结果：长文本问答（提取式任务）场景下，比"不聚合跨节点内存、只能重算 KV"的现有基线高效 <b>5–6 倍</b>。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>PTStore = 分布式增量张量存储（trie 式无冗余增长）+ 扁平化元数据快速前缀查询 + 热 prefix 本地复制，三者组合把跨节点 KV 复用从"机会错过"变为"主要加速手段"。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q2</span>
+            <span class="faq-title">现有系统（vLLM/LMCache/SGLang）在跨节点前缀复用上的短板在哪？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>前缀缓存（prefix caching）已是推理服务的核心优化，但现有系统各自覆盖的范围有限，跨节点场景未被充分解决。</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li><b>vLLM</b>：PagedAttention + 引用计数复用最长公共前缀，但缓存停留在 GPU 显存与节点内 host memory，默认不跨节点共享。</li>
+                <li><b>LMCache</b>：把 KV block 从 GPU 卸载到同节点 host memory，可跨 GPU 复用但<b>不能跨节点</b>，且访问更慢。</li>
+                <li><b>SGLang RadixAttention</b>：把 KV cache 视为 radix tree，单节点内自动共享高效，但<b>扩展到多节点很困难</b>（元数据同步瓶颈）。</li>
+                <li><b>Mooncake</b>：KVCache 为中心的分层架构（GPU 显存 → 本地 DRAM → 远程 SSD），但远程传输 I/O 开销高。</li>
+                <li>共性病根：要么元数据同步扩展不出去，要么即使走 RDMA，远程传输的 I/O 开销也抵消了省下的 prefill 计算。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>跨节点复用的真正瓶颈不是"能不能传"，而是<b>远程 I/O 开销与元数据可扩展性</b>。PTStore 的差异化就在于用"复制"压低远程 I/O、用"扁平元数据"绕开分布式 trie 遍历。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q3</span>
+            <span class="faq-title">核心机制一：张量级增量存储为什么能"无冗余"增长？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>不同请求的前缀存在大量重叠，若每个对象都完整存储会浪费巨大空间。PTStore 如何利用这种重叠？</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>每次 store 操作先找出新对象与已存对象之间的<b>最长公共前缀（LCP）</b>，只保存"增量差异"（一组张量）。</li>
+                <li>执行 store 的服务器成为该增量的 <b>owner</b>，存入自己的 owned cache；多个增量随时间自然拼出越来越长的共享前缀，形态类似 <b>trie</b>，冗余为零。</li>
+                <li>增量的落点在服务器间<b>随机选择</b>，实现无需同步的轻量负载均衡（缓存层级与元数据都不需要全局协调）。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"按 LCP 存增量 + 随机放置 owner"让存储随前缀分叉方向自然增长而不重复，同时天然摊平了写入负载——这是 PTStore 可扩展性的存储层基础。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q4</span>
+            <span class="faq-title">核心机制二：扁平元数据如何实现"一次性"前缀查询？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>增量式存储天然形成分布式 trie，直接沿 trie 遍历做前缀查询代价高。PTStore 的元数据设计如何避开这个问题？</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>每个对象的元数据是<b>单个扁平结构</b>：一列去重后的张量 ID（unique tensor IDs）。对象继承它所共享的最长前缀的 ID，并追加自己增量部分的 ID。</li>
+                <li>每个张量 ID 不仅标识张量本身，还<b>编码了存储它的服务器位置</b>——load 操作只需遍历 ID 列表，本地 replication cache 命中则用，未命中则按 ID 找 owner 远程拉取。</li>
+                <li>store 时的 LCP 查询用<b>两级并行归约</b>：payload 只有每前缀几字节的紧凑 ID，带宽开销极小；且元数据自包含、互不依赖，各服务器可对本地 owned cache 并行匹配。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"自包含扁平元数据 + ID 内嵌 owner 位置"把前缀查询从"分布式 trie 多跳遍历"降为"一次广播-归约 + 本地匹配"，这是元数据层随规模扩展的关键。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q5</span>
+            <span class="faq-title">核心机制三：热前缀复制的收益与代价权衡如何设计？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>对象越分散在多台服务器，load 需要联系的 owner 越多，即使并行执行，远程延迟也远高于本地 host memory 访问。复制如何解决这个问题？</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>每台服务器把本地存储层级（host memory、SSD、外部存储）划分为 <b>owned cache</b> 与 <b>replication cache</b> 两部分。</li>
+                <li>owned cache 的最后一层<b>保证持久化</b>；replication cache 中的张量是热门前缀的副本，可在任意层级驱逐（丢了就重新远程拉取）。</li>
+                <li>权衡本质：本地多缓存热张量换快访问，但挤压了 owned 冷张量的空间，冷张量更容易掉到慢层/远端。PTStore 用<b>可配置阈值</b>划分两者比例，配合驱逐策略联合调优。</li>
+                <li>实验中 replication cache 被固定为每台服务器 host memory 预算的 <b>50%</b>，比例敏感性扫描留作未来工作。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>复制是把"远程 I/O 延迟"换成"本地空间占用"的交易；50/50 的划分比例在本实验中有效，但该比例与负载分布强相关，实际部署需要按 trace 调参。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q6</span>
+            <span class="faq-title">为什么用 GDSF 而不是 LRU 做驱逐策略？<span class="badge badge-comp">Computer</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>前缀的结构特殊性使通用缓存策略失效。PTStore 如何改造驱逐策略？</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>前缀<b>靠前的张量</b>更常作为最长公共前缀的一部分被访问，LRU 这类纯时间局部性策略捕捉不到这种结构性偏置；实测<b>频率型策略优于 LRU</b>。</li>
+                <li>张量大小可变时，"很多小而热的张量"会挤掉"大而冷但远程拉取代价高的张量"。PTStore 采用为 Web 代理缓存设计的 <b>GDSF</b>（Greedy-Dual-Size-Frequency，1997），显式权衡 size × frequency × 取回代价。</li>
+                <li>复制张量与 owned 张量竞争同一存储层级时：复制张量可直接丢弃（代价是触发远程 I/O），owned 张量必须刷到慢层。策略为复制区设<b>上下限</b>：未到下限时优先丢弃复制张量，才轮到驱逐 owned 张量到慢层。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>前缀缓存的最优驱逐策略要同时编码<b>结构位置、访问频率、张量大小、副本可弃性</b>四个维度——直接复用 1997 年 Web 缓存的 GDSF 思想即可获得显著收益，不必发明新算法。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q7</span>
+            <span class="faq-title">RDMA 传输层做了哪些针对性优化？<span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>增量分散在多台服务器的不同层级上，如何让远程读写既快又少拷贝？</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>每个 LCP 增量在单一服务器上被<b>聚合为一段连续区域</b>（该服务器即 owner），避免张量过度分散。</li>
+                <li>跨节点访问走 <b>bulk RDMA 零拷贝</b>：每个张量分配 (offset, size) 段，所有分散段在<b>单个 RDMA RPC 请求</b>内并行访问——比"先聚成连续大块再整体传输"更快。</li>
+                <li>把 RDMA 段描述信息<b>与张量一起缓存</b>，后续 load 免去昂贵的 RDMA 注册（registration）建立开销。</li>
+                <li>实现栈：Mochi 组件集的 <b>Thallium</b>（Mercury + Argobots 的 C++ 封装）提供 HPC RPC；key-value 抽象与内存分配器紧耦合以消除注册开销。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"零拷贝 scatter-gather 式单 RPC + 缓存注册信息"是让远程内存层访问接近可用的工程前提；传输层优化与缓存/复制策略必须一起设计，单独优化任何一层都撑不住端到端收益。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q8</span>
+            <span class="faq-title">弱扩展性实验说明了什么？EvoStore 为什么退化到接近不共享？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>在 ALCF Polaris 超算测试床（560 节点，每节点 4×A100 + 512GB DDR4 + 双 Slingshot 10 网络）上，用 WikiQA 数据集（平均 8000 token/请求，Mistral-7B + vLLM v0.6）对比四种方案，每 GPU 固定 1500 条请求。</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li>四种递进方案：vLLM Vanilla（无前缀感知）→ vLLM Prefix（本地前缀复用）→ EvoStore（分布式前缀共享，无本地复制）→ PTStore（分布式 + 复制）。</li>
+                <li>8/16/32 GPU 下四方案均扩展良好，但 EvoStore 因<b>缺少本地复制，RDMA I/O 开销巨大</b>，复用远程前缀的收益几乎被抵消——效果接近干脆忽略远程前缀的 vLLM-Prefix。</li>
+                <li>vLLM-Prefix 又接近 vLLM-Vanilla：只利用<b>节点内本地</b>前缀，错过了大量跨请求复用机会。</li>
+                <li>I/O vs 计算分解图证实：四方案 GPU 计算开销相同，差距完全来自 RDMA I/O 开销差异。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>"分布式共享"不等于"分布式加速"——没有本地复制兜底，跨节点拉取的延迟开销会把复用收益吃光。PTStore 的领先完全来自复用远程前缀的低开销路径。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q9</span>
+            <span class="faq-title">序列长度如何影响收益？短序列下 PTStore 反而更慢？<span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>用 SQUAD 数据集（10 万问题，同一文本对应大量问题，前缀复用压力最大）测 1k/2k/4k/8k token 序列长度下的平均 TTFT。</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li><b>1k token</b>：KV 张量小到能塞进 GPU 显存，重算也不贵，vLLM 本地前缀缓存反而更优——远程复用不划算。</li>
+                <li><b>2k token 起反超</b>：PTStore 优于 vLLM 前缀缓存，且差距随长度增长，<b>8k 时接近 2×</b>。</li>
+                <li>vs EvoStore 的差距随长度反向变化：1k 时 PTStore 快 2× 以上，8k 时只剩 20%——短序列下复制缓存命中率收益最大，长序列下大家都要走远程层。</li>
+                <li>token 分布（数据集特性）对结果影响显著：SQUAD 的结论与 WikiQA 的弱扩展实验并不一致，评估不能只看单一负载。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>分布式前缀缓存存在<b>适用长度下限</b>（本实验约 2k token）；前缀越长、重算越贵、跨节点复用收益越大。负载的 token 分布是比系统机制更敏感的变量。</div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-number">Q10</span>
+            <span class="faq-title">PTStore 的局限与开放问题有哪些？与 Mooncake/LMCache 是什么关系？<span class="badge badge-other">Other</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <div class="faq-body"><p>评估该工作的成熟度与后续方向。</p></div>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <div class="faq-body"><ul>
+                <li><b>实验局限</b>：replication cache 比例固定 50% 无敏感性分析；仅 Mistral-7B 一个模型；负载限于提取式长 prompt 任务（天然利好 prefill 复用）；未与 Mooncake、LMCache 直接 head-to-head 对比。</li>
+                <li><b>生态位</b>：Mooncake 走 KVCache 为中心的分层存储路线（GPU→DRAM→SSD），LMCache 走会话/实例间共享路线；PTStore 补的是"细粒度张量级增量 + 分布式复制"这一格，三者互补而非替代。</li>
+                <li><b>未来方向</b>：负载感知的动态内存均衡、ML 驱逐策略、复制/元数据/复制比的消融实验、与多轮对话和代码补丁等真实 trace 的对照基准、更紧的推理运行时与分布式调度器集成。</li>
+                <li>作者背景值得注意：这是 DOE/NSF 资助的 HPC 侧工作（Argonne + JHU），视角是"聚合超算闲置内存服务推理"，与 Mooncake（Moonshot AI，线上 serving）形成产业/学术互补。</li>
+            </ul></div>
+        </div>
+        <div class="faq-conclusion"><strong>关键结论：</strong>PTStore 验证了"分布式增量存储 + 热 prefix 复制"路线的正确性，但结论目前建立在 HPC 测试床 + 提取式负载上；能否迁移到生产级多轮对话负载，需等它与 Mooncake/LMCache 的正面对比结果。</div>
+    </div>
+
+    <div class="tips-section">
+        <h2>📚 技术知识点沉淀</h2>
+        <p><strong>1. 推理能耗的产业结构数据</strong></p>
+        <ul>
+            <li>Meta 数据：推理已占其 HPC 数据中心 AI 能耗的 <b>65%</b>，预训练仅 35%——推理侧的基础设施优化（KV cache、调度、网络）是当前最大的降本杠杆。</li>
+        </ul>
+        <p><strong>2. 前缀缓存技术谱系速查</strong></p>
+        <table>
+            <tr><th>系统</th><th>复用范围</th><th>核心机制</th><th>主要瓶颈</th></tr>
+            <tr><td>vLLM PagedAttention</td><td>单 GPU / 请求内</td><td>分页块 + 引用计数 + LRU</td><td>不感知共享前缀（默认）</td></tr>
+            <tr><td>SGLang RadixAttention</td><td>节点内</td><td>KV cache 视为 radix tree 自动共享</td><td>元数据同步难以出节点</td></tr>
+            <tr><td>LMCache</td><td>节点内跨 GPU / 会话间</td><td>KV 卸载到 host memory</td><td>不能跨节点，访问慢</td></tr>
+            <tr><td>Mooncake (FAST'25)</td><td>集群</td><td>GPU→DRAM→SSD 分层 KVCache 架构</td><td>远程传输 I/O 开销</td></tr>
+            <tr><td>EvoStore (HPDC'24)</td><td>集群</td><td>聚合闲置 DRAM + 增量存储 + RDMA</td><td>无本地复制，I/O 抵消收益</td></tr>
+            <tr><td>PTStore</td><td>集群</td><td>增量存储 + 扁平元数据 + 热 prefix 复制</td><td>复制比/驱逐需按负载调参</td></tr>
+        </table>
+        <p><strong>3. GDSF 驱逐策略（1997，Web 代理缓存）</strong></p>
+        <ul>
+            <li>代价函数综合了取回代价（size 相关）、访问频率与新鲜度。25+ 年后仍适用于 KV prefix 缓存——<b>缓存理论跨域复用</b>的典型案例，遇到新缓存问题先翻 CDN/代理缓存文献。</li>
+        </ul>
+        <p><strong>4. 提取式任务 = prefill 复用的理想负载</strong></p>
+        <ul>
+            <li>长 prompt + 单 token 短答案（在文档中定位答案位置）的负载形态，使 TTFT 几乎完全由 prefill 决定，最大化前缀复用收益；文档 + 多问题的数据组织天然制造长共享前缀。评估前缀缓存系统应优先构造这类负载做上界，再用对话/补全负载看一般情形。</li>
+        </ul>
+        <p><strong>5. 实验方法细节</strong></p>
+        <ul>
+            <li>负载采样用幂律分布（α=6）模拟生产 trace 中前缀热度的重尾偏斜，刻意把复用集中在小部分前缀上以压测复制缓存。</li>
+            <li>nanobind（而非 Pybind11）桥接 C++/Python：选型理由是 dlpack 协议支持（GPU/CPU 张量零拷贝互通）+ 更低绑定开销——C++ 高性能库暴露 Python API 时的参考选择。</li>
+        </ul>
+    </div>
+
+    <div class="source-tag">
+        来源：论文《PTStore (Prefix Tensor Store): Distributed Prefix Caching and Replication for High Throughput Inference Serving》（arXiv:2607.22648，Johns Hopkins University + Argonne National Laboratory，2026-06）· 生成于 2026-09-23 自动化任务 · 今日技术对话主题：分布式 KV Cache 前缀缓存与复制
+    </div>
+</div>
+</body>
+</html>
