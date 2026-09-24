@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-24</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            line-height: 1.75;
+            padding: 40px 16px;
+        }
+        .container { max-width: 880px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { font-size: 14px; margin-bottom: 24px; display: inline-block; }
+        header { border-bottom: 1px solid #30363d; padding-bottom: 20px; margin-bottom: 32px; }
+        h1 { color: #f0f6fc; font-size: 28px; margin-bottom: 8px; }
+        .meta { color: #8b949e; font-size: 14px; }
+        .meta span { margin-right: 16px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .faq-cat {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .cat-ai { background: #1f3a5f; color: #79c0ff; }
+        .cat-comp { background: #2a2f1f; color: #d2a8ff; }
+        .cat-comm { background: #1f3d2f; color: #56d364; }
+        .cat-other { background: #3d2f1f; color: #e3b341; }
+        .faq-item h2 { color: #f0f6fc; font-size: 19px; margin-bottom: 12px; }
+        .faq-item h3 { color: #79c0ff; font-size: 15px; margin: 14px 0 6px; }
+        .faq-item p, .faq-item li { font-size: 15px; }
+        .faq-item ul { padding-left: 22px; margin: 6px 0; }
+        .faq-item li { margin-bottom: 4px; }
+        code {
+            background: #21262d;
+            color: #ffa657;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 13.5px;
+        }
+        .conclusion {
+            border-left: 3px solid #58a6ff;
+            background: #0d2436;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 14px;
+            font-size: 14.5px;
+        }
+        .conclusion strong { color: #58a6ff; }
+        .knowledge {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .knowledge h2 { color: #f0f6fc; font-size: 20px; margin-bottom: 14px; }
+        .knowledge .k-item { margin-bottom: 14px; }
+        .knowledge .k-item strong { color: #e3b341; }
+        .footer { text-align: center; color: #8b949e; font-size: 13px; margin-top: 40px; border-top: 1px solid #30363d; padding-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">← 返回索引页面</a>
+    <header>
+        <h1>每日技术 FAQ · 2026-09-24</h1>
+        <div class="meta">
+            <span>📅 2026-09-24</span>
+            <span>📦 10 条问答</span>
+            <span>🗂 主题：BeaconKV — 面向大型推理模型（LRM）的 KV Cache 压缩（arXiv:2609.04971, ICML 2026）</span>
+        </div>
+    </header>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q1. 什么是 BeaconKV？它解决 LRM 推理中的什么问题？</h2>
+        <p>BeaconKV 是面向<b>大型推理模型（LRM）</b>推理阶段的<b>免训练 KV Cache 压缩</b>方法（ICML 2026，Hanyang University 等）。LRM 依赖长 Chain-of-Thought，KV Cache 随生成长度线性增长——Qwen3-4B 在 batch size 16、生成 32K token 时 KV Cache 超过 77 GB，单张 80 GB A100 已接近极限。现有方法（RPC、R-KV）用<b>近期查询</b>估计未来 token 重要性，但在长程推理中会过早驱逐关键的远距离上下文。</p>
+        <div class="conclusion"><strong>关键结论：</strong>BeaconKV 用少量"信标查询"（beacon queries）替代完整查询历史来指导 KV 压缩，在四个开源 LRM 上实现最高 5.8× 显存压缩、4.3× 吞吐提升，精度接近 Full KV。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q2. 什么是 Thought Revisiting Tokens（TRT）现象？为何它推翻了"近期查询代理未来注意力"的假设？</h2>
+        <p>作者对 R1-Distill-Qwen-7B 在 AIME24 上的注意力可视化发现：绝大多数查询只关注邻近 key（局部查询），但存在少量 token 会<b>突然将注意力重定向到非常遥远的早期上下文</b>（如问题约束、任务规划），这些 token 被定义为 TRT。TRT 在多个层/头中反复出现，其 attention distance 分布与局部查询明显分离。</p>
+        <ul>
+            <li>token 是边生成边决策的，近期查询无法预见未来某步会"回退"到远距离上下文；</li>
+            <li>仅依赖近期查询的压缩方法会<b>系统性地</b>错过未来 TRT 所需的远距离 KV 对。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>长程推理中"近期注意力"不能代理"未来注意力"——压缩 KV 时不仅要关注"现在关注什么"，更要为"未来可能回退到什么"预留空间。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q3. 为什么"信标查询"可以替代完整查询历史？其几何依据是什么？</h2>
+        <p>关键观察：TRT 对应的<b>全局查询在预 RoPE 查询嵌入空间中并非随机分布，而是聚类为少量相似性簇</b>（PCA 投影可验证），且与周围局部查询明显不同。同簇的查询倾向于回退到相似的远距离上下文。因此每个簇选出一个代表查询（信标查询），即可覆盖未来可能出现的多种全局回退模式。</p>
+        <ul>
+            <li>这是模型推理行为的<b>涌现特性</b>，不是人工先验；</li>
+            <li>无需保存完整查询历史即可预测未来可能被重访的 KV 对。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>全局查询的几何聚类是可利用的归纳偏置——将几何方法（FPS 最远点采样）引入 KV 管理是一个新的有效方向。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q4. Continual FPS 如何实现内存有界的在线信标采样？</h2>
+        <p>Naive FPS 需要保存全部历史查询，内存不可接受。Continual FPS 采用<b>"填满-压缩"</b>策略：每个头维护大小有界的查询缓存，达到 <code>B_Q^max = n_beacon + n_recent</code> 后用 FPS 压缩回 <code>B_Q^min = n_beacon</code>；新生成的查询继续追加，随推理轨迹演化动态更新信标集合。FPS 的起点选平均余弦相似度最小的查询（最远离整体分布），之后每轮贪心选最远离已选集合的查询。</p>
+        <ul>
+            <li>源码提供两个版本：完整相似度矩阵版 O(Q²)（中小规模）、迭代版 O(Q)（预填充 1K+ token）；</li>
+            <li>消融实验表明：相比固定"Initial+Recent"查询策略，Continual FPS 的动态采样增益不可替代（Qwen3-14B/AIME24：57.92 vs 23.75）。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>Continual FPS 保证查询缓存内存开销恒定，同时使信标集合随推理轨迹动态演化——这是固定历史查询无法做到的。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q5. BeaconKV 压缩触发时如何打分？为什么用 max 而不是 mean 聚合？</h2>
+        <p>压缩触发时（decode KV 达到 <code>B_KV^max</code>，降至 <code>7/8 · B_KV^max</code>）：</p>
+        <ul>
+            <li>信标查询被 <b>RoPE 对齐到当前解码位置</b>（模拟"如果现在发生 TRT，它会关注哪些 key"），近期查询保持原始生成位置；</li>
+            <li>对 observation query 集合计算对当前 KV Cache 的注意力权重，在 GQA head group 上 max pooling 聚合，再在 query 维度取 max；</li>
+            <li>最终保留：prefix token + 最近 window token + 按分数 Top-K 选取的中间 token。</li>
+        </ul>
+        <p><b>max vs mean 的原因</b>：TRT 是稀疏的事件驱动信号，均值会将其淹没在大量局部查询中；max 确保只要任一信标查询认为某 KV 重要，该 KV 就被保留。消融实验证实低预算下 max 显著优于 mean（512 预算：30.0 vs 27.5）。</p>
+        <div class="conclusion"><strong>关键结论：</strong>对稀疏、事件驱动的重要信号，max 聚合优于 mean——该原则可推广到其他稀疏注意力/检索场景。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q6. BeaconKV 的实测效果如何？消融实验给出哪些配置建议？</h2>
+        <p><b>主要结果</b>（四个模型：R1-Distill-Qwen-7B / R1-Distill-Llama-8B / Qwen3-4B / Qwen3-14B；任务：AIME24 / MATH-500 / GPQA-Diamond / LiveCodeBench）：</p>
+        <ul>
+            <li>最大精度提升：Qwen3-14B / AIME24 / 预算 1024 时，比现有方法高 <b>31.7 个百分点</b>；</li>
+            <li>效率：单张 A100 80GB、Qwen3-4B 生成 32K token，2K 预算下峰值显存 77 GB → 13.3 GB（<b>5.8×</b>），吞吐 82.3 → 356.4 tok/s（<b>4.3×</b>）；</li>
+            <li>与 RPC 拉到相同 batch size 时系统效率相近，但精度显著更高（51.1 vs 44.8）——收益来自更好的 KV 选择策略而非激进压缩。</li>
+        </ul>
+        <p><b>配置建议</b>：<code>(n_recent=16, n_beacon=16)</code> 在准确率-延迟间取得最佳平衡；信标过多削弱局部上下文捕捉并显著增加延迟，过少则覆盖不了全局回退模式。</p>
+        <div class="conclusion"><strong>关键结论：</strong>BeaconKV 在低预算区间优势最大；同等系统效率下精度领先，说明价值在"选得准"而非"压得狠"。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q7. BeaconKV 在工程上如何做到即插即用？</h2>
+        <p>BeaconKV <b>不修改模型权重、无需微调</b>，通过 monkey-patch 替换 HuggingFace Transformers 的 attention forward 函数（<code>qwen2_custom_forward</code> / <code>llama_custom_forward</code> / <code>qwen3_custom_forward</code>）接入现有推理管线。一次 decode 步骤的关键调用链：</p>
+        <ul>
+            <li>RoPE 之前调用 <code>update_pre_rope_query()</code> 缓存预 RoPE 查询（预 RoPE 位置信息是几何聚类的关键）；</li>
+            <li>正常计算 attention 并更新 KV Cache；</li>
+            <li><code>needs_compression()</code> 为真时执行 <code>_BeaconKV</code>：RoPE 对齐 → 注意力打分 → Top-K 选取 → <code>gather</code> 压缩缓存。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>训练无关 + monkey-patch 注入，落地门槛低，与需要微调的压缩方法形成互补。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q8. BeaconKV 有哪些局限性与未来方向？</h2>
+        <p><b>局限</b>：① 任务范围集中在数学/科学/代码推理，对通用长上下文（检索、摘要、对话）未充分验证；② 超参数（n_beacon、n_recent、budget）固定，未做自适应；③ 压缩仅发生在 decode 阶段，超长 prompt 的预填充 KV Cache 仍可能巨大；④ 多模态与多轮会话场景未覆盖。</p>
+        <p><b>未来方向</b>：按推理阶段自适应调整信标/近期查询比例；与稀疏注意力（DSA）或分离式 KV Cache（Mooncake 等）结合降低跨节点 KV 传输；将 FPS 思想扩展到预填充压缩；探索跨层信标共享。</p>
+        <div class="conclusion"><strong>关键结论：</strong>BeaconKV 定位是推理侧 KV 选择策略的改进，可与缓存管理、稀疏注意力等正交方向叠加。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-other">Other</span>
+        <h2>Q9. Farthest Point Sampling（FPS）的算法原理是什么？</h2>
+        <p>FPS 从 N 个查询中选出 m 个，使所选集合在余弦相似度下覆盖最大"距离"：</p>
+        <ul>
+            <li><b>起点</b>：选平均余弦相似度最小的查询（最远离整体分布）；</li>
+            <li><b>贪心迭代</b>：每轮选与已选集合"最近相似度"最小的查询（即最远离已选集合），随后更新其余查询的最近相似度 <code>S_j = max(S_j, cos(q_j, q_r))</code>；</li>
+            <li>复杂度 O(m·N·D)（迭代版），保证选出的代表在几何上尽量分散、覆盖多样模式。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>FPS 的目标是"几何覆盖度"而非"密度代表"，与 K-Means 质心形成互补——对稀疏簇场景 FPS 更稳。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-other">Other</span>
+        <h2>Q10. LRM 的长 CoT 带来多大的 KV Cache 压力？</h2>
+        <p>论文统计了各模型在不同任务上的平均输出 token 数：AIME24 上四个模型平均输出均在 <b>1.3万~1.5万 token</b>（R1-Distill-Qwen-7B 13,459 / Qwen3-4B 14,675），LiveCodeBench 也在 1.2万左右；而 MATH-500 仅 4,000~5,300。这意味着推理任务的 KV Cache 需求比普通对话高一个数量级，压缩是部署 LRM 的刚需而非优化项。</p>
+        <div class="conclusion"><strong>关键结论：</strong>长 CoT 是显存压力的直接来源——任务越接近"深度推理"，KV 压缩收益越大。</div>
+    </div>
+
+    <div class="knowledge">
+        <h2>📚 今日知识点沉淀</h2>
+        <div class="k-item"><strong>1. KV 压缩的两种视角：</strong>"近期查询"假设未来注意力可由近期行为预测，适合局部连贯场景；"未来代理"（信标查询）主动为预测到的全局回退预留空间，适合长程推理。选择策略取决于任务的注意力模式。</div>
+        <div class="k-item"><strong>2. 预 RoPE 位置编码的作用：</strong>几何聚类观察必须在<b>预 RoPE</b> 查询空间进行——RoPE 会将位置信息混入查询向量，破坏语义聚类的纯度。工程实现中应在 RoPE 之前拦截缓存查询。</div>
+        <div class="k-item"><strong>3. 周期性驱逐设计：</strong>达到 max 预算触发压缩、压到 min（= 7/8 max）而非一次性压到目标，为后续 Top-K 计算和边界 token 保留留出缓冲，降低单次压缩的信息损失。</div>
+        <div class="k-item"><strong>4. GQA 下的聚合层次：</strong>同一 head group 共享 KV，打分时先在 head 维 max（group_max），再在 query 维 max——两层次 max 组合保证"任何头、任何信标认为重要"的 KV 都不丢。</div>
+        <div class="k-item"><strong>5. 观察驱动的研究范式：</strong>BeaconKV 的路线是"可视化注意力 → 发现异常现象（TRT）→ 提炼几何结构（聚类）→ 设计轻量算法（FPS）→ 免训练落地"，对系统类 AI 研究有普适参考价值。</div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base · <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> · 每日自动更新</p>
+    </div>
+</div>
+</body>
+</html>
