@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-26</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.75;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        .back-link { display: inline-block; margin-bottom: 24px; color: #58a6ff; text-decoration: none; font-size: 0.95em; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 1.9em; color: #58a6ff; margin-bottom: 6px; }
+        .subtitle { color: #8b949e; margin-bottom: 36px; font-size: 1.05em; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 26px;
+            margin-bottom: 18px;
+        }
+        .faq-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .faq-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #238636; color: #fff; font-size: 0.85em; font-weight: 600;
+        }
+        .faq-title { font-size: 1.15em; font-weight: 600; color: #e6edf3; }
+        .faq-meta { display: flex; gap: 8px; margin-left: auto; }
+        .badge {
+            display: inline-block; font-size: 0.72em; padding: 3px 10px;
+            border-radius: 12px; font-weight: 500;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .section-label { font-size: 0.82em; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .faq-section p { color: #c9d1d9; font-size: 0.97em; }
+        .faq-section ul { margin: 6px 0 0 20px; color: #c9d1d9; font-size: 0.97em; }
+        .faq-section li { margin: 4px 0; }
+        .conclusion {
+            background: rgba(35,134,54,0.08);
+            border-left: 3px solid #238636;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 12px;
+        }
+        .conclusion .section-label { color: #3fb950; }
+        .conclusion p { color: #aff5b4; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            background: #21262d; padding: 1px 5px; border-radius: 4px;
+            font-size: 0.9em; color: #ffa657;
+        }
+        .knowledge {
+            margin-top: 40px;
+            padding-top: 28px;
+            border-top: 1px solid #30363d;
+        }
+        .knowledge h2 { font-size: 1.25em; color: #d2a8ff; margin-bottom: 18px; }
+        .knowledge-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+        }
+        .knowledge-item h4 { color: #79c0ff; font-size: 1em; margin-bottom: 6px; }
+        .knowledge-item p { color: #c9d1d9; font-size: 0.95em; }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">← 返回 Technical-FAQ 索引</a>
+    <h1>每日技术 FAQ · 2026-09-26</h1>
+    <p class="subtitle">Uno：通过离散扩散解锁 LLM 无损加速 · arXiv:2609.04010 · MBZUAI / UIUC / Cornell / Harvard / Cerebras</p>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">1</span>
+            <span class="faq-title">Uno 的核心思想是什么？与现有路线有何不同？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>现有 LLM 加速路线（MTP、投机解码 SD、自投机）各有局限：MTP 改架构增加预测头；SD 需独立 drafter 模型；自投机改基座权重且有损。Uno 提出了一种新的解耦思路。</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li>将<strong>"定义分布"</strong>与<strong>"采样方式"</strong>解耦：AR 权重 <code>θ_AR</code> 冻结不动，负责定义高质量自回归分布</li>
+                <li>每个权重矩阵挂一份 rank-128 的 LoRA 适配器作为<strong>扩散权重</strong> <code>θ_Δ</code>，负责从该分布<strong>并行采样多个 token</strong></li>
+                <li>模型定义仍是标准 AR 分布，但可以并行生成——区别于 MTP（改架构）、SD（加独立 drafter）、self-speculative（改基座权重有损）三条路线</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>Uno 的"参数共享式 self-drafting"是全新范式：一份模型、两条通路（AR 定义分布 + 扩散并行采样），无需独立 draft 模型，也不改动基座分布。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">2</span>
+            <span class="faq-title">Ψ-Spec 采样器如何做到"无损"加速？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>传统离散扩散 d-LLM 天然并行但存在质量损失；投机解码虽无损但需额外模型。Uno 声称"无损"，其保证机制是什么？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>起草阶段</strong>：扩散通路 <code>θ_AR + θ_Δ</code> 一次前向并行输出 B 个 token 的草稿</li>
+                <li><strong>验证阶段</strong>：纯 <code>θ_AR</code> 通路对草稿做拒绝采样校正，输出分布<strong>严格等于基座 AR 分布</strong></li>
+                <li>首 token 由基座分布采样 ⇒ 必被接受；后续 token 以 <code>min(1, p/q)</code> 概率接受；被拒时从残差分布重采样</li>
+                <li>提供两种采样器：<strong>Linear Sampler</strong>（面向系统吞吐，B=4 最优）和 <strong>Tree Sampler</strong>（面向单请求延迟，B=16,K=32,V=32）</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>无损性由标准拒绝采样保证：验证分布 = 目标分布 ⇒ 输出分布不变。扩散通路仅负责"高效提议"，不参与最终分布构造。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">3</span>
+            <span class="faq-title">Diffusion Distillation 训练目标为何选 TV 而非 KL？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>训练目标 <code>L = α·L_DCD + β·L_TV</code> 中，全变分距离 TV 与 KL 散度有何本质区别？为什么 TV-only 效果最好？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>KL（L_DCD）</strong>：约束 student 与 teacher 的分布一致性，但不直接关联"连续 token 被接受"的系统指标</li>
+                <li><strong>TV（L_TV）</strong>：计算 <code>|student − teacher|</code> 的全变分距离，直接约束<strong>连续 token 被接受的概率</strong></li>
+                <li>依据 Leviathan et al. 2023 的 Corollary 3.6：TV 距离直接约束接受率 ⇒ <strong>训练目标与系统指标同构</strong></li>
+                <li>消融实验：TV-only（α=0,β=1）平均 TPF 2.39 > KL+TV 2.23 ≈ KL-only 2.23；0.01 KL + TV 达到最优 2.46</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>TV 是"接受长度的代理量"，KL 是"分布对齐的代理量"。对投机解码类方法，训练目标应选与系统指标同构的 TV 而非默认 KL。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">4</span>
+            <span class="faq-title">Gated LoRA 的工程作用是什么？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>训练时需要同一前向内同时拿到 teacher（纯 AR）和 student（AR+扩散）两套 logits，工程上如何实现？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li>采用 Samragh et al. 2025 的 <strong>Gated LoRA</strong>：通过 token 级 mask 开关适配器</li>
+                <li>训练时：干净位置 mask=0（只用 <code>θ_AR</code> 产 teacher logits），噪声位置 mask=1（用 <code>θ_AR+θ_Δ</code> 产 student logits）</li>
+                <li>推理时：草稿序列的第一个（seed）位置 <code>lora_mask[:,0]=0</code>（纯 AR），其余噪声位置 mask=1</li>
+                <li>输入布局为 <code>[clean x | noisy z₁]</code>，序列总长 2L，<strong>与块大小 B 无关</strong>——对比 DFlash 需 B·L</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>Gated LoRA 使单次 decoder 前向同时产出 teacher/student 两套 logits，训练上下文恒为 2L，与推理块大小解耦——这是方法能 scale 到 64K 上下文的关键。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">5</span>
+            <span class="faq-title">TPF（Tokens-Per-Forward）的理论上下界是多少？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>论文提到增大块大小 B 并不能线性提升吞吐，TPF 存在上界。如何定量理解？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li>每次迭代两次前向（起草 + 验证），首 token 由基座产生 ⇒ <strong>必被接受</strong></li>
+                <li>若后续立刻被拒：从 renormalized residual 采样 ⇒ 仍得 <strong>2 个 token</strong></li>
+                <li>若全接受：从末尾 logits 多采 1 个 bonus ⇒ 共 <strong>B+1 个 token</strong></li>
+                <li>因此：1 ≤ TPF ≤ (B + 1) / 2</li>
+                <li>实验验证：B=4 时 TPF≈1.8（上限 2.5），B=16 时 TPF≈2.2~2.3（上限 8.5）</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>TPF 上界 (B+1)/2 解释了"块越大越好"的直觉为何错误：B=16 的 TPF 仅比 B=4 高 0.4，但验证开销大增，导致系统吞吐反而从 5190 掉到 3445 tok/s。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">6</span>
+            <span class="faq-title">Uno 相比 EAGLE-3 / DFlash 投机解码的核心优势？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>EAGLE-3 和 DFlash 也是无损投机解码方案，Uno 相对它们有何差异化优势？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>共享单份 KV cache</strong>：峰值显存 118.0 GiB vs EAGLE-3 129.4 / DFlash 129.8（降低约 8 GiB）</li>
+                <li><strong>额外参数更少</strong>：0.35B LoRA vs EAGLE-3 0.40B / DFlash 1.05B</li>
+                <li><strong>无需独立 drafter 模型</strong>：起草与验证共用同一份模型 + KV cache</li>
+                <li>实测吞吐：Uno<sub>Qwen</sub> 系统吞吐 5733 tok/s > EAGLE-3 4944；单请求 445 tok/s > EAGLE-3 284（2.53× 基座 AR）</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>对显存受限的长上下文 / 大并发服务，"单份 KV + 更少参数"比单纯的 TPF 提升更有系统价值。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">7</span>
+            <span class="faq-title">Uno 相比 d-LLM（DiffusionGemma、Mercury 2 等）有何不同？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>离散扩散语言模型（d-LLM）也支持并行生成，Uno 与其竞争格局如何？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>无损 vs 有损</strong>：Uno 输出分布严格等于基座 AR；d-LLM 替换整个模型，存在质量损失</li>
+                <li><strong>大 batch 加速不消失</strong>：Uno 在最大 batch=64 下仍有 1.5× 加速；d-LLM 的加速通常在大 batch 下消失</li>
+                <li><strong>质量对比</strong>：8B Uno 在全部 Agentic / Coding / Long-Context 基准上超过 26B-A4B 的 DiffusionGemma 和闭源 Mercury 2</li>
+                <li><strong>评测口径纠偏</strong>：论文用 1K/8K 固定长度 throughput test 避免"生成更短推理链占便宜"</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>Uno 是"AR 分布 + 扩散采样"的混合体，兼具 AR 的质量与扩散的并行性；d-LLM 是"纯扩散替换"，牺牲质量换取并行。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">8</span>
+            <span class="faq-title">Uno 的两条落地训练路径分别是什么？成本如何？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>论文提供了从零预训练和开源模型增强两种方案，各自的训练成本与适用场景？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>路径一：从零预训练 Uno</strong>
+                    <ul>
+                        <li>AR 阶段：约 23T tokens，四阶段上下文伸长（8K→32K→128K→512K）</li>
+                        <li>扩散阶段：约 7B tokens，rank-128 LoRA，块大小课程 B∈{2,4,8}</li>
+                        <li>硬件：8 节点 × 8×H200，约 <strong>60 小时</strong></li>
+                    </ul>
+                </li>
+                <li><strong>路径二：开源模型增强（Uno<sub>Qwen</sub>）</strong>
+                    <ul>
+                        <li>基座：冻结 Qwen3-8B，挂 rank-128 LoRA（可训练参数 0.35B）</li>
+                        <li>数据：OpenThoughts3-1.2M（与 Qwen3 原训练分布不同），3 epoch = 14.7B tokens</li>
+                        <li>硬件：4 节点 × 8×H200，约 <strong>32 小时</strong></li>
+                        <li><strong>不需要原模型的训练数据</strong>——即插即用</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>路径二（冻结开源模型 + LoRA）是绝大多数用户的实际选择：32 小时、4 节点 H200、无需原数据，即可获得无损加速。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">9</span>
+            <span class="faq-title">RL 后训练时 adapter 是否需要重训？TPF 会下降多少？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>如果基座模型经过 RL 后训练大幅更新，共享的 LoRA adapter 是否还能保持 draft/verify 分布一致性？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li>RL 只更新 <code>θ_AR</code>，adapter <code>θ_Δ</code> 冻结不动</li>
+                <li>实测：RL 后 TPF 从 2.66 降至约 1.95（平均），<strong>仅下降约 6%</strong></li>
+                <li>原因：<strong>共享基座参数带来的耦合</strong>维持了 draft/verify 分布一致性</li>
+                <li>工程价值：SFT 后一次性冻结 adapter，整个 RL 阶段享受 <strong>40% 端到端训练加速</strong>，无需周期性重训 drafter</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>RL 后 adapter 无需重训即可保持近 94% 的 TPF，这是 Uno 相对 d-LLM 路线最被低估的工程优势——d-LLM 需要改写 RL 目标与采样器。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">10</span>
+            <span class="faq-title">Uno 在工程实现层面的四大关键创新？</span>
+            <span class="faq-meta"><span class="badge badge-ai">AI</span></span>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">问题描述</div>
+            <p>在 250k 词表 + 64K 上下文的规模下，Uno 的工程实现有哪些值得复用的组件？</p>
+        </div>
+        <div class="faq-section">
+            <div class="section-label">回答要点</div>
+            <ul>
+                <li><strong>融合验证 kernel</strong>（<code>fused_verify_kernel.py</code>）：dual online softmax 一趟求 max/sum，再一趟 Gumbel-max 取修正 token，<strong>显存从 O(B·V) 降到 O(B)</strong></li>
+                <li><strong>TV 损失自定义反向</strong>（<code>_ChunkedTotalVariation</code>）：分块 forward + 手写符号梯度，避免 [T, 250k] 稠密 FP32 softmax 显存爆炸</li>
+                <li><strong>确定性噪声</strong>（<code>noise.py</code>）：splitmix64 整数哈希生成先验噪声，不依赖 CUDA RNG 状态 ⇒ 可被 CUDA graph 捕获、跨 runner 可复现</li>
+                <li><strong>树 KV 的 Triton 压缩</strong>（<code>tree_kv_copy.py</code>）：只搬运被接受路径的 slot，保持 tree sampler 的"单份 KV"语义</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>这四个组件共同解决了"大词表 × 长上下文 × 无损验证"的三重工程挑战，均可泛化到其他投机解码或蒸馏场景。</p>
+        </div>
+    </div>
+
+    <div class="knowledge">
+        <h2>📌 技术知识点沉淀</h2>
+
+        <div class="knowledge-item">
+            <h4>参数共享式 self-drafting 取代独立 drafter</h4>
+            <p>EAGLE/DFlash 需要额外 0.4B/1.05B 参数 + 独立 KV cache；Uno 用 0.35B LoRA + 单份 KV，在更高 TPF 下把峰值显存压低 8 GiB。对显存受限的长上下文 / 大并发服务，这比单纯的 τ 提升更有价值。</p>
+        </div>
+
+        <div class="knowledge-item">
+            <h4>训练目标应与系统指标同构</h4>
+            <p>用 TV 距离（直接约束"连续 token 被接受概率"）替代 KL（约束分布一致性），以更小的梯度预算换来了更高的 TPF（2.39 vs 2.23）。这提示 speculative-decoding 类研究：drafter 的训练目标不应默认是 CE/KL，而应是<strong>接受长度的代理量</strong>。</p>
+        </div>
+
+        <div class="knowledge-item">
+            <h4>训练上下文 2L 布局使训练成本与推理块大小解耦</h4>
+            <p>Uno 的 <code>[clean x | noisy z₁]</code> 布局使训练上下文恒为 2L，与块大小 B 无关（DFlash 需 B·L）。在 250k 词表 + 64K 上下文的训练场景下，这是数量级的显存/算力差异，直接决定方法能否 scale。</p>
+        </div>
+
+        <div class="knowledge-item">
+            <h4>Quadratic Samplers 是下一步方向</h4>
+            <p>TPF 上界 (B+1)/2 提示：只要仍是"起草 + 验证两次前向"，收益就有天花板。Quadratic Samplers（一次前向同时完成验证与下一轮起草）是必然的下一步，但需要专用 kernel——与作者 future work 的判断一致。</p>
+        </div>
+
+        <div class="knowledge-item">
+            <h4>摘要数字与正文表格的偏差风险</h4>
+            <p>论文摘要称"up to 3×"、Takeaway 1 称"over 2× higher throughput across all batch sizes"，但正文 Table 7 原始数据为 5255/3577 = <strong>1.47×</strong>（系统吞吐），Table 18 最大比值为 445/176 = <strong>2.53×</strong>（batch=1）。对外引用时请以表格原始数据为准。</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ · 2026-09-26 · 来源：arXiv:2609.04010v1 &amp; github.com/ifm-ai/uno</p>
+    </div>
+</div>
+</body>
+</html>
