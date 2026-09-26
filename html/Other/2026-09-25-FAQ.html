@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-09-25</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            line-height: 1.75;
+            padding: 40px 16px;
+        }
+        .container { max-width: 880px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back-link { font-size: 14px; margin-bottom: 24px; display: inline-block; }
+        header { border-bottom: 1px solid #30363d; padding-bottom: 20px; margin-bottom: 32px; }
+        h1 { color: #f0f6fc; font-size: 28px; margin-bottom: 8px; }
+        .meta { color: #8b949e; font-size: 14px; }
+        .meta span { margin-right: 16px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .faq-cat {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .cat-ai { background: #1f3a5f; color: #79c0ff; }
+        .cat-comp { background: #2a2f1f; color: #d2a8ff; }
+        .cat-comm { background: #1f3d2f; color: #56d364; }
+        .cat-other { background: #3d2f1f; color: #e3b341; }
+        .faq-item h2 { color: #f0f6fc; font-size: 19px; margin-bottom: 12px; }
+        .faq-item h3 { color: #79c0ff; font-size: 15px; margin: 14px 0 6px; }
+        .faq-item p, .faq-item li { font-size: 15px; }
+        .faq-item ul { padding-left: 22px; margin: 6px 0; }
+        .faq-item li { margin-bottom: 4px; }
+        code {
+            background: #21262d;
+            color: #ffa657;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 13.5px;
+        }
+        .conclusion {
+            border-left: 3px solid #58a6ff;
+            background: #0d2436;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 14px;
+            font-size: 14.5px;
+        }
+        .conclusion strong { color: #58a6ff; }
+        .knowledge {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .knowledge h2 { color: #f0f6fc; font-size: 20px; margin-bottom: 14px; }
+        .knowledge .k-item { margin-bottom: 14px; }
+        .knowledge .k-item strong { color: #e3b341; }
+        .footer { text-align: center; color: #8b949e; font-size: 13px; margin-top: 40px; border-top: 1px solid #30363d; padding-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">← 返回索引页面</a>
+    <header>
+        <h1>每日技术 FAQ · 2026-09-25</h1>
+        <div class="meta">
+            <span>📅 2026-09-25</span>
+            <span>📦 10 条问答</span>
+            <span>🗂 主题：Analytical MoE Overlap — 细粒度 MoE 计算-通信重叠的解析式资源管理（arXiv:2609.07536, SC26 AI on HPC Workshop）</span>
+        </div>
+    </header>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q1. 这篇论文解决的核心问题是什么？</h2>
+        <p>在 MoE 推理的细粒度计算-通信重叠路径（如 ByteDance FLUX/COMET A100 实现）中，计算 CTA 与通信 CTA 共享同一批 SM 驻留容量。上游 COMET 采用<b>固定 C=3 个通信 CTA</b>，无法根据 token 数、专家负载、split 数与 kernel 形状动态调整。论文将“每次调用应给通信分配多少 SM 槽位”形式化为一个依赖约束下的非抢占式 GPU 驻留划分问题，并给出<b>无需逐负载 profiling 的解析式选择器</b>。</p>
+        <div class="conclusion"><strong>关键结论：</strong>问题本质是计算-通信 CTA 对有限 SM 驻留的争夺；固定划分会在某些形状上比不重叠更慢，而最优划分可以在线解析推导。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q2. 什么是“依赖-驻留耦合（dependency–residency coupling）”？</h2>
+        <p>通信 CTA 必须等计算侧发布的 split 就绪才能消费；但通信 CTA 占用的 SM 位会直接<b>挤占</b>计算 CTA 的并行度。这导致双向效应：多一个通信 worker 会少一个 SM，即少 <code>o_comp</code> 个计算槽位。论文在 A100 上测得 <code>o_comp=2、o_comm=1</code>，因此加 1 个通信 CTA 等价于减 2 个计算 CTA 槽位。</p>
+        <ul>
+            <li>通信太少 → 就绪 split 排队，通信尾部拖长；</li>
+            <li>通信太多 → 计算并行度塌缩，GEMM 变慢；</li>
+            <li>最优 C* 位于两种瓶颈的谷底。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>依赖-驻留耦合是性能对 C 呈 U 形（带台阶）响应的根因，资源管理必须在“等计算”和“通信排队”之间找平衡。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q3. “波量化（wave quantization）”为什么让固定分配失效？</h2>
+        <p>GPU 上 CTA 与 tile wave 都是整数执行。性能随资源分配呈<b>台阶-平台</b>而非平滑曲线：同一 wave 平台内增加 CTA 无收益，跨过 wave 边界可能突变。固定 C=3 对不同形状要么落在“通信尾部”台阶，要么落在“计算塌缩”台阶，无法一概而论。因此解析模型必须用 ceiling 递推刻画整数 wave，而不是连续近似。</p>
+        <div class="conclusion"><strong>关键结论：</strong>波量化意味着资源分配是离散的；连续优化/线性外推在 wave 边界处会系统性失效。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q4. 解析模型的核心公式与变量有哪些？</h2>
+        <p>模型输入为负载 <code>M,N,K,L,D</code>、实际路由计数 <code>{Me}</code>、kernel tile 形状、占用率 <code>o_comp/o_comm</code> 与 SM 数 <code>G</code>。关键量：</p>
+        <ul>
+            <li><code>R(C)=⌈C/o_comm⌉</code>：实现通信并行度所需的最小 SM 预留；</li>
+            <li><code>P(C)=o_comp·(G−R(C))</code>：剩余计算槽位；</li>
+            <li><code>W_comp/W_comm</code>：每 split 的计算/通信 tile 数，由实际路由计数决定；</li>
+            <li><code>A_s(C)=⌈(s+1)·W_comp/P(C)⌉</code>：split s 的就绪时间（允许跨 split 提前）；</li>
+            <li><code>F_s(C)=max(A_s,F_{s−1})+q(C)</code>：split s 完成时间，<code>q(C)=ρ·⌈W_comm/C⌉</code>。</li>
+        </ul>
+        <p>目标为 <code>C* = argmin_{C∈𝒞} F_{L−1}(C)</code>，并列时用末波空槽 <code>Δ_comp</code> 破平。</p>
+        <div class="conclusion"><strong>关键结论：</strong>所有量都是整数 tile/wave 的闭式 ceiling 表达，无迭代求解，单次选择开销约 0.157 μs。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-comm">Communication</span>
+        <h2>Q5. 服务率 ρ 如何标定与按形状外推？</h2>
+        <p>ρ 是“一个通信波相对一个计算波的时间长度”。论文在 C=16 处做一次<b>一次性实测</b>：</p>
+        <ul>
+            <li>25 个累计计算波耗时 497.36 μs，通信连续服务 2 个 split 耗时 400.19 μs；</li>
+            <li><code>ρ_ref=(400.19/2)/(497.36/25)≈10.05</code>，参考形状 <code>K_ref=352</code>、<code>T_ref=128×128</code>、<code>D_ref=4</code>。</li>
+        </ul>
+        <p>运行时按形状外推：<code>ρ = ρ_ref · (K_ref/K) · (T_ref/T) · (D/D_ref)</code>。K 越大或 tile 越大 → 一个计算波 FLOPs 越多 → ρ 变小；rank 数 D 越多 → 环形通信成本相对上升 → ρ 变大。</p>
+        <div class="conclusion"><strong>关键结论：</strong>ρ 不是逐负载拟合，而是一次性标定 + 解析比例外推，这保证了低开销与 3.22% 平均 regret 同时成立。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q6. Algorithm 1 在 CPU 侧如何工作？复杂度是多少？</h2>
+        <p>算法在常规 kernel dispatch 与实际 launch 之间执行，不试跑、不计时、不查表：</p>
+        <ol>
+            <li>根据负载与 kernel 元数据计算 <code>W_comp、W_comm</code>；</li>
+            <li>对每个候选 <code>C=1..16</code> 计算 <code>R(C)、P(C)</code>；</li>
+            <li>递推所有 split 的就绪时间 <code>A_s</code> 与完成时间 <code>F_s</code>；</li>
+            <li>选 <code>T(C)=F_{L−1}</code> 最小的 C*，并列时用 <code>Δ_comp</code> 破平；</li>
+            <li>发射 <code>C*</code> 个通信 CTA，并限制计算容量为 <code>P(C*)</code>。</li>
+        </ol>
+        <p>复杂度为 <code>O(E + L·|𝒞|)</code>，实际运行约 0.157 μs。</p>
+        <div class="conclusion"><strong>关键结论：</strong>解析选择器在 dispatch 后、launch 前插入，完全在 CPU 完成，不改变 kernel 实现、路由或通信量。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q7. 实验加速比是多少？为什么不同层级收益差异大？</h2>
+        <p>在 4×A100、3 个 MoE 模型、3 种 TP/EP 配置上，对上游 COMET 的<b>几何平均加速</b>：</p>
+        <ul>
+            <li>GEMM2+GatherRS 算子：<b>2.528×</b>（最高 4.218×）；</li>
+            <li>完整 post-router MoE 层：<b>1.771×</b>（最高 2.584×）；</li>
+            <li>完整模型 prefill：<b>1.185×</b>（最高 1.439×）。</li>
+        </ul>
+        <p>层级越低收益越高，因为 AllGather+GEMM1、Activation、attention 等相邻部分未优化，收益被稀释。TP=2/EP=2 配置下收益最大，因为 EP 比例越高，固定划分与最优划分的错配越严重。</p>
+        <div class="conclusion"><strong>关键结论：</strong>2.5× 算子级收益是“纯资源划分”的上限，完整模型收益受未优化部分稀释；论文诚实地将结论限定在 prefill/长上下文场景。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q8. 与 Megatron core-TE / FastMoE 相比，本文方法在什么情况下领先？</h2>
+        <p>完整模型 prefill 几何平均：Granite 1.064× vs core-TE、1.151× vs FastMoE；Qwen 1.002× / 1.125×；DeepSeek-V2-Lite 1.026× / 1.176×。</p>
+        <ul>
+            <li><b>S≤2048 时 Megatron core-TE 在三个模型上都最快</b>；</li>
+            <li>交叉点随 tile wave 数增长出现，本文在 S≥4096（Granite/Qwen）或 S≥2048（DSV2-Lite）起领先；</li>
+            <li>所有 S≥4096 的 TP=2/EP=2 可行点中，本文均为四者最快。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>解析重分配只在“有足够的 token tile 形成多个计算/通信波”时才显现价值；短序列由 launch 与集合通信固定开销主导。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-ai">AI</span>
+        <h2>Q9. 论文代码开源状态与工程集成点在哪里？</h2>
+        <p>论文没有独立的 artifact 仓库，但明确声明将解析选择器<b>集成进公开的 FLUX 代码库</b>（github.com/bytedance/flux，BSD 式许可）。</p>
+        <ul>
+            <li>基座：FLUX/COMET A100 V2 commit <code>19831ca</code>；</li>
+            <li>GEMM2 与 GatherRS 核：<code>src/moe_gather_rs/</code>；</li>
+            <li>split 级就绪协议：<code>moe_utils.cu</code>、<code>epilogue_gather.hpp</code> 等；</li>
+            <li>管理器插入点：<code>src/ths_op/</code>，在 dispatch 选定 GEMM2 kernel 之后、launch 之前；</li>
+            <li>增量（Algorithm 1 + ρ 标定 + tie-break）未单独发布，但标定参数与算法完整，可依文复现。</li>
+        </ul>
+        <div class="conclusion"><strong>关键结论：</strong>基座代码完全开源、复现路径清晰；增量是百行级 CPU 逻辑，可嵌套在现有 dispatch-launch 路径中。</div>
+    </div>
+
+    <div class="faq-item">
+        <span class="faq-cat cat-other">Other</span>
+        <h2>Q10. 这项工作的主要局限与未来方向是什么？</h2>
+        <p>作者在论文与源码映射中明确指出了局限：</p>
+        <ul>
+            <li>规模止步于 4×A100 单节点与 1B~2.7B 级模型，大模型/多节点行为未验证；</li>
+            <li>完整模型收益（1.185×）明显低于算子级，AllGather+GEMM1/Activation/attention 未优化；</li>
+            <li>短序列不敌 Megatron core-TE，当前最适合 prefill/长上下文；</li>
+            <li>增量代码未开源，复现需自行实现约百行 CPU 选择器；</li>
+            <li><code>o_comp/o_comm</code> 驻留假设绑定 A100 kernel 族，换平台需重新推导全部常数。</li>
+        </ul>
+        <p>未来方向：在新 GPU 架构与多节点互连上验证；将方法扩展到 decode 阶段与其他细粒度依赖的计算-通信算子。</p>
+        <div class="conclusion"><strong>关键结论：</strong>结论是“平台/形状限定”的，不能无差别外推；核心方法论——解析式发射时资源管理——具有跨平台迁移潜力，但常数需重新标定。</div>
+    </div>
+
+    <div class="knowledge">
+        <h2>📚 今日知识点沉淀</h2>
+        <div class="k-item"><strong>1. 资源管理的三条路线：</strong>① 测量引导搜索（NanoFlow/Lagom）；② 流量特性解析推导（DeepEP V2）；③ 依赖-驻留-波量化三要素解析模型（本文）。共同趋势是把调优成本从“逐负载离线 profiling”压到“一次性标定 + 在线闭式计算”。</div>
+        <div class="k-item"><strong>2. 波量化意识：</strong>对 tile/wave 型系统，性能是台阶-平台函数。资源管理器应使用整数 ceiling 递推而非连续近似，否则会在 wave 边界处系统性误判。</div>
+        <div class="k-item"><strong>3. 计算-通信重叠的“免费收益”：</strong>本文加速不减少 FLOPs、token 或通信量，仅通过更优的 CTA 配比让同样工作更快。通信库设计应暴露“通信 CTA 数”这一控制面，供上层按形状调优。</div>
+        <div class="k-item"><strong>4. dispatch-launch 插桩模式：</strong>轻量解析管理器放在常规 dispatch 与实际 launch 之间，是“不改变 kernel、不改变图、只改发射参数”的典型落地位置，可推广到其他持久化 kernel + 生产者/消费者 CTA 分工的系统。</div>
+        <div class="k-item"><strong>5. 可证伪的工程假设：</strong><code>P(C)=o_comp·(G−R(C))</code> 依赖 kernel 占用率推导。换 GPU 架构、kernel 族或多节点互连时，<code>o_comp/o_comm</code>、服务率模型与合法 C 范围都必须重新推导，不能直接复用 A100 常数。</div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ Knowledge Base · <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> · 每日自动更新</p>
+    </div>
+</div>
+</body>
+</html>
