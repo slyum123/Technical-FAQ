@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-01</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+            padding: 40px 20px;
+            line-height: 1.75;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        .back-link { display: inline-block; margin-bottom: 24px; color: #58a6ff; text-decoration: none; font-size: 0.95em; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 1.9em; color: #58a6ff; margin-bottom: 6px; }
+        .subtitle { color: #8b949e; margin-bottom: 36px; font-size: 1.05em; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 26px;
+            margin-bottom: 18px;
+        }
+        .faq-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+        .faq-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: #238636; color: #fff; font-size: 0.85em; font-weight: 600;
+        }
+        .faq-title { font-size: 1.15em; font-weight: 600; color: #e6edf3; }
+        .faq-meta { display: flex; gap: 8px; margin-left: auto; }
+        .badge {
+            display: inline-block; font-size: 0.72em; padding: 3px 10px;
+            border-radius: 12px; font-weight: 500;
+        }
+        .badge-comm { background: rgba(88,166,255,0.15); color: #58a6ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .section-label { font-size: 0.82em; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+        .faq-section p { color: #c9d1d9; font-size: 0.97em; }
+        .faq-section ul { margin: 6px 0 0 20px; color: #c9d1d9; font-size: 0.97em; }
+        .faq-section li { margin: 4px 0; }
+        .conclusion {
+            background: rgba(35,134,54,0.08);
+            border-left: 3px solid #238636;
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 12px;
+        }
+        .conclusion .section-label { color: #3fb950; }
+        .conclusion p { color: #aff5b4; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            background: #21262d; padding: 1px 5px; border-radius: 4px;
+            font-size: 0.9em; color: #ffa657;
+        }
+        .knowledge {
+            margin-top: 40px;
+            padding-top: 28px;
+            border-top: 1px solid #30363d;
+        }
+        .knowledge h2 { font-size: 1.25em; color: #d2a8ff; margin-bottom: 18px; }
+        .knowledge-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+        }
+        .knowledge-item h4 { color: #79c0ff; font-size: 1em; margin-bottom: 6px; }
+        .knowledge-item p { color: #c9d1d9; font-size: 0.95em; }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back-link" href="../../index.html">← 返回 Technical-FAQ 索引</a>
+    <h1>每日技术 FAQ · 2026-10-01</h1>
+    <p class="subtitle">PREFACE：Scale-Up 链路的联合 FEC 与飞行控制（Predict Before Replay）· arXiv:2608.17503 · 中科院计算所 ICT, CAS</p>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">1</span>
+            <span class="faq-title">PREFACE 要解决的核心问题是什么？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <p>论文识别了 Scale-Up 高速链路（UALink/NVLink 类，数百 Gbps）上的 <strong>replay exposure（重传暴露）</strong>问题：突发错误损坏 flit <code>i</code> 后，接收端需经 FEC 解码 + CRC 检测才能发现，在反馈返回前，后续 flit 持续进入 replay buffer；标准重传要求从 <code>i</code> 开始重传整个保留后缀——一个错误被放大为多个 flit 的重传（"后缀放大"）。</p>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>残余错误的成本不仅取决于 FEC 强度，还取决于"链路可能已坏"期间有多少流量被允许进入暴露窗口。FEC 与流控（flight control）各自为政是吞吐崩溃的根因。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">2</span>
+            <span class="faq-title">突发错误的物理根源是什么？为什么 pre-FEC 观测有信息量？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <ul>
+                <li>物理根源：PAM4 信号 + DFE（判决反馈均衡器）+ RS-FEC（如 RS(544,514)）的 SerDes 链路中，DFE 误差传播、串扰、瞬态信号完整性丢失、均衡器不稳定导致<strong>时间相关的突发错误</strong>。</li>
+                <li>关键洞察：现代接收器在错误变成 replay 事件之前，就已经观测到<strong>被纠正的符号错误（corrected-symbol observations）</strong>。</li>
+                <li>突发意味着相邻 flit 的符号错误数会在反馈返回前持续升高，因此 pre-FEC 统计量对突发信道尤其有预测价值。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>pre-FEC 纠错符号数是免费的"错误前兆信号"——用它做预测可以在 FEC 解码失败之前就感知突发，为联合控制争取时间窗口。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">3</span>
+            <span class="faq-title">两状态贝叶斯滤波器如何估计突发状态？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <ul>
+                <li>信道建模为 Gilbert–Elliott 过程：每时刻处于 GOOD 或 BAD 状态，转移矩阵由参数 <code>p, r</code> 决定。</li>
+                <li>观测 <code>y_t</code> 为第 t 个 flit 的 pre-FEC 纠错符号数，假设泊松分布：<code>y_t|GOOD ~ Poisson(λ_G)</code>，<code>y_t|BAD ~ Poisson(λ_B)</code>，且 <code>λ_B ≫ λ_G</code>。</li>
+                <li>滤波器递推维护后验 <code>P(S_t = BAD | y_1..t)</code>，转移与似然从合成信道参数或实测 trace 标定。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>滤波器输出的突发后验概率 <code>π_t</code> 是唯一的状态估计器，同时驱动下游两个执行器（编码强度选择 + 在途上限控制），实现单一信号协调双决策。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">4</span>
+            <span class="faq-title">联合决策如何工作：FEC profile + flight cap？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <p>核心成本恒等式（Eq. 2）：</p>
+            <p><code>Cost = CodingOverhead(profile) + P(residual | profile) × E[suffix_size | state, W]</code></p>
+            <ul>
+                <li>对三档编码（LOW / LIGHT / STRONG）逐档枚举期望总成本，选最小者。</li>
+                <li>ExposureCost 是"残余错误发生 × 该时刻 replay buffer 中未确认 flit 数"的期望。</li>
+                <li>当选 STRONG 且后验超阈值时，引入绝对风险预算 <code>W_R = 8 flits</code>，限制风险窗口内允许在途的未确认 flit 数。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>成本函数显式耦合"花多少冗余"与"一旦失败损失多少后缀"：高后验时同时加强编码并收紧窗口；标准重传机制本身完全不变，仅作为正确性兜底。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">5</span>
+            <span class="faq-title">flight cap 为什么只在"STRONG + 高风险"时收紧？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <p>若任何时候都用小窗口，GOOD 状态下会造成 underfill（链路利用率损失）。因此 cap 的触发条件是联合的：</p>
+            <ul>
+                <li>编码档选到 STRONG（愿意为保护付冗余代价）；</li>
+                <li>且突发后验 <code>π_next &gt; τ_cap</code>（确实处于高风险窗口）。</li>
+                <li>此时暴露后缀被限制为 <code>min(current_flight, W_R)</code>；其余情况保持完整 replay window <code>W = 16</code>。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>风险预算是条件性的：正常时满窗口吞吐，风险时用 W_R=8 把"可能要重传的后缀"砍半。时序示例中标准链路暴露 8 flits（全窗口），PREFACE 暴露 ≤8 且 STRONG 降低残余概率。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">6</span>
+            <span class="faq-title">ns-3 中的 UALink 200G 1.0 语义模型有哪些关键设计？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <ul>
+                <li><strong>阈值抽象 RS 解码器</strong>：用"纠错上限 + 残余错误概率"的阈值模型替代真实 RS 解码器，保持语义正确的同时快速扫描参数空间。</li>
+                <li><strong>序列化反向控制</strong>：每个 payload flit 对应一个 640B 控制 flit（ACK/NACK/profile 切换请求），模拟 UALink 200G 1.0 反向控制时序。</li>
+                <li><strong>标准重传语义</strong>：replay buffer <code>W=16</code> flits；NACK 后从被指出 flit 起重传整个后缀；最多 20 次重试。</li>
+                <li><strong>三档 FEC profile</strong> + 11 个模块级确定性测试（交付顺序守恒、重传不变式、计数器恢复等）。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>模型定位为"协议语义正确、时序敏感细节显式可替换"，便于后续接入 UALink 2.0 或 SUE 等其他 Scale-Up 协议变体；截至撰写时作者未发布独立仓库，但 ns-3 + 公开 UALink 规范具备复现条件。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">7</span>
+            <span class="faq-title">链路级实验结果如何？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <p>在 Gilbert–Elliott 突发信道、6 维参数（负载/突发强度/持续性/profile 切换成本/反馈延迟/buffer 大小）288 个配置点系统扫描：</p>
+            <ul>
+                <li>Goodput：<strong>330.13 Gb/s</strong>，比固定强 FEC（298.74）提升 <strong>+10.52%</strong>，比解码后自适应（285.62）提升 +15.58%。</li>
+                <li>P99 延迟：较固定强 FEC 降低 <strong>−50.75%</strong>；解码后自适应反而略升。</li>
+                <li>Replay flit 数：减少 <strong>−47.52%</strong>（自适应基线 +90.6%）。</li>
+                <li>FEC 字节开销：比固定强 FEC 省一半（−50.6%），比自适应多 128.4%（用冗余换尾延迟与重传量）。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>PREFACE 以适中的编码开销同时拿到最高 goodput、最低尾延迟和最少重传量——联合控制优于"只加码"或"只反应"。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">8</span>
+            <span class="faq-title">链路级收益能传导到集合通信吗？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <p>论文将链路模型接入 8~32 节点的同步 ring AllReduce，验证独立链路收益在"最慢链路决定步长"的集体调度下是否存活：</p>
+            <ul>
+                <li>AllReduce 完成时间提升 <strong>13.1%~27.0%</strong>，且随节点数增加收益扩大。</li>
+                <li>机制：ring 中每条链路都可能成为瓶颈步；PREFACE 降低单链路 P99 延迟与重传次数，压缩了最慢链路的尾部。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>链路级尾延迟优化在同步集合通信中被放大而非稀释——对 Scale-Up 域内训练这类 AllReduce 密集负载，链路可靠性机制直接影响端到端迭代时间。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">9</span>
+            <span class="faq-title">与相关工作的定位差异是什么？</span>
+            <span class="faq-meta"><span class="badge badge-comm">Communication</span></span>
+        </div>
+        <div class="faq-section">
+            <ul>
+                <li><strong>链路本地重传</strong>（RIFL 等）：不改变重传机制，在其激活前做控制。</li>
+                <li><strong>自适应 FEC</strong>（无线/流媒体）：增加了 Scale-Up 特有的"pre-FEC 后验 + replay 暴露窗口"耦合。</li>
+                <li><strong>编码+重传联合设计</strong>（Maelstrom、Ricochet、WiLDNet）：那些决定"如何恢复/在哪里放冗余"，PREFACE 决定"标准重传触发前多少流量被暴露"。</li>
+                <li><strong>Scale-Up 可靠性规范</strong>（UALink、RXL）：规范定义正确性路径，PREFACE 优化进入该路径的流量和时机。</li>
+                <li>论文还论证了四种替代设计的不足：静态小窗口、只编码不限 flight、选择性重传、学习型预测器。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>PREFACE 的差异化在于"预测先于重放（Predict Before Replay）"——它不是又一种恢复机制，而是压缩恢复机制的触发概率与触发成本。</p>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">10</span>
+            <span class="faq-title">局限与落地启示有哪些？</span>
+            <span class="faq-meta"><span class="badge badge-other">Other</span></span>
+        </div>
+        <div class="faq-section">
+            <ul>
+                <li><strong>局限</strong>：基于 ns-3 仿真 + 合成 Gilbert–Elliott 信道，未经实测 trace 与真实 SerDes 硬件验证；滤波器参数（转移矩阵、泊松 λ）需按链路标定；作者未开源独立仓库。</li>
+                <li><strong>落地路径</strong>：机制不要求改动重传状态机，主要新增接收端滤波器 + 发送端 profile/cap 执行器，可作为 UALink/SUE 链路层增强候选。</li>
+                <li><strong>适用判断</strong>：错误呈短时相关突发（而非稀疏独立）时收益最大；若链路误码极低，收益趋近于零（退化为无害开销）。</li>
+            </ul>
+        </div>
+        <div class="conclusion">
+            <div class="section-label">关键结论</div>
+            <p>"pre-FEC 观测 + 条件性 flight cap"是低成本、可增量部署的链路可靠性增强方向；下一步价值点在实测 trace 标定与 UALink 2.0 语义对接。</p>
+        </div>
+    </div>
+
+    <div class="knowledge">
+        <h2>技术知识点沉淀</h2>
+        <div class="knowledge-item">
+            <h4>Scale-Up 链路可靠性主题簇</h4>
+            <p>本篇与 2026-09-21 SemaCredit（Scale-Up Fabric 多资源流控，arXiv:2608.17523）、2026-09-22 Dragonfly-Ultra（Scale-Out 网络架构）构成"Scale-Up/Scale-Out 可靠性与流控"系列；值得注意的是 SemaCredit 与 PREFACE 同出中科院计算所，且 arXiv 编号相邻（2608.17523 / 2608.17503）。</p>
+        </div>
+        <div class="knowledge-item">
+            <h4>Gilbert–Elliott 突发信道模型</h4>
+            <p>两状态马尔可夫信道（GOOD/BAD），是建模时间相关突发错误的标准工具；配合泊松观测模型即可构成完整的贝叶斯滤波问题。适用于链路层可靠性、无线与高速 SerDes 场景的仿真与预测器设计。</p>
+        </div>
+        <div class="knowledge-item">
+            <h4>UALink 200G 1.0 重传语义要点</h4>
+            <p>640B flit、序列号 + replay buffer（论文取 W=16）、CRC 检测 + NACK 后缀重传、最多 20 次重试；反向控制按 payload flit 序列化传输。200 Gbps 线速下单个 flit 约 25.6 ns，往返反馈（含 FEC 解码）约 8~16 个 flit 时间——这正是暴露窗口的量级来源。</p>
+        </div>
+        <div class="knowledge-item">
+            <h4>FEC 档位与成本权衡的通用模式</h4>
+            <p>"编码开销 + 残余概率 × 暴露成本"这一期望成本分解是通用决策框架：凡存在"预防成本 + 失败放大损失"结构的系统（重传、缓存、冗余副本）都可套用；PREFACE 的贡献在于指出暴露成本可被主动控制（限流）而不仅是被动承受。</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ · 每日技术问答归档 · 生成于 2026-10-01</p>
+    </div>
+</div>
+</body>
+</html>
