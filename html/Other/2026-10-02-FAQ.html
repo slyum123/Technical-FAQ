@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-02</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 {
+            font-size: 1.9em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 16px;
+        }
+        .knowledge-box h3 {
+            font-size: 1.05em;
+            color: #e6edf3;
+            margin: 18px 0 8px;
+        }
+        .knowledge-box ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.2);
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #e6edf3;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #30363d;
+            text-align: center;
+            color: #484f58;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <a class="back" href="../../index.html">← 返回 Technical-FAQ 索引</a>
+    <h1>每日技术 FAQ · 2026-10-02</h1>
+    <p class="subtitle">REACT 在线集合通信模式调优 + RDMA 验收与 NCCL 映射</p>
+    <p class="date">生成时间：2026-10-02 · 领域：Communication / AI 集群网络</p>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">1</span>
+            <div class="faq-title">REACT 要解决的核心问题是什么？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT（arXiv:2609.04417，UIUC / Meta / IBM Research）</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>在共享 AI 集群（多租户云或学术共享集群）中，单个训练作业的集合通信流会被外部作业或后台流量阻塞。现有方案要么依赖交换机/路由层支持，要么需要全局调度权限，无法在租户侧单边部署。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>传统拥塞控制分三类：网络层自适应路由、全局调度协调、传输层降速，都需要基础设施或全局控制权。</li>
+                <li>REACT 的观察：AllReduce/AllGather 等集合操作存在多种语义等价的实现模式。</li>
+                <li>当某条入链路拥塞时，把聚合/收发节点换到不拥塞的位置，即可在不改路由、不降速的前提下绕过瓶颈。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>REACT 在 CCL 层通过改写集合模式的源/目的节点绕开拥塞，保留集合语义，无需网络层或调度层支持，适合共享集群单边部署。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">2</span>
+            <div class="faq-title">Collective Operation 与 Collective Pattern 有何区别？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §2</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>NCCL、Gloo 等集合通信库中常把"集合操作"与"集合模式"混为一谈，导致难以理解 REACT 的优化空间。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li><strong>Collective Operation</strong>：高层语义，如 AllReduce、AllGather、ReduceScatter，只规定输入输出语义。</li>
+                <li><strong>Collective Pattern</strong>：CCL 内部实现该操作的具体数据交换序列，包括哪些 rank 在哪些时步与谁通信、消息大小与聚合顺序。</li>
+                <li>主流 CCL 在作业启动时根据节点数、消息大小、传输协议静态选择模式并复用，无法响应动态变化的网络状态。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>REACT 在不变的 Collective Operation 语义之上，对 Collective Pattern 做运行时在线微调，从而在不改应用代码的前提下适应网络变化。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">3</span>
+            <div class="faq-title">Time-Expanded Network（TEN）在 REACT 中起什么作用？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §5.1</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>REACT 需要对集合模式做节点交换并保证语义正确，需要一个形式化模型来描述"哪些 rank 在哪些时步通信"。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>TEN 把模式建模为有向图 <code>G = {⟨V_c, E_c⟩ | c ∈ C}</code>，每个顶点 <code>(t, r)</code> 表示 rank r 在逻辑时步 t 的状态。</li>
+                <li>边 <code>((t,r) → (t+1, r'))</code> 表示两个连续时步之间的数据流。</li>
+                <li>C 表示消息分成的 chunk 子图集合，例如 NCCL 双树 AllReduce 有两个 chunk 子图。</li>
+                <li>TEN 让 REACT 独立于底层拓扑，仅从 rank-时步通信关系层面做变换。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>TEN 将动态网络问题抽象为"时序图上的节点置换问题"，使 REACT 可以在不依赖拓扑信息的情况下安全改写集合模式。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">4</span>
+            <div class="faq-title">REACT 如何仅通过 FCT 检测拥塞？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §5.2</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>REACT 无法访问链路利用率、拓扑或其他租户信息，只能看到本作业各流的完成时间。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li><strong>稳态拥塞 Steady</strong>：流 f 的 p90 吞吐量低于同度数其他流均值 20% 以上，即 <code>p90(b_f) < mean(b_F(k_f)) · (1 − δ_1)</code>，δ_1 = 0.2。</li>
+                <li><strong>间歇拥塞 Erratic</strong>：流吞吐量的归一化标准差超过阈值，即 <code>normalizedSTD(b_f) > δ_2</code>，δ_2 = 0.15。</li>
+                <li>检测仅使用 CCL 内部可获取的 FCT 向量，无需链路状态或拓扑信息。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>REACT 用 FCT 的统计分布（稳态偏低、间歇高波动）识别拥塞流，把"网络层不可见"约束转化为"端侧可观测"约束。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">5</span>
+            <div class="faq-title">REACT 的三种安全变换各有什么特点？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §5.3</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>REACT 需要在保持集合语义的前提下对 TEN 做节点交换，不同变换粒度对应不同适用场景。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li><strong>全局置换 Global Permutation</strong>：交换两个 rank 在所有 chunk 和时步中的全部出现；适用于 All 集合，但对 Server-ToR 稳态拥塞帮助有限（整体度数不变）。</li>
+                <li><strong>块内置换 Chunk-local Permutation</strong>：仅在受影响的单个 chunk 子图内交换两个 rank；更精细，适合 Tree AllReduce。</li>
+                <li><strong>位置等价交换 Position-equivalent</strong>：仅交换 chunk 子图中语义等价的位置；适合 Tree / Recursive Doubling，可针对关键路径上特定时步精确替换。</li>
+                <li>三种变换按粒度优先使用 ③→②→①，并做度数剪枝：交换后若 rank 度数高于原位置则剔除。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>三种变换从细到粗覆盖不同集合模式，配合度数剪枝保证语义正确并限制搜索空间。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">6</span>
+            <div class="faq-title">REACT 运行时闭环的关键阈值与开销如何控制？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §4 / §5.4</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>在线调优需要在收敛速度、开销和避免局部最优之间取得平衡。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>每批 <code>B = 6</code> 个 epoch 收集 FCT 并做一次决策；历史 FCT 保留长度 <code>H = 60</code> epoch。</li>
+                <li><strong>ε 检查</strong>：候选模式相对旧模式关键路径耗时提升 ≥ 5% 才接受。</li>
+                <li><strong>τ_r 检查</strong>：新模式跑完后若实际通信时间未比旧模式好 5%，则回退。</li>
+                <li>设置 <code>E_max = 5</code> 轮探索周期，每轮 B 个 epoch；连续 5 轮无探索则强制触发一次探索，避免局部最优。</li>
+                <li>控制消息走独立管理网口 <code>eth1</code>，避免污染 RDMA 数据路径 <code>hsn0</code>。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>REACT 通过 ε/τ_r 双阈值、历史 FCT 估计和强制探索机制，在数百毫秒到数秒内完成收敛，并将控制面与数据面物理隔离。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">7</span>
+            <div class="faq-title">REACT 的实验收益与局限是什么？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：论文解读 REACT §7 / §8</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>评估 REACT 时既要看到加速收益，也要明确它不能解决哪些问题。</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>真实 4/8 节点 A100 + Cray Slingshot 200 Gbps 集群：拥塞场景算法带宽提升 13%–38%，随拥塞度增加而提升。</li>
+                <li>ns-3 仿真中最高提升 75%，覆盖 Tree/Ring AllReduce 与 Recursive Doubling AllGather。</li>
+                <li>无拥塞时性能下降约 4%，来自探索和 PyTorch P2P shim 开销，处于工程可接受范围。</li>
+                <li>局限：仅适用于少量节点/链路拥塞；大部分链路都拥塞时无优化空间；无法处理微秒级单流突发拥塞；多作业同时启用可能出现振荡。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>REACT 在共享集群持久/慢变拥塞场景下收益显著，但与 NCCL 原生集成、多作业协调仍是生产化需要补的课。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">8</span>
+            <div class="faq-title">RDMA 验收为什么要坚持"分层切断干扰"原则？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：交付件《RDMA 验收测试用例清单与 NCCL 映射》</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>在 AI 集群中，NCCL 训练性能差时，如何区分是 RDMA 链路、Fabric 配置、NCCL 参数还是训练框架本身的问题？</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>验收分五层：① 裸 RDMA 基线（perftest 单机打流）→ ② 跨主机 RDMA 基线 → ③ Fabric 无损/拥塞面（PFC/ECN/DCQCN）→ ④ NCCL 端到端（nccl-test）→ ⑤ 训练框架级。</li>
+                <li>每一步只引入一个新变量，出现劣化时才能归因到具体层。</li>
+                <li>跳过某一层会导致"NCCL 慢"无法定位到根因，例如把 PCIe 瓶颈误判为网络带宽不足。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>分层验收是 RDMA 问题定位的底线：裸链路基线 → Fabric → NCCL → 训练，每一步必须单独验证，否则无法做有效归因。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">9</span>
+            <div class="faq-title">RDMA 指标如何映射到 NCCL 集合通信性能？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：交付件《RDMA 验收测试用例清单与 NCCL 映射》§02</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>perftest 测出的带宽、时延、消息率、GDR 能力等，如何对应到 nccl-test 的 algbw / busbw / latency？</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>单连接带宽 → ring/tree 每通道吞吐，决定 algbw / busbw 上限；ring 每卡流量 = <code>2(N−1)/N × S</code>。</li>
+                <li>单消息时延 → 集合通信 step time；ring 时延主导场景 <code>T_lat ≈ 2(N−1) × lat</code>，N=1024 时单跳 +1 μs ≈ 全集群 +2 ms。</li>
+                <li>消息率 Mpps → 小 size 集合通信的 algbw 天花板；当 <code>size/B < 1/MTT</code> 时，<code>algbw ≈ Mpps × size</code>。</li>
+                <li>GDR 能力 → 决定 NCCL 实际落点；非 GDR 路径下需要约 <code>2 × 网络带宽</code> 的 PCIe 余量。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>RDMA 指标不是孤立数字，必须换算成 NCCL 的理论边界：大消息看 busbw ≤ 2(N−1)/N × RDMA 基线，小消息看 2(N−1)×lat，小消息还要看 Mpps 上限。
+            </div>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-header">
+            <span class="faq-num">10</span>
+            <div class="faq-title">为什么 GDR 路径在 ≥400G 网络中几乎是必选项？<span class="badge badge-comm">Communication</span></div>
+        </div>
+        <div class="faq-meta">来源：交付件《RDMA 验收测试用例清单与 NCCL 映射》§00 / §D</div>
+        <div class="faq-section">
+            <div class="faq-section-title">问题描述</div>
+            <p>非 GDR 路径下，为什么即使 RDMA 测速达标，NCCL 训练仍可能跑不满？</p>
+        </div>
+        <div class="faq-section">
+            <div class="faq-section-title">回答要点</div>
+            <ul>
+                <li>非 GDR 路径：数据走 <code>设备内存 → 主机内存 → 网卡</code> 和 <code>网卡 → 主机内存 → 设备内存</code>，共两段 PCIe。</li>
+                <li>单向总需求约 <code>2 × 网络带宽</code>：400 GbE ≈ 50 GB/s → 非 GDR 需 100 GB/s PCIe；Gen4 x16 实际约 28–32 GB/s，会先于网络打满。</li>
+                <li>800 GbE = 100 GB/s → 非 GDR 需 ~200 GB/s，只有 Gen5 x16（≈ 250 GB/s）才勉强够。</li>
+                <li>GDR 让 NIC 直接 DMA 读写设备内存，省掉主机内存中转和一段 PCIe，是小包时延降 15–30%、带宽提升 10–30% 的关键。</li>
+            </ul>
+        </div>
+        <div class="faq-section">
+            <div class="key-conclusion">
+                <strong>关键结论：</strong>≥ 400G 端口必须启用 GDR 或 NPU-DPU 同 switch 直连高带宽总线，否则 RDMA 验收达标也落不到 NCCL 训练吞吐上。
+            </div>
+        </div>
+    </div>
+
+    <div class="knowledge-box">
+        <h2>今日技术知识点沉淀</h2>
+
+        <h3>1. REACT 与网络层/调度层优化的关系</h3>
+        <ul>
+            <li>路由优化解决"流走哪条路径"，REACT 解决"谁来发/收这条流"，两者互补。</li>
+            <li>REACT 特别擅长规避 unavoidable link 拥塞（如服务器-ToR 被外部流量持续占用），而自适应路由对此无能为力。</li>
+        </ul>
+
+        <h3>2. RDMA → NCCL 反向推导四步法</h3>
+        <ul>
+            <li>① 看 <code>NCCL_DEBUG=INFO</code> 实际选 ring/tree、用几条 rail；</li>
+            <li>② 大消息慢：用 <code>busbw_理论 = 2(N−1)/N × RDMA 基线</code> 比对实测 busbw；</li>
+            <li>③ 小消息慢：用 <code>2(N−1) × lat_RDMA</code> 估算，超出部分多为 CPU 轮询或 GPU copy 未并行；</li>
+            <li>④ 带宽"正常但时间飘"：直接查 PFC/ECN 与抖动，而不是继续加 QP。</li>
+        </ul>
+
+        <h3>3. RDMA 验收的四大典型坑</h3>
+        <ul>
+            <li>只测 <code>ib_write_bw</code> 大包不看 <code>ib_write_lat</code> → 小集合通信全线失守；</li>
+            <li>只测 host bounce 不测 GDR → 无法证明 NCCL 拿到设备内存直访收益；</li>
+            <li>用峰值而不是稳定态中位数 + p99 → 掩盖抖动，训练先炸；</li>
+            <li>把"switch 无丢包"当成"无损" → PFC/ECN 未配好时统计上丢 0，但吞吐已在震荡。</li>
+        </ul>
+
+        <h3>4. REACT 生产化集成锚点</h3>
+        <ul>
+            <li>最自然入口：扩展 PyTorch <code>ProcessGroupNCCL</code> 或 NCCL <code>src/graph/search.cc</code> 的运行时重搜索接口。</li>
+            <li>FCT 采集：在 NCCL <code>src/transport.cc</code> 或 ext-net profiler 钩子插入测量。</li>
+            <li>新模式分发：复用 NCCL bootstrap（<code>src/bootstrap.cc</code>）或 Gloo 控制面。</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p>Technical-FAQ · <a href="https://github.com/slyum123/Technical-FAQ">GitHub 仓库</a> · 每日自动更新</p>
+    </div>
+</div>
+</body>
+</html>
