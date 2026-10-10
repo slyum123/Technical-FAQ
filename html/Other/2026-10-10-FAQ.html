@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-10</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 {
+            font-size: 1.9em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 16px;
+        }
+        .knowledge-box h3 {
+            font-size: 1.05em;
+            color: #e6edf3;
+            margin: 18px 0 8px;
+        }
+        .knowledge-box ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+            color: #79c0ff;
+        }
+        pre {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 14px 16px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        pre code { background: none; padding: 0; }
+        .footer { text-align: center; color: #8b949e; font-size: 0.85em; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">&larr; 返回索引</a>
+        <h1>每日技术 FAQ · 2026-10-10</h1>
+        <p class="subtitle">今日主题：共享 KV Cache 的来源盲复用与 KV Provenance Contract（arXiv:2609.38706）</p>
+        <p class="date">2026-10-10 · 10 条问答 · AI ×8 / Computer ×1 / Other ×1 · 附 LMCache 源码兼容性知识点沉淀</p>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">什么是「来源盲复用」（provenance-blind reuse）？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">来源：Preserving Provenance in Shared KV Caches for LLM Serving（arXiv:2609.38706，Griffith/NUS/Macquarie，2026-09-30）</div>
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <ul>
+                    <li>生产级 LLM serving 采用两层 KV 复用：引擎本地 prefix cache（vLLM 按块哈希、SGLang 按基数树）+ 集群共享 KV 层（LMCache / Mooncake / filesystem connector / SGLang HiCache）。</li>
+                    <li>本地层按 adapter、权重配置、共享域区分请求；共享层的 key 往往只含 token 内容和粗粒度模型元数据。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>根因</strong>：引擎与 connector 在「等价性」判断上使用不同标准——引擎区分任何会导致不同 KV 状态的请求上下文，connector 只看 token。上下文信息在 engine–connector 边界被抹除。</li>
+                    <li>这是<strong>结构性缺陷</strong>而非个别 bug：对 LMCache、filesystem connector、Mooncake 三个独立实现的源码审计表明，三者都以相同方式派生 key（内容寻址的必然结果）。</li>
+                    <li>运行时实验横跨 vLLM + SGLang 两个引擎、两个 SGLang 版本、7 个家族 12 个模型（0.5B–32B）、160+ 配置，均复现该问题。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：共享层从不接收判断「缓存状态是否可安全复用」所需的完整 provenance；每一层单独看都正确，组合起来却可能不安全。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">跨 adapter 冲突是如何发生的？为什么本地隔离挡不住？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <ul>
+                    <li>两个 worker 服务同一基座模型但挂载不同 LoRA adapter（A、B），共享一个外部 KV 层。Worker 1 在 adapter A 下预填充并按 token 派生的 key 存储；同一 prompt 到达 Worker 2 时在 adapter B 下命中 A 的 KV。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>结果是用 B 的权重在「A 的前缀表示」上解码，输出静默依赖了请求未选择的 adapter——<strong>不报错、不需要攻击者</strong>。</li>
+                    <li>本地缓存本可区分两个 adapter（本地 key 为 (x, A) vs (x, B)），但共享 key 是 H(x, model ID)，adapter 身份丢失。</li>
+                    <li>冲突不在存储端而在 connector 接口：任何接受该 key 的存储都会继承歧义。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：key 等式既不意味着计算等价，也不意味着允许复用；失败完全来自「本地隔离 + 省略 adapter 身份的共享 key」的组合。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">五个 provenance 维度如何分类？各自的失效模式有何不同？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>计算来源（Computational provenance）</strong>——决定缓存状态对请求者是否有效，省略会导致服务/加载不兼容状态：
+                        <ul>
+                            <li>Adapter 身份（请求级）：LoRA 改变 key/value 投影，同前缀可产生不同 KV。</li>
+                            <li>权重精度（worker 级）：fp8 / 非量化副本产生数值不同的投影。</li>
+                            <li>权重版本（worker 级）：滚动更新期间新旧 checkpoint 共存于同一名字下。</li>
+                            <li>KV 表示（worker 级）：KV pool 的元素类型（bfloat16/float16/fp8）决定状态如何存取。</li>
+                        </ul>
+                    </li>
+                    <li><strong>共享来源（Sharing provenance）</strong>——决定是否<strong>允许</strong>共享：租户 salt（请求级）。salt 不改变计算出的 KV 状态，只改变能否被他人观测/复用，用于防御前缀缓存时序侧信道（CVE-2025-46570）。</li>
+                    <li>前两个是请求级、后三个是 worker 级生命周期，实现上分别对应 per-request 与 per-worker 两级摘要。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：五维冲突曾以孤立工程 bug 的形式出现，本质是 engine–connector 边界缺失同一个接口契约的五个实例。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">跨 adapter 复用的实际危害有多大？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>独立初始化的随机 adapter：6/6 prompt 全部碰撞并发散。</li>
+                    <li>微调的英/法 adapter 对：30 个 prompt 全部碰撞，25/30（83%）输出偏离请求者自己的结果。</li>
+                    <li>情感分类任务：相反策略 adapter 下准确率从 94% 跌至 64%（32 次有害翻转 vs 2 次反向，p&lt;0.001）；IMDB 200 条从 0.945 跌至 0.715，28.5% 的答案被改标为 seeder 的策略（p&lt;10⁻⁹）。</li>
+                    <li>合并权重模型效果相当（0.94 → 0.60）；基座与指令微调兄弟 checkpoint 也会互相碰撞（18/20），但部分任务分数不变。</li>
+                    <li>危害取决于缓存前缀是否包含判别性内容，而非文档长度。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：跨 adapter 复用可以在无攻击者的条件下把准确率从 0.94 打到 0.64，甚至直接返回另一租户的答案。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">权重精度（weight precision）冲突为什么是「意外的例外」？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>提取任务：60/60 请求全部复用外来状态、大多数输出文本改变，但<strong>每个答案都与干净参考一致</strong>。</li>
+                    <li>推理任务：平均约 357/440 token 来自 seeder 状态，但无一格达到统计显著（p≥0.125）；情感任务 0.935 vs 0.940（0.5B）、0.970 vs 0.970（7B）。</li>
+                    <li>即：精度冲突改变输出文本，但在测试负载中无统计显著的准确率损失。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：危害程度分三个梯度——精度：改文本不降准确率；adapter/版本：任务与模型相关的显著伤害；KV 表示：答案整体被替换。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">KV 表示（dtype/element type）冲突为何最致命？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>改变 KV pool 元素类型（如 bfloat16 ↔ fp8）后，情感任务从 0.945–0.975 跌至约 0.47，299 对翻转中 298 次有害；推理任务在所有尺寸与家族下准确率归零。</li>
+                    <li>失效模式依赖存储策略：waiting 默认策略下外来页加载永远完不成（<strong>活性失败</strong>）；permissive 策略下引擎拒绝该条目、表现与隔离参考一致。</li>
+                    <li>自库对照（own-store control）加载 19,200 token 保持健康，证明 permissive 策略安全仅因「拒绝加载外来条目」。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：KV 表示冲突直接替换/摧毁答案，是最严重的一维；存储策略决定了表现为「挂起」还是「安全拒绝」。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">省略 tenant salt 如何把共享层变成侧信道？<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>单实例内禁用共享层：不同 salt（或不带 salt）的请求 miss 已 salt 受害者的块，引擎本地隔离有效；启用共享层后状态跨实例被服务，7 个家族（0.5B–14B）全部复现绕过。</li>
+                    <li>端到端攻击：攻击者对 N 个候选 prompt 计时，≤10 个候选时完美识别受害者 prompt，N=100 时 93% 准确率——<strong>正是 salt 被引入所要防御的场景</strong>。</li>
+                    <li>饱和 store 负载可关闭该信道，更快传输则拉大差距。</li>
+                    <li>版本级差异：SGLang 0.5.20 在两层都隔离 salted 请求，0.5.8.post1 则复用第一域的 1,024 token——salt 行为是版本属性。</li>
+                    <li>审计的所有 vLLM connector 均不绑定 salt（salt 为 opt-in 且默认关闭）；某商业 serverless 的 fleet 级共享缓存文档中客户账号之间完全无隔离。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：同一个省略，换到保密性视角就是跨实例侧信道，绕过引擎已部署的隔离控制；只修一维（如某版本只修 salt）其余维仍然洞开。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">什么是 KV Provenance Contract？如何形式化？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>在维度注册表 D 上参数化的接口契约。维度 well-formed 条件：身份函数 idᵢ 单射且<strong>跨 worker 稳定</strong>（同一取值在任何 worker 上得到同一身份）。</li>
+                    <li><strong>计算不变量</strong>：产生不同 KV 状态的配置必须派生不同 key（KV(x,c₁)≠KV(x,c₂) ⟹ Key(x,c₁)≠Key(x,c₂)）。</li>
+                    <li><strong>权限不变量</strong>：不允许共享的配置必须派生不同 key。</li>
+                    <li><strong>可扩展性</strong>是设计的结构性质：任何具有稳定身份的新维度，只需在注册表加一项、在既有序列化中填充字段，无需改动 connector 专属 key 逻辑。</li>
+                    <li>两个天真做法为何行不通：① 进程本地句柄不是 provenance 身份（两个 worker 可能给同一 adapter 分配不同整数句柄）；② key 派生发生在元数据不对称的执行点（vLLM 的 scheduler 知道请求的 adapter/salt，worker 未必），只在单点注入会让 lookup 与 store 路径派生不同 key、静默破坏合法共享。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：契约规定「已声明维度必须满足什么」，而非「存在哪些维度」；绑定的是跨 worker 稳定的身份，而不是进程本地值。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">实现上如何绑定 provenance？差分遗漏测试是什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>规范编码</strong>：Key(x,c) = f(x, H(enc(id₁,…,idₙ)))，enc 为单射长度前缀编码，f 为 connector 原生 key 函数；新维度只需追加编码字段。</li>
+                    <li><strong>两级摘要</strong>：worker 级（精度/版本/KV 表示，生命周期固定）在启动时摘要一次并折入模型身份；请求级（adapter/salt）随请求记录传播。adapter 身份用<strong>内容身份</strong>而非句柄——vLLM 用 adapter 名，SGLang 对 adapter 内容（张量名/dtype/shape/字节）做指纹，同字节不同路径共享、同路径换字节不共享。</li>
+                    <li><strong>跨站点一致</strong>：lookup（scheduler）与 store（worker）两个站点必须从同一描述符值派生 key；无 adapter/salt 的请求 key 与未打补丁时完全一致（绑定惰性生效）。</li>
+                    <li>各 connector 集成：LMCache 把 worker 摘要放进模型身份、请求摘要放 namespaced tag（150 字节预算内用 128-bit 摘要 + base64，key 稳定 89 字符）；vLLM filesystem/Mooncake 把 worker 材料折入 md5/blake2b 输入；SGLang HiCache 只替换唯一 namespace seed 即覆盖 lookup/write/promotion/restart 四条链。</li>
+                    <li><strong>差分遗漏测试</strong>：固定 token 与其余维度、只变化 dᵢ，若 KV 状态改变而 key 不变即报遗漏（直接证伪计算不变量）。离线 CPU float32 逐层对比下，0.5B 模型上未打补丁的 key 检出全部 5 个维度遗漏；故意留出的 rotary base 也可注册后经既有编码器路由、零新增 key 派生代码。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：绑定是「每维度可测试」的——差分测试把「哪个维度没绑」从猜测变成机械可判定的证伪过程。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">provenance 绑定的实测开销与部署收益如何？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>正确性</strong>：vLLM（LMCache + filesystem）与 SGLang 0.5.20（HiCache）三条路径上，全部五维跨配置复用降为零外来 token，同源共享全保留；SGLang 26 个实验臂 25 个通过，唯一失败是未绑定时的运行时 adapter 句柄不一致（绑定后反而恢复被引擎丢掉的合法共享）。</li>
+                    <li><strong>消融</strong>：adapter 与 salt 绑定独立贡献——只开 adapter 零掉跨 adapter 泄漏、留下 672 跨 salt token；只开 salt 则留下 640；两者全开全零且保留 656 token 同源复用。</li>
+                    <li><strong>时延</strong>：vLLM 命中路径 TTFT 中位数变化 −0.30 ms；SGLang 汇总均值 +0.34 ms，均小于 3.0 ms 的重复间波动；请求级摘要仅 12.7 μs，对 store 往返（数十 ms）可忽略。</li>
+                    <li><strong>部署验证</strong>：滚动更新中绑定在每个新旧流量比例下都消除陈旧服务（1/4 新流量时 stale-fetch 0.24→0、准确率 0.87→0.92）；冷启动 worker 是最大受益者——未绑定时 100/100 请求吃到陈旧状态、准确率 0.73，绑定后恢复 0.92。</li>
+                    <li><strong>成本</strong>：存储随 provenance 多样性线性增长（12 前缀从 214 MB 到 4 类 856 MB；fp8 类只增 24.75 MiB，足迹反映元素宽度）；固定预算下驱逐压力增大。40 MB adapter 指纹冷 1.06 s / 暖 0.060 s，一次性成本摊销。</li>
+                    <li><strong>发生率上下界</strong>：seed-then-replay 构造下 83.5% 为上界；每类恒热 worker 的交错流 1.5% 为下界；四 worker 集群负载均衡路由 10%、sticky 路由几乎为 0；前缀多样性上升时率也随之上升（8→128 前缀：3%→16%）。<strong>缓存层越发挥其价值，跨源复用率越接近上界</strong>。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><strong>关键结论</strong>：命中路径无可分辨的时延代价，代价是随 provenance 多样性线性增长的存储；收益在滚动更新与冷启动场景最大。</div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>知识点沉淀 · LMCache TokenDatabase 与 vLLM 兼容层</h2>
+            <p style="color:#8b949e; margin-bottom:10px;">今日源码研读（LMCache <code>token_database.py</code>）中值得沉淀的实现知识：</p>
+
+            <h3>1. vLLM 版本兼容的三个关键 PR</h3>
+            <ul>
+                <li><code>PR#20511</code>：引入 <code>kv_cache_utils.init_none_hash()</code>，NONE_HASH 不再固定为 0，而由 hash 函数初始化（可能是 bytes）。</li>
+                <li><code>PR#23673</code>：<code>sha256_cbor_64bit</code> 重命名为 <code>sha256_cbor</code>（返回 32 字节 digest）。</li>
+                <li><code>PR#27151</code>：hash 函数迁移到 <code>vllm.utils.hashing</code> 模块（旧版本在 <code>vllm.utils</code>）。</li>
+                <li>兼容层做法：多路径尝试导入 → 处理函数名重命名的候选列表 → 最终回退 builtin hash 并告警。</li>
+            </ul>
+
+            <h3>2. PYTHONHASHSEED 与分布式一致性</h3>
+            <ul>
+                <li>使用 builtin hash 时，跨进程哈希结果依赖 PYTHONHASHSEED；集中式缓存共享（remote_url 非空）必须 <code>export PYTHONHASHSEED=0</code>。</li>
+                <li>P/D 分离场景下未设置 PYTHONHASHSEED 会直接导致 <strong>KV cache 传输错误</strong>（error 级日志）。</li>
+            </ul>
+
+            <h3>3. 前缀哈希链与 CacheEngineKey</h3>
+            <ul>
+                <li>chunk 级前缀哈希链：<code>prefix_hash = H(chunk, prefix_hash)</code> 链式递推，起点为 NONE_HASH；哈希输入经规范化（int/bytes 归一、tuple 固定结构）保证跨实例结构一致。</li>
+                <li>CacheEngineKey 组成：model_name、world_size、worker_id、chunk_hash、kv_dtype、request_configs。</li>
+                <li>MLA 场景 <code>save_only_first_rank</code>：仅首 rank 存缓存时把 world_size 折叠为 1，使 key 跨兼容部署 world-size 无关。</li>
+            </ul>
+
+            <h3>4. Chunked vs Segment 两种切分策略</h3>
+            <ul>
+                <li>ChunkedTokenDatabase：固定 chunk（默认 256）切分 + 前缀哈希链；mask 语义为 FFFFTTTT（False 恒在前缀，且 False 数量须为 chunk 大小整数倍）。</li>
+                <li>SegmentTokenDatabase：按分隔符 token（blend_special_str）切分，用滑动窗口 unfold 做快速子串匹配；适用于多轮对话 blend 场景。</li>
+                <li><code>save_unfull_chunk</code> 控制不足一个 chunk 的尾部是否入库。</li>
+            </ul>
+
+            <h3>5. 与论文的呼应：chunk 阈值决定碰撞触发</h3>
+            <ul>
+                <li>connector 按<strong>固定尺寸 chunk</strong> 存储意味着：短于一个 chunk 的前缀永远不会碰撞；达到/超过 chunk 的共享前缀在跨 provenance 时必然碰撞。</li>
+                <li>论文实测阈值：vLLM 一个 storage chunk、SGLang 一个 storage page；生产共享前缀通常数百 token，因此碰撞在跨源边界上是<strong>确定性触发</strong>而非概率事件。</li>
+            </ul>
+        </div>
+
+        <div class="footer">Generated by WorkBuddy · 每日技术 FAQ 自动化 · 2026-10-10</div>
+    </div>
+</body>
+</html>
