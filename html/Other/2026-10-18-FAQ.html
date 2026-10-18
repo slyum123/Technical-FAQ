@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-18</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 {
+            font-size: 1.9em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 16px;
+        }
+        .knowledge-box h3 {
+            font-size: 1.05em;
+            color: #e6edf3;
+            margin: 18px 0 8px;
+        }
+        .knowledge-box ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.88em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.92em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #161b22; color: #e6edf3; }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">← 返回索引</a>
+        <h1>每日技术 FAQ · 2026-10-18</h1>
+        <p class="subtitle">EfficientAgent 论文深度解读 — 并发 Agent 场景下 KV Cache 卸载为何"时灵时不灵"</p>
+        <p class="date">2026-10-18 · 共 10 条问答 + 知识点沉淀 · 来源：arXiv:2609.33762 深度解读（HKUST × Huawei × HKU × 中山大学，ICLR 2027 投稿，Apache-2.0 开源）</p>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">KV Cache 卸载在并发 Agent 上为什么"时灵时不灵"？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：同一编码 Agent 负载，KV 卸载到 CPU host 层在 RTX 3090 提速、H800 变慢（1.08–1.87×）、H20 无效，根因是什么？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>现有系统按"逐 token 成本比较"决策（载回比重算便宜就载回/写入），在并发 Agent 负载下系统性失效。</li>
+                    <li>Agent 等 tool 返回的窗口被其他 Agent 的处理时间拉伸：两轮之间中位间隔 9.0 s，是 Agent 自身间隔的 14 倍。</li>
+                    <li>97.3% 的新写入 KV 确实会在下轮被引用，但 79.2% 在下轮到来之前已被驱逐并被迫重算。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">命中率不是逐 token 的成本问题，而是<b>容量与并发竞争问题</b>：缓存写入后必须"活到"下次复用，窗口期被其他 Agent 上下文挤出即告失效。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">复用工作集 (Reuse Working Set) 是什么？为什么决定卸载成败？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：论文提出的核心概念量 C_reuse ≈ (A−1)·N̄·β_rank 如何解释命中是否会发生？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>定义：两次复用之间服务端处理的其他 Agent 上下文总量（backlog 池规模），A 个活跃 Agent、平均上下文 N̄、每 rank 每 token KV 字节 β_rank。</li>
+                    <li>两个压力比：γ_G = A·N̄/K_G（池上下文 / GPU KV 容量），γ_H = C_reuse/C_H（工作集 / host 容量）；γ_G&gt;1 是卸载机会，γ_H&gt;1 是 thrash 区。</li>
+                    <li>H20 上 A=16：C_reuse ≈ 15 × 33,234 × 24 KiB ≈ 11.4 GiB/rank；5/10/20 GiB host 对应 γ_H = 2.3 / 1.1 / 0.57，实测容量拐点恰在 γ_H 跨 1 处。</li>
+                    <li>复用工作集决定"命中是否会发生"，与硬件（决定"命中值多少钱"）解耦。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">并发改变工作集：A 从 16 减半到 8，工作集从 11.4 降到 5.3 GiB，容量拐点同步左移；即使不配 host 层，减半活跃池本身就省 24.8% makespan。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">硬件差异为何概括为一个比值：FLOP/host-byte？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：为什么同一负载在 H800 上卸载必然亏本？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>峰值算力 / host 链路带宽比决定载回的机会成本：RTX 3090 2.2K、H20 2.3K、H800 15.5K FLOP/byte。</li>
+                    <li>H20 实测：LMCache 载回中位速率 26.6 GiB/s，β=24 KiB 下每 token 每 rank 仅 0.86 µs；prefill 至少 5.6 µs/token，长前缀 OBR ≥ 0.84。</li>
+                    <li>H800 是 H20/RTX 3090 的 6.7–7.0 倍比值：载回占用的 PCIe 时间折损了远高于此的计算，所有 10 组测量全部减速。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion"><b>FLOP/host-byte 比值定生死</b>：低比值 GPU（3090/H20）卸载可提速，高比值 GPU（H800）卸载必然亏本——硬件决定恢复前缀的价值。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">栈距离容量模型如何做到实验前定位容量拐点？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：Mattson 1970 经典栈距离分析如何迁移到 KV 分层场景？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>式 4：全相联 LRU 下，chunk k 存活当且仅当复用距离 D(k) &lt; ⌊C/(b·β_rank)⌋（容量可容纳的 chunk 数）。</li>
+                    <li>KV 特有结构约束：host 覆盖只能取"从首 chunk 起的连续存活 run"，还需减去 GPU 已驻留部分（式 9：R = max{0, H−G}）；把 chunk 当独立对象统计会高估有效载回量。</li>
+                    <li>预测精度：实验前预测 20 GiB 下 prefill 5.19–5.78M tokens，实测 5.28M；拐点定位准确，仅在 γ_H≈1 过渡区略保守。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">同一栈距离模型既服务部署前定容（找 γ_H=1 拐点容量），又以轻量在线形式（滑动窗口 A_t·N̄_t）进入运行时准入前馈项——规划与门控共用一个模型。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">容量条件化写准入如何工作？开销多大？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：运行时核心机制——压力信号 p_t 与写规则 save(r) = ¬(p_t ∧ u&gt;κ) 的设计。</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>前馈项：滑动窗口估计活跃任务数 A_t 与平均 prompt 长度 N̄_t，代入式 5 与 host 容量比较；反馈项：host 遥测报告"占用率 ≥0.95 且窗口内有容量驱逐"，防估计误报。</li>
+                    <li>写规则：新满 chunk 数 u 小（延伸仍驻留的前缀）照写，u 大（回填已被驱逐的上下文）拒写；κ=8 时 5 GiB 下拒掉 95.3% 新 chunk 写入，κ∈[2,16] 均稳健。</li>
+                    <li>开销：每请求一次 O(1) 常数检查；拷贝前还有去重（drop tier 已持有的 chunk）。</li>
+                    <li>压力信号 p_t≡0 退化为 native offload，p_t≡1 即 fixed 准入——两个端点被统一。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">设计源自 Denning 工作集模型（1968）：host 层低于池的复用工作集时以完全相同的方式 thrash，负载控制让子集驻留——准入即 KV 版的内存过载控制。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">Proposition 1：哪些写入可以"拒而不丢命中"？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：LRU 命中保持性证明如何为拒写提供理论保障？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>命题：若 LRU 层仅在"下次引用的复用距离 D ≥ K_H（或不再引用）"的 miss 上拒绝插入，则全准入下的命中在此策略下仍命中。</li>
+                    <li>证明要点：命中要求自上次引用以来被提升的不同 chunk 数 &lt; K_H；被拒插入永远不会把这个计数推过 D。</li>
+                    <li>实测验证：5 GiB 下 84.4–85.5% 被拒 chunk 满足 D≥K_H 条件；fixed 准入在 40 GiB 下被拒 chunk 中 95.2% 复用距离 &lt; K_H（违反命题条件，故造成伤害）。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">该命题把处理器缓存领域的 bypass / dead-block prediction / RRIP 原理形式化到了"精确前缀 + 连续覆盖"的 KV 分层场景。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">"符号反转"实验说明了什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：固定写准入为何在低容量有利、高容量有害？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <table>
+                    <tr><th>配置</th><th>策略</th><th>计算 prefill</th><th>makespan</th><th>结论</th></tr>
+                    <tr><td>5 GiB/rank</td><td>Offload（无准入）</td><td>76.7M</td><td>209 min</td><td>每载回 1 token 要写 6.5 token</td></tr>
+                    <tr><td>5 GiB/rank</td><td>Fixed / Conditioned</td><td>48.9M / 49.7M</td><td>186 / 187 min</td><td>护住驻留前缀，载回提升 3.3×</td></tr>
+                    <tr><td>40 GiB/rank</td><td>Offload（无准入）</td><td>5.3M</td><td>124 min</td><td>基线</td></tr>
+                    <tr><td>40 GiB/rank</td><td>Fixed</td><td>22.8M (4.3×)</td><td>162 min (+30.6%)</td><td>帮助变成伤害</td></tr>
+                    <tr><td>40 GiB/rank</td><td>Conditioned</td><td>5.3M</td><td>124.3 min</td><td>压力信号全程未触发，等于全写</td></tr>
+                </table>
+            </div>
+            <div class="key-conclusion">条件化准入靠压力信号在两侧自动选对策略：5 GiB 下对 90.2% 的请求启用过滤器，40 GiB 下一次都不启用——"跨越拐点符号反转"的困境消失。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">实测收益有多大？依赖保持回放是什么方法论亮点？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：8×H20 全量 SWE-bench Verified 回放的核心数字与可复现性设计。</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>按工作集定容（11.4 GiB/rank 量级）：重算 prompt tokens −93.1%，makespan −38.7%（209→128 min）；4,427 次调用、147.1M prompt tokens。</li>
+                    <li>容量拐点对应：5→10→20 GiB，计算 prefill 76.7M→23.5M→5.3M；抢占从 1,808 降到 46。</li>
+                    <li>回放方法：提交精确 prompt token ID + logits processor 强制输出与录制逐 token 一致——固定 token 工作量，只让调度决策变化；任务下一调用须等前序响应并经过录制 tool 间隔（闭环时序保持）。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">makespan 与计算 prefill 跨所有 17 组干预单调关联——"计算 prefill"是 KV 分层调度的第一性代理指标。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">缓存稳定 prompt 长度为何约束 Agent 上下文管理设计？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：可复用状态沿"上一次处理后序列与当前 prompt 的最长公共前缀"延伸，历史改写有何代价？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>vLLM 前缀缓存的 key 对整个前缀做哈希：改写历史早期内容会使之后所有 chunk 的 key 失效——即使后续文本一字未改。</li>
+                    <li>实测：把早期历史折叠成摘要的"历史压缩器"把前缀命中率从 96.5% 砍到 51–61%。</li>
+                    <li>编码 Agent 的 prompt token 中 98.1% 已在上轮处理过，输出仅 23K、输入 33K 量级——输入的负担是纯 prompt。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">Agent 侧上下文管理必须保持前缀稳定：任何早期历史改写（摘要/重排）都会以 KV 前缀缓存大面积失效为代价，与"压缩省 token"的收益严重对冲。</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">工程落地路径与局限是什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">问题描述：开源仓库（Apache-2.0）如何映射论文概念？相关工作的定位边界？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>实现极薄：全部运行时增量仅 connector.py 约 400 行（EfficientAgentConnector），基于 vLLM KV connector 接口 + LMCache host 分层；policies.py 做配置映射。</li>
+                    <li>纯 CPU 分析工具（capacity_model.py 等）支持部署前定容，无需 GPU 即可预测容量曲线。</li>
+                    <li>与 KVFlow/Continuum/TOPAS 等"决定什么驻留/何时调度"的系统正交：EfficientAgent 决定"host 层是否装得下池的工作集、以及哪些新状态准入"。</li>
+                    <li>局限：压力信号依赖活跃任务数与 prompt 长度估计（60s 窗口/256 条 deque）；γ_H≈1 过渡区预测略保守；结论基于编码 Agent 负载外推需谨慎。</li>
+                </ul>
+            </div>
+            <div class="key-conclusion">结论一句话：<b>硬件决定恢复前缀的价值，并发工作集决定它能否活到复用</b>——按工作集定容 + 压力感知准入，复用工作集应成为 KV 分层与调度的一等输入。</div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>📚 知识点沉淀</h2>
+            <h3>1. Denning 工作集模型 → KV 分层的直接迁移</h3>
+            <ul>
+                <li>多道程序内存：活跃程序工作集总和超过内存时 thrash，负载控制让子集驻留（1968/1980）。</li>
+                <li>KV 分层对应：host 层低于池的复用工作集 (A−1)·N̄·β_rank 时以完全相同的方式 thrash；写准入即负载控制。</li>
+                <li>三个新量：排队拉伸的复用距离、连续前缀覆盖 + GPU 驻留扣减、(A−1)·N̄·β_rank 准入门控尺度。</li>
+            </ul>
+            <h3>2. KV 足迹公式（式 1）与 TP 放大效应</h3>
+            <ul>
+                <li>β_rank = 2·L·d·s·max(1, ⌈H_kv/TP⌉)：Qwen3-Coder-30B（MoE, L=48, H_kv=4）为 24 KiB/token/rank @TP8；Qwen2.5-Coder-32B 为 32 KiB @TP8、128 KiB @TP2。</li>
+                <li>KV 头复制（TP&gt;头数）会显著放大足迹——MoE 模型在 TP8 时恰好触及，是容量规划容易漏掉的坑。</li>
+            </ul>
+            <h3>3. 服务成本守恒式（式 3）的通用判据价值</h3>
+            <ul>
+                <li>ΔT ≈ −(省下的重算) + (付出的载回流量)：只把复用从 GPU 层平移到 host 层、而不增加总覆盖的卸载，只会增加搬运、不省计算。</li>
+                <li>该"省下 vs 付出"的守恒视角可迁移到任何分层缓存（SSD 层、跨节点 KV 池）的方案评估。</li>
+            </ul>
+            <h3>4. 关联历史归档</h3>
+            <ul>
+                <li>承接 2026-09-23 BeaconKV、2026-10-10 共享 KV Cache 来源盲复用 FAQ，同属"KV Cache 缓存管理与优化"方向：BeaconKV 管前缀链去重，本篇管并发场景的写准入与容量规划，互补而非重复。</li>
+                <li>与用户 5 级 KV 访问层级模型（同柜 HBM → 同柜 DDR → 同托盘 SSD → 跨柜 DDR → CMX）中的 GPU→Host（DDR）层直接相关：host 层容量规划判据 γ_H 可直接用于层级间配比设计。</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            WorkBuddy 每日技术 FAQ · 2026-10-18 · 由自动化任务生成并推送至
+            <a href="https://github.com/slyum123/Technical-FAQ">GitHub Technical-FAQ</a>
+        </div>
+    </div>
+</body>
+</html>
