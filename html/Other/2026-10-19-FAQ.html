@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-19</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 {
+            font-size: 1.9em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 16px;
+        }
+        .knowledge-box h3 {
+            font-size: 1.05em;
+            color: #e6edf3;
+            margin: 18px 0 8px;
+        }
+        .knowledge-box ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.88em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.92em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #161b22; color: #e6edf3; }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">← 返回索引</a>
+
+        <h1>每日技术 FAQ · 2026-10-19</h1>
+        <div class="subtitle">主题：GitHub 不可达的根因定位 —— Windows hosts 劫持与 CONNECT 代理绕行</div>
+        <div class="date">生成时间：2026-10-19 · 分类：Computer × 7、Other × 3</div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">git push 报 "Failed to connect to github.com port 443: Could not connect to server"，如何判断是网络故障还是本地劫持？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：Git / HTTPS 传输 / 错误语义 / 分层定位</div>
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <ul>
+                    <li>自动化任务推送 GitHub 仓库时连续失败，报错为 <code>fatal: unable to access 'https://github.com/...': Failed to connect to github.com port 443 after 2089 ms: Could not connect to server</code>。</li>
+                    <li>此前多轮经验把该类故障一律当作「GitHub 502，重试即可」，但本次重试数十轮完全无效。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>502 Bad Gateway</strong>：请求已到达 GitHub 边缘节点，属服务端瞬时故障，重试可恢复。</li>
+                    <li><strong>Connection timed out</strong>：SYN 无响应，通常是链路中断、防火墙丢包或代理不可达。</li>
+                    <li><strong>Could not connect to server</strong>：TCP 连接被<em>立即</em>拒绝（RST）。若耗时仅 2 s 左右且稳定复现，说明目标地址在本机——即域名被解析到 127.0.0.1，而本机 443 端口无监听。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">「Could not connect」+ 毫秒级返回 = 名称解析层异常，而非网络层故障。判据是耗时特征：链路故障会等到超时上限（数十秒），本地拒绝则在 2 s 内返回。把这类错误归类为 502 并盲目重试，是本次浪费数十分钟的根因。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">如何用一条对照命令确认域名被 hosts 劫持？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：hosts / DNS / ping / nslookup</div>
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <ul>
+                    <li>需要区分「DNS 服务器返回了错误结果」与「本机 hosts 覆盖了正确结果」。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><code>ping github.com</code> → 显示 <code>正在 Ping github.com [127.0.0.1]</code>，且 TTL=128（本机回环）。</li>
+                    <li><code>nslookup github.com</code> → 返回 <code>Address: 20.205.243.166</code>（真实 GitHub IP），DNS 服务器 192.168.1.1 正常应答。</li>
+                    <li>两者结果不一致即证明：hosts 文件的优先级高于 DNS，且当前存在覆盖条目。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">ping 走操作系统解析器（先查 hosts），nslookup 直连 DNS 服务器（不查 hosts）。这一对命令构成最廉价、最可靠的 hosts 劫持判定工具，无需任何额外软件。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">Windows 的域名解析顺序是什么？为什么 nslookup 不受 hosts 影响？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：DNS Client / dnscache / 解析优先级</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>Windows DNS Client 服务（dnscache）的解析顺序：<strong>① hosts 静态表 → ② 本地 DNS 缓存 → ③ DNS 服务器 → ④ NetBIOS/LLMNR</strong>。hosts 命中即直接返回，不再外查。</li>
+                    <li>hosts 路径：<code>C:\Windows\System32\drivers\etc\hosts</code>，无扩展名，IPv4 在前、主机名在后，<code>#</code> 开头为注释。</li>
+                    <li>nslookup / dig 是<em>专用 DNS 查询工具</em>，它们自行构造 DNS 报文发给指定服务器，完全绕开操作系统解析器，因此不会读取 hosts。</li>
+                    <li><code>ipconfig /flushdns</code> 只清空第 ② 层缓存，对 hosts 无效；<code>ipconfig /displaydns</code> 可查看当前缓存。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">「清 DNS 缓存」治不了 hosts 劫持——hosts 在缓存之前生效。排查时必须单独检查 hosts 文件本身，而不是反复 flushdns。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">如何证明到 GitHub 的网络链路本身是通的？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：curl --resolve / SNI / 证书校验</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>用 DNS 拿到的真实 IP 手动建连：<code>curl --resolve github.com:443:20.205.243.166 https://github.com</code> → 返回 <strong>HTTP 200</strong>。</li>
+                    <li><code>--resolve</code> 把「主机名:端口 → IP」预置进 curl 的地址表，跳过名称解析，但 HTTP 层请求的 Host 头、TLS 握手的 SNI 仍是 <code>github.com</code>，因此证书校验正常通过（未关闭 <code>-k</code>）。</li>
+                    <li>同法验证 <code>api.github.com</code> 返回 301（重定向，同样证明可达）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">拿到 HTTP 200 即完成「链路可达」的闭环证明：物理网络、路由、TLS、服务端全部正常，故障点 100% 收敛到本机的名称解析层。这一步是后续选择绕行方案的决策依据。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">根因是什么？Steam++ / Watt Toolkit 的 hosts 加速残留<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">关键词：Steam++ / hosts 加速 / 残留条目</div>
+            <div class="faq-section">
+                <div class="faq-section-title">问题描述</div>
+                <ul>
+                    <li>hosts 文件中存在一段<strong>处于生效状态</strong>的 <code># Steam++ Start ... # Steam++ End</code> 区块，把 40+ 个域名映射到 <code>127.0.0.1</code>。</li>
+                    <li>上方另有两份已注释的历史副本，分别标记 <code>[disabled 2026-10-18]</code> 与 <code>[disabled 2026-10-19]</code>。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>此类加速器的原理之一：把目标域名指向 127.0.0.1，由本机监听的加速进程接管连接并转发；<strong>加速器未运行时，127.0.0.1:443 无监听 → 连接立即被拒</strong>，表现为「GitHub 突然不可达」。</li>
+                    <li>两份 <code>[disabled]</code> 副本说明该段被手工禁用过，但软件重启后<em>重新写入了生效区块</em>——即 hosts 被程序反复重写。</li>
+                    <li>本机同时存在备份文件 <code>hosts.backup-2026-10-18</code>，可用于比对与回滚。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">故障根因不是网络、不是 GitHub、也不是凭据，而是加速器遗留的 hosts 黑洞条目。改 hosts 只能治标：只要 Steam++ 仍在运行，它会把区块写回去；根治需要在软件内关闭对应加速项。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">不改系统文件如何恢复 git 推送？本地 CONNECT 代理 + http.proxy<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：CONNECT 隧道 / git http.proxy / 无管理员权限</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>在 <code>127.0.0.1</code> 起一个最小 CONNECT 代理：收到 <code>CONNECT github.com:443</code> 后，用 <code>nslookup</code>（绕过 hosts）自行解析真实 IP，再与目标建 TCP 连接并双向转发字节流。</li>
+                    <li>推送命令不带全局配置、即用即走：<br><code>git -c http.proxy=http://127.0.0.1:8889 -c https.proxy=http://127.0.0.1:8889 push origin main</code></li>
+                    <li>关键点：代理只是转发 TCP，TLS 仍由 git 与真实 github.com 端到端完成，SNI 与证书校验完整保留。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">remote URL 保持不变，Git Credential Manager 仍按 github.com 匹配缓存凭据，无需管理员权限、不触碰系统文件、不降低 TLS 安全性。本次两个仓库（Technical-FAQ 86b0351、slyum123.github.io 36dfd20）均一次推送成功。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">为什么不能直接把 IP 写进 remote URL，或关闭证书校验？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：证书 SAN / sslVerify / 安全折中</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><code>https://20.205.243.166/slyum123/Technical-FAQ.git</code>：TLS 证书只签发了 <code>github.com</code> 等域名，IP 不在 SAN 列表 → 证书校验失败。</li>
+                    <li>配套「解法」<code>git -c http.sslVerify=false</code> 会放弃服务端身份认证，等同向中间人敞开，且污染操作习惯。</li>
+                    <li>「域名 + 自定义端口」（<code>https://github.com:8443/...</code>）看似可行，但要求本机 8443 上有转发器，本质上仍是代理方案，且会在凭据匹配上引入额外变量。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">评估绕行方案的三条底线：域名不变（保凭据与证书）、校验不关（保安全）、不写系统文件（保可逆性）。CONNECT 代理是唯一同时满足三条的方案。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">根治方案：清理 hosts 中的加速区块<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">关键词：系统 hosts / 管理员权限 / 备份回滚</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>编辑 <code>C:\Windows\System32\drivers\etc\hosts</code> 需管理员权限；修改前先复制一份备份（如 <code>hosts.backup-YYYY-MM-DD</code>）。</li>
+                    <li>推荐做法是<strong>整段注释</strong>（行首加 <code>#</code>）而非删除，保留可回滚痕迹，也便于识别是哪款软件写入。</li>
+                    <li>顺序很重要：先在 Steam++ 内关闭 GitHub 加速 / 退出软件，再改 hosts，否则会被立即重写。</li>
+                    <li>验证：<code>ping github.com</code> 应返回真实 IP（非 127.0.0.1），随后 <code>git push</code> 直连成功。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">治本路径 = 「软件内关闭加速 → 注释 hosts 段 → ping 验证 → 直连推送」。在自动化场景里，更稳妥的策略是本地先提交落盘、网络恢复后补推，避免把任务成败绑定在外部环境上。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">影响面有多大？被劫持的远不止 github.com<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">关键词：GitHub Pages / HuggingFace / Docker Hub / 故障域</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>生效区块涵盖：<code>github.com</code>、<code>api.github.com</code>、<code>github.io</code>、<code>pages.github.com</code>、<code>gist.github.com</code>、<code>github.dev</code>、<code>raw.githubusercontent.com</code>、<code>objects.githubusercontent.com</code>、<code>avatars*.githubusercontent.com</code>、<code>huggingface.co</code>、<code>hub.docker.com</code> 等。</li>
+                    <li>连带后果：<strong>GitHub Pages 部署失效</strong>（个人网页同步中断）、模型/数据集下载失败、Docker Hub 拉取失败、头像与 raw 资源 404 式不可用。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">排查时必须整段评估而非只测 github.com：本例中 GitHub Pages（github.io）与 HuggingFace 同时失效，是同一根因的不同症状，逐个域名试错会得出「多处故障」的错误结论。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">复盘：自动化推送的重试策略应该怎么写？<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">关键词：重试判据 / 分层诊断 / 提交落盘</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>昨日的处理：检测到推送失败后启动 20~30 轮定时重试（累计数十分钟），全程认为「GitHub 502，等一会就好」，结果是无效功。</li>
+                    <li>正确的三步定位法：<strong>① 解析层</strong>（ping vs nslookup 对照）→ <strong>② 链路层</strong>（<code>curl --resolve</code> 拿到 200）→ <strong>③ 应用层</strong>（选择绕行通道推送）。每一步都有明确的二分判据，总耗时应在 2 分钟内。</li>
+                    <li>提交与推送解耦：本地 commit 先落盘保证不丢内容，push 作为可延迟补偿动作。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">重试只对<em>瞬时性</em>故障有效（502/限流/超时抖动）；对<em>确定性</em>故障（本机配置错误）重试一万次也不会成功。经验规则：同类错误连续 3 次完全一致 → 停止重试，转入根因定位。本次 10-18 的本地提交 86b0351 与部署提交 36dfd20 已在 10-19 用代理方案一次性补推。</div>
+            </div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>知识点沉淀</h2>
+
+            <h3>1. Windows 名称解析链路与 hosts 优先级</h3>
+            <ul>
+                <li>顺序：hosts 静态表 → DNS Client 缓存（dnscache）→ DNS 服务器 → NetBIOS/LLMNR；hosts 命中即短路返回。</li>
+                <li>诊断工具对照：<code>ping</code>/<code>curl</code>/<code>git</code> 走系统解析器（受 hosts 影响）；<code>nslookup</code>/<code>dig</code> 直查 DNS（不受影响）。这一差异正是定位 hosts 劫持的抓手。</li>
+                <li><code>ipconfig /displaydns</code> 查看缓存、<code>/flushdns</code> 清缓存，均不影响 hosts。</li>
+            </ul>
+
+            <h3>2. curl --resolve 与 TLS SNI/证书校验的关系</h3>
+            <ul>
+                <li><code>--resolve host:port:ip</code> 只替换地址解析结果，Host 头与 SNI 仍使用原主机名，因此证书校验可正常通过，无需 <code>-k</code>。</li>
+                <li>同理，<code>--connect-to</code> 可同时改写目标主机与端口，适合做「域名不变、路径变」的验证。</li>
+                <li>这是验证「链路是否真的通」最干净的探针：返回值若为 200/301，即可排除网络、路由、防火墙与服务端因素。</li>
+            </ul>
+
+            <h3>3. HTTP CONNECT 隧道与 git 代理配置</h3>
+            <ul>
+                <li>HTTPS 走代理时，客户端发送 <code>CONNECT host:443 HTTP/1.1</code>，代理回 <code>200 Connection established</code> 后转为纯字节转发；代理<em>不</em>参与 TLS，因此看不到明文，也不会破坏证书校验。</li>
+                <li>git 用法：<code>git -c http.proxy=http://127.0.0.1:PORT -c https.proxy=http://127.0.0.1:PORT push origin main</code>；临时传参优于写全局配置。</li>
+                <li>诊断开关：<code>GIT_CURL_VERBOSE=1</code> 或 <code>GIT_TRACE=1</code> 可打印完整的 HTTP 交互，判断卡在 DNS、TCP 还是 TLS。</li>
+            </ul>
+
+            <h3>4. Git 推送错误语义速查</h3>
+            <table>
+                <tr><th>错误信息</th><th>层级</th><th>典型原因</th><th>对策</th></tr>
+                <tr><td>502 Bad Gateway</td><td>服务端</td><td>GitHub 边缘节点瞬时故障</td><td>指数退避重试</td></tr>
+                <tr><td>Could not connect to server</td><td>本机/传输</td><td>hosts 劫持到 127.0.0.1、代理端口无监听</td><td>查 hosts、换通道</td></tr>
+                <tr><td>Connection timed out</td><td>网络</td><td>防火墙丢包、代理不可达</td><td>查路由/代理</td></tr>
+                <tr><td>Authentication failed</td><td>应用层</td><td>令牌过期、凭据不匹配</td><td>刷新凭据</td></tr>
+                <tr><td>non-fast-forward / rejected</td><td>版本</td><td>本地落后远程</td><td>fetch 后 rebase/merge</td></tr>
+            </table>
+
+            <h3>5. Steam++ 类加速工具的 hosts 改写机制与残留风险</h3>
+            <ul>
+                <li>机制：将目标域名写入 hosts 指向 127.0.0.1，由本机加速进程监听并代理转发；软件异常退出或未清理时留下「黑洞条目」。</li>
+                <li>特征：hosts 中成对出现 <code># &lt;工具名&gt; Start</code> / <code># &lt;工具名&gt; End</code> 标记段，易于识别与整段禁用。</li>
+                <li>运维建议：修改前备份（<code>hosts.backup-&lt;日期&gt;</code>）、整段注释而非删除、先在软件内关闭加速再改文件；自动化任务应假设该文件可能被随时重写，优先采用不依赖 hosts 的绕行通道。</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            WorkBuddy 每日技术 FAQ · 2026-10-19 · 由自动化任务生成并推送至
+            <a href="https://github.com/slyum123/Technical-FAQ">GitHub Technical-FAQ</a>
+        </div>
+    </div>
+</body>
+</html>
