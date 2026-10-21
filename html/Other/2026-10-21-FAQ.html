@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-10-21</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 {
+            font-size: 1.9em;
+            color: #58a6ff;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 {
+            font-size: 1.2em;
+            color: #d2a8ff;
+            margin-bottom: 16px;
+        }
+        .knowledge-box h3 {
+            font-size: 1.05em;
+            color: #e6edf3;
+            margin: 18px 0 8px;
+        }
+        .knowledge-box ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.88em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 0.92em;
+        }
+        th, td {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th { background: #161b22; color: #e6edf3; }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">← 返回索引</a>
+
+        <h1>每日技术 FAQ · 2026-10-21</h1>
+        <p class="subtitle">主题：FastEEP —— MoE 推理的实例内 EP 弹性伸缩（arXiv:2610.18451，上海交大 IPADS）</p>
+        <p class="date">2026-10-21 · 10 条问答 + 5 组技术知识点沉淀 · 本篇为 2026-10-19 论文抓取的补录（解读于今日完成）；今日另有 cofabric 论文解读进行中，将归入下期</p>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">为什么 MoE 服务需要"实例内"EP 伸缩，而不是简单地增减服务实例？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：大规模 EP 部署下，实例级伸缩为何失效？</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>生产级 MoE 部署的 EP 度动辄数百卡（DeepSeek-V3 专家参数占 97%），一个 wide-EP 实例占几十至上百 GPU；实例级伸缩的粒度（几十卡）远粗于流量波动粒度。</li>
+                    <li>流量波动剧烈：BurstGPT 追踪（140 万请求）中 59% 的 10 秒窗口无新请求，繁忙期中位数与 P99 到达率相差 25×；Azure 会话追踪也有 1.7× 波动。</li>
+                    <li>由此形成两难：按峰值配置则低谷期大量空闲，按中位数配置则突发期违反 SLO。小 EP 度虽改善弹性，但专家权重冗余复制带来严重显存代价。</li>
+                    <li>有效伸缩须同时满足三个要求：<strong>细粒度</strong>（单 GPU 级）、<strong>快</strong>（现有实例内重建 36.4~92.0 s，比它要应对的流量波动还长）、<strong>可逆</strong>（突发过后及时回收资源，不付重建代价）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">EP 度是 MoE 服务一个独立于"实例数量"之外的资源分配旋钮：动态调整运行中实例的 EP 度，可让供给算力精确贴合动态负载，打破"峰值配置 vs SLO 违约"的两难。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">一次实例重建到底贵在哪里？模型权重加载只占多大比例？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：DeepSeek-V2-Lite 单 rank 从进程启动到稳态 126 s 的耗时分解</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>126 s 六阶段分解：进程启动 24 s、通信域构建 13 s、权重加载仅 10 s、算子剖析与编译 32 s、KV 容量测定 6 s、CUDA Graph 捕获 36 s。</li>
+                    <li>即权重加载只占 10 s，其余 116 s 全部花在构建执行环境上；满启动跨配置为 156~267 s。</li>
+                    <li>显存上：权重加载前运行时状态已占 6.32 GiB，稳态时运行时上下文开销 10.90 GiB，超过 9.62 GiB 的模型权重本身。</li>
+                    <li>关键洞察：被重建的状态大多与 EP 度无关——worker 进程、编译内核、CUDA 上下文、通信基础设施、已捕获 Graph 都只取决于模型架构、设备和最大 world size；EP 度真正决定的只有活跃 rank 参与者、专家放置映射、物理页驻留和对端连接这一小部分。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">弹性伸缩的主要成本不是"搬模型数据"，而是"重建执行环境"。只要保住与 EP 度无关的持久状态，缩放只需重写一小部分动态状态——这是 FastEEP 全部设计的出发点。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">现有推理框架的哪三大"刚性绑定"使动态 EP 伸缩必须全量重建？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：结构性根因分析</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>不可变通信组绑定</strong>：NCCL 等集合通信组为固定 rank 集构建，SPMD 语义要求每个成员同步进入调用——增删 rank 必须销毁并分布式重建进程组（除非从跨最大 rank 集的持久父组派生子组）。</li>
+                    <li><strong>静态内存与地址绑定</strong>：捕获的 CUDA Graph、内核参数、RDMA 注册内存都硬编码虚拟地址；释放或重分配 buffer 会使执行路径失效——除非将虚拟地址空间与物理页分配解耦。</li>
+                    <li><strong>紧耦合 worker 执行</strong>：每个 worker 同时管理本地请求/KV cache 和远端 token 派发的专家计算；单独暂停一个 worker 会令远端挂起——除非对端能动态屏蔽该 rank 并重映射专家路由。</li>
+                    <li>三者均源于软件实现惯例而非硬件限制，但没有已部署系统系统地同时打破这三个绑定。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">动态 EP 伸缩的障碍是三个软件层面的绑定（通信组、虚拟地址、worker 耦合），FastEEP 的三个设计模块与之一一对应：子组派生、地址稳定内存、协同休眠。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">FastEEP 的核心原则"部分状态复用"（Partial Reuse）是什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：系统总览与设计哲学</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>将服务状态划分为<strong>持久结构</strong>与<strong>可重配状态</strong>：前者（每 GPU 运行时、预协商的集合通信域、虚拟地址空间、CUDA Graph 可执行体）一次初始化、跨 EP 尺寸复用；后者（活跃 rank 集、专家放置、物理页驻留）随 EP 尺寸在线重写。</li>
+                    <li>三个层面对应：通信层从持久父域派生子组 + NIXL 掩码切换可见性；内存层用 CUDA VMM 保虚拟地址换物理页；执行层把通信、内存、请求路由、专家放置合成一次一致的 worker 状态转换。</li>
+                    <li>缩放作为<strong>分阶段事务</strong>执行：并发准备资源 → 在短暂全局静默点提交新活跃配置 → 恢复请求处理后回收空闲资源。</li>
+                    <li>区别于两条既有路线：预加载实例切换（每配置驻留一套运行时，仅通信/驱动分配就每卡数 GiB）与实例内重建（vLLM Elastic EP，每次转换重复昂贵初始化）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">"复用结构、只换参与者"：以最大拓扑初始化一次，缩放时只改变活跃 rank 集、专家映射与物理页驻留，避开重建分布式运行时的全部昂贵环节。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">不重建通信域，如何改变 EP 成员？——父域派生子组 + NIXL 掩码<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：Design-1，对应 Challenge-1（不可变通信组）</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>wide-EP 有两条语义不同的通信路径：DP 集合通信（同步 attention worker）与 EP All-to-All（token 派发/合并，实为点对点传输）。二者必须切换到同一个一致的活跃 rank 视图。</li>
+                    <li>集合通信：启动时创建跨最大 worker 集的<strong>父 NCCL 域</strong>（保留 rank 空间、bootstrap 上下文与控制面，总计不足 300 MB；空闲时数据面 buffer 卸载至 host），每次缩放用 NCCL communicator split 派生只含活跃 rank 的子组——活跃 rank 同色组成子通信器，收缩永不删除扩容所需的关系。</li>
+                    <li>点对点：NIXL 保留最大逻辑 rank 空间，用<strong>设备侧掩码</strong>控制派发/合并内核的可见性；缩容时先复制好专家副本再掩蔽目标 rank，扩容时 buffer/endpoint 就绪后才解除掩蔽。增删 rank 只影响其自身 endpoint，其他连接原样保留。</li>
+                    <li>在一个安全点同时发布 NCCL 子组、NIXL 掩码与逻辑专家-物理槽位映射：每个 rank 对三者要么全部可见、要么全部不可见。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">通信成员变更被降维成"派生子组 + 切换掩码"两个 O(成员数) 操作，避免了 8 卡组约 20 s 的分布式 bootstrap 与全集群停顿。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">如何回收 HBM 而不破坏执行上下文？——虚拟地址稳定的细粒度显存管理<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：Design-2，对应 Challenge-2（回收内存摧毁执行上下文）；graph 重捕获单独就要 25~82 s</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>用 CUDA Virtual Memory Management 为共享权重、专家权重、KV cache、CUDA Graph buffer 分别建 CuMem 池：缩容时解除物理页映射但<strong>保留虚拟地址、张量元数据与对象引用</strong>；扩容时在原地址重新映射新页。</li>
+                    <li>地址稳定使内核参数、张量指针、allocator 对象全部有效——唤醒时无需重建任何运行时结构。</li>
+                    <li>内容按语义恢复：复制的 attention 等非专家权重丢弃后从活跃 rank 经 NVLink 按原地址回填；专家权重同路径由控制面计算源-目标对批量异步拷贝；CUDA Graph buffer 备份后按原地址还原，Graph 直接重放、无需重捕获。</li>
+                    <li>请求级 KV cache 按块三选一：<strong>丢弃重算</strong>（重调度后由 prompt+已生成 token 重算）/ <strong>NVLink 异步迁移</strong> / <strong>换出到 pinned host 内存</strong>，在恢复时延、互连带宽与 host 内存占用间权衡。</li>
+                    <li>通信 buffer 的生命周期铁律：<strong>先撤销可达性再释放内存，先恢复内存再授予可达性</strong>——防止远端写落到被重分配的页。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">保留的是"逻辑分配身份"（虚拟地址 + 注册元数据 + Graph 可执行体），释放的只是物理页与数据内容——用 host 内存和少量重算换取免重建的快速唤醒。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">如何让一个 worker 安全"休眠"而服务不中断？——shadow worker 与算法级收缩<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：Design-3，对应 Challenge-3（worker 安全驻留与复用）</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>shadow worker 状态</strong>：进程、CPU 线程、executor、编译内核、虚拟地址与控制状态全部保留，仅物理内存被卸载；被排除在 NCCL 子组之外并被 NIXL 掩码隐藏，不收集合通信也不收派发流量，执行前检查活跃状态、旁路 forward。</li>
+                    <li><strong>算法级收缩须同时关两条路径</strong>：请求路径（标记 draining、移出活跃 DP 集、排空/迁移存量请求与 KV 状态）与专家路径（重算逻辑专家-物理槽位映射、把缺失专家经 NVLink 拷入剩余 worker 的空闲槽位）。可用专家槽位数决定最小可行活跃规模 N_min。</li>
+                    <li>两条路径都收缩后才允许目标休眠并释放算力、通信、HBM；扩容严格逆序：先恢复内存、专家放置与通信，再准其加入活跃 DP 集。</li>
+                    <li><strong>请求与 worker 生命周期解耦</strong>：scheduler 在请求完成或获得新执行位置后才解绑，之后才可回收原 KV cache 并休眠 worker；活跃集是请求路由、专家放置、通信视图的统一提交边界。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">休眠 = "留住身份、交出资源"。只停本地请求排不空远端专家流量——必须请求路径与专家路径同时收缩，并在一个原子安全点统一切换视图。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">实测加速多少？缩放延迟与服务中断各缩短到什么水平？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：vLLM v0.27.0 实现，2 节点 16×H20-3e（900 GB/s NVLink + 8×400G BlueField-3），6 个 MoE 模型、EP 2~16</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <table>
+                    <tr><th>方案</th><th>缩放延迟</th><th>零输出中断（8→4 / 4→8）</th></tr>
+                    <tr><td>FastEEP</td><td>4.2~13.4 s（FullAsync 3.2~9.8 s）</td><td><strong>4.2 s / 7.3 s</strong></td></tr>
+                    <tr><td>vLLM Elastic EP</td><td>36.4~92.0 s</td><td>31 s / 44 s</td></tr>
+                    <tr><td>整实例重启</td><td>126~293 s</td><td>141 s / 149 s</td></tr>
+                </table>
+                <ul>
+                    <li>相对 Elastic EP 加速 4.5×~11.7×（几何均值 7.0×，FullAsync 变体 9.3×）；相对重启 22.0×（FullAsync 29.3×）。官方 Elastic EP 在 DeepSeek-V4-Flash 与 Mistral-Small-4 上直接跑不通。</li>
+                    <li>阶段分解（Qwen3-30B，8→4）：Elastic EP 共 47 s（图捕获 15 s、编译预热 11 s）；FastEEP 共 4.21 s，其中安装新专家布局与通信视图 2.81 s、卸载 shadow buffer 0.92 s。4→8 时 FastEEP 7.15 s，唤醒 1.09 s、权重回填 0.85 s、NIXL 连通恢复 2.50 s。</li>
+                    <li>专家重排（scale-down）与"唤醒+权重+连通性恢复"（scale-up）主导剩余耗时；稳态吞吐与原版 vLLM 完全一致（休眠 worker 只做同步空转，不参与计算）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">复用 worker、通信状态与 CUDA Graph 后，EP 缩放从"分钟级停服"降到"秒级抖动"（几何均值 7×），且稳态零开销——使 EP 伸缩短到足以追踪真实的流量波动。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">多模型共置（MaaS）场景下，缩放释放的 GPU 如何流转给其他服务？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：两个共置服务共享 GPU 池，实例均不重建</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>共置 Qwen3-30B-A3B 与 DeepSeek-V2-Lite：Service 1 从 EP8 缩到 EP4 释放 4 卡给 Service 2；Service 2 需求回落缩到 2 卡后，Service 1 再扩到 EP6——全程无实例重建。</li>
+                    <li>8→4 转换：异步排空 3 s（与正常服务重叠）+ 重配 4.4 s，驱动报告空闲显存从 34 191 MiB 升至 64 613 MiB。</li>
+                    <li><strong>存在顺序依赖</strong>：释放的物理页回到节点分配器而非在进程间直接转移，因此依赖性转换必须排序——Service 1 的 4→6 扩容（6.9 s）须等 Service 2 的 4→2 缩容（4.2 s）完成后执行。</li>
+                    <li>全异步模式会在预取/卸载时短暂与推理争抢资源，把传输挪到全局静默点之前可同时降低缩放时延与干扰。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">实例内 EP 伸缩把"GPU 在服务间流转"的粒度从整机实例降到单卡；但页回收经节点分配器中转，多服务编排需按依赖顺序调度转换。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">FastEEP 的适用边界、局限与工程落地路径是什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：Discussion 与 Related Work 定位</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>空间-时间权衡</strong>：不为每个 EP 配置驻留完整副本，只保留重建昂贵状态的元数据，释放/卸载活跃配置用不到的数据资源——比预加载方案省得多。</li>
+                    <li><strong>持久 ≠ 驻留 GPU</strong>：最大 world size 的通信组逻辑上持久，但每次缩放后把非活跃 GPU 数据 buffer（2~4 GB，不含 KV）卸到 CPU，只留复用所需元数据——最大拓扑初始化不等于常驻对应 GPU 资源。</li>
+                    <li><strong>局限</strong>：只能在启动时初始化的最大拓扑内缩放；扩容需要足够空闲 GPU 显存；更大的拓扑变更仍需重建。评估限于 2 节点 16 GPU，但去中心化状态卸载的设计应比现有机制更有利于扩展。</li>
+                    <li><strong>生态位</strong>：vs ElasticMoE（Ascend、预初始化切换 + 预热）、vs SGLang rank-failure recovery（掩蔽故障 rank 但不回收显存）、vs vAttention/KunServe（VMM 扩 KV 容量）、vs Prism/WarmServe/vLLM sleep mode（释放页但保地址——FastEEP 在此之上叠加了 Graph 重放与 RDMA 注册续期的反复缩放组合）。</li>
+                    <li><strong>落地</strong>：约 5K 行产品代码，实现在 vLLM v0.27.0（NCCL 2.28.9 + NIXL 1.2.0），不改 MoE 服务接口，已作为 PR 提交 vLLM 上游；autoscaler 决策"何时缩放"，FastEEP 提供"如何缩放"的转换机制，亦兼容 prefill/decode 分离架构（尽管评估为非分离部署）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">FastEEP 把"EP 度"变成 vLLM 里可在线调节的分配旋钮，且已走 PR 上游化路径；约束是拓扑上限在启动时锁定——适合"最大规格已知、负载波动大"的 MaaS / RL rollout / 抢占式算力场景。</div>
+            </div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>📚 技术知识点沉淀</h2>
+
+            <h3>1. EP 度与 KV cache 容量的耦合关系</h3>
+            <ul>
+                <li>EP 度不仅决定吞吐，还决定<strong>运行时 KV cache 总容量</strong>：EP 越宽，专家权重冗余副本越少，留出的 HBM 越多。高并发、长上下文、agentic 负载应倾向更宽 EP；低负载时收窄 EP 把 GPU 让给其他服务。</li>
+                <li>没有任何单一 EP 尺寸全局最优：Qwen3-30B 上并发 4 时 EP4→16 吞吐不升反降（0.88×~0.99×），并发 256 时同向变化带来 1.85×~2.30× 提升；prefill-heavy 受益最大，decode-heavy 曲线最平。正确策略是"满足 SLO 的最小 EP，随压力伸缩"。</li>
+            </ul>
+
+            <h3>2. 服务成本守恒：权重搬运不是瓶颈，环境重建才是</h3>
+            <ul>
+                <li>单 rank 启动 126 s 中权重加载仅 10 s（9.62 GiB），运行时上下文开销 10.90 GiB 反超权重本身；CUDA Graph 捕获一项即 36 s（重捕获 25~82 s）。</li>
+                <li>通用判断法：任何"扩缩容慢"的系统，先把状态按"EP/规模依赖 vs 规模无关"分类——规模无关的持久结构（进程、内核、Graph、通信域骨架）永远值得复用。</li>
+            </ul>
+
+            <h3>3. 通信 buffer 生命周期铁律</h3>
+            <ul>
+                <li><strong>先撤销可达性，再释放内存；先恢复内存，再授予可达性</strong>。集合通信路径以"安装新子组 + 排空旧操作"为界；点对点路径以掩码 + endpoint 断连/就绪为界。违反该顺序会让远端 RDMA 写落到被重分配的物理页，造成难以排查的数据损坏。</li>
+                <li>同一活跃集是 NCCL 子组、NIXL 掩码、专家映射三者的统一提交边界——视图要么全部切换、要么全部不动，避免半新半旧状态。</li>
+            </ul>
+
+            <h3>4. KV cache 缩放三策略与 CUDA VMM 地址稳定模式</h3>
+            <ul>
+                <li>请求级 KV 按块三选一：重算（省带宽、费算力）、NVLink 迁移（省算力、占互连）、pinned host 换出（两者兼顾、费 host 内存）——按恢复成本逐块决策。</li>
+                <li>地址稳定模式可迁移到一切"Graph/RDMA 注册依赖固定地址"的场景：CuMem 分池 + 保留虚拟地址 + 只换物理页 + 按语义备份/回填，使 CUDA Graph 重放免重捕获、RDMA 注册免重协商。</li>
+            </ul>
+
+            <h3>5. 相关系统速查表</h3>
+            <table>
+                <tr><th>系统</th><th>机制</th><th>与 FastEEP 的差异</th></tr>
+                <tr><td>vLLM Elastic EP</td><td>重建 Ray worker / 通信组 / Graph</td><td>实例内重建路线，36~92 s</td></tr>
+                <tr><td>ElasticMoE</td><td>预初始化实例切换（Ascend）</td><td>实例级 + 需 warmup</td></tr>
+                <tr><td>SGLang rank recovery</td><td>掩蔽故障 rank + 专家重映射</td><td>容错用途，不回收显存</td></tr>
+                <tr><td>Prism / WarmServe / vLLM sleep</td><td>VMM 释放页、保留虚拟地址</td><td>未组合 Graph 重放 + RDMA 注册续期的反复缩放</td></tr>
+                <tr><td>vAttention / KunServe</td><td>VMM 扩展 KV 容量</td><td>面向过载处理，非 EP 弹性</td></tr>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>Technical-FAQ Knowledge Base · <a href="../../index.html">返回索引</a> · 每日自动更新</p>
+        </div>
+    </div>
+</body>
+</html>
