@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-11-15</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 860px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 { font-size: 1.9em; color: #58a6ff; margin-bottom: 8px; }
+        .subtitle { color: #8b949e; margin-bottom: 28px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 32px; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul { padding-left: 20px; color: #c9d1d9; }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .topic-divider {
+            margin: 34px 0 18px;
+            padding: 10px 16px;
+            background: rgba(88,166,255,0.06);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            font-weight: 600;
+            color: #79c0ff;
+        }
+        .topic-divider span { font-weight: 400; color: #8b949e; font-size: 0.9em; }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 { font-size: 1.2em; color: #d2a8ff; margin-bottom: 16px; }
+        .knowledge-box h3 { font-size: 1.05em; color: #e6edf3; margin: 18px 0 8px; }
+        .knowledge-box ul { padding-left: 20px; color: #c9d1d9; }
+        .knowledge-box li { margin-bottom: 6px; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.88em;
+        }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.92em; }
+        th, td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+        th { background: #161b22; color: #e6edf3; }
+        .footer { margin-top: 40px; text-align: center; color: #8b949e; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">← 返回索引</a>
+
+        <h1>每日技术 FAQ · 2026-11-15</h1>
+        <p class="subtitle">主题：RDMA 协议详解 —— 报文格式、BTH OpCode 编码空间与指令级问题清单（RoCEv2 / RC 为主线，对照 IB 原生、RoCEv1、iWARP）</p>
+        <p class="date">2026-11-15 · 14 条问答 + 8 组技术知识点沉淀 · 口径以 IBTA Vol.1 与 Annex A17、rdma-core/man7、mlx5 PRM 为准，含对既有资料库材料的 6 条勘误</p>
+
+        <div class="topic-divider">一、编码空间与承载方式 <span>（为什么「OpCode 对不上」的争论几乎都源于层次混淆）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">为什么 RDMA 的 OpCode 必须先分清三个编码层次？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：Verbs 枚举、厂商 WQE opcode、线上 BTH OpCode 三者的关系与混淆后果</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>① Verbs 层</strong> <code>enum ibv_wr_opcode</code>：软件 API 枚举（<code>IBV_WR_RDMA_WRITE</code> / <code>IBV_WR_RDMA_READ</code> / <code>IBV_WR_SEND_WITH_INV</code> 等），仅对应用程序可见，与线上数值无关。</li>
+                    <li><strong>② WQE ctrl.opcode</strong>：厂商 WQE Control Segment 编码，驱动/网卡可见。mlx5 中 <code>0x08</code>=RDMA_WRITE、<code>0x09</code>=WRITE_IMM、<code>0x0A</code>=SEND、<code>0x10</code>=RDMA_READ。</li>
+                    <li><strong>③ BTH OpCode</strong>：报文第 1 字节，网卡/交换机/抓包工具可见，是「指令」的默认含义。</li>
+                    <li>经典陷阱：<code>0x08</code> 在 mlx5 WQE 里是 RDMA_WRITE，在 BTH 里是 RDMA WRITE <strong>Last</strong>；<code>0x0A</code> 在 mlx5 WQE 里是 SEND，在 BTH 里是 RDMA WRITE <strong>Only</strong>。数值巧合但语义完全不同。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">BTH OpCode 只能以 IBTA 规范 / Wireshark <code>packet-infiniband.h</code> 常量表为准；绝不可从 verbs 枚举或厂商 WQE opcode 反推，否则抓包解析与驱动调试会整体偏移。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">IB 原生 / RoCEv1 / RoCEv2 / iWARP 的承载差异，以及 RoCEv2 的固定开销是多少？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：四种 RDMA 承载的链路层、网络层、传输头、ECMP 熵与校验差异</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>RoCEv1 走 EtherType <code>0x8915</code> + GRH，不可路由（仅 L2）；RoCEv2 改为 UDP 封装，<strong>dport 4791（<code>0x12B7</code>）/ proto 17</strong>，可路由并支持 ECMP；iWARP 则是 TCP + MPA + DDP + RDMAP，传输头与 IB 完全不同。</li>
+                    <li>RoCEv2 固定开销量化（IPv4 无 VLAN）：Eth 14+4 + IPv4 20 + UDP 8 + BTH 12 + ICRC 4 = <strong>62 B</strong>；加 802.1Q VLAN → 66 B；IPv6 → 82 B；首包再加 RETH 16 B。</li>
+                    <li>小消息效率：Payload=64 B 的单包 WRITE Only（含 RETH）有效载荷占比约 <strong>45%</strong>；Payload=8 B 的 SEND 仅 <strong>11%</strong>。</li>
+                    <li>ECMP 熵：RoCEv1/IB 用 LID/SL，RoCEv2 唯一逐流可变字段是 <strong>UDP 源端口</strong>（每 QP 固定、按流变化）——因此同一 QP 的报文在多路径下会走不同 plane，接收端必须靠 PSN 重排。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">RoCEv2 的 UDP 只是封装外壳：连接、PSN、ACK/NAK、重传、QP 状态机全部由 BTH 承担，UDP 本身不提供可靠性。62 B 固定开销正是「内联发送、批量聚合、大 PMTU」对小消息场景具决定性影响的原因。</div>
+            </div>
+        </div>
+
+        <div class="topic-divider">二、报文格式与字段布局 <span>（BTH / ETH / AETH 的精确口径与偏移陷阱）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">BTH 12 字节的字段布局是怎样的？哪些位置最容易被记错？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：Base Transport Header 逐字节定义与常见错误</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>BTH 为 <strong>12 字节</strong>（3 个 32-bit word）：字节 0 = OpCode；字节 1 = SE(bit7) / M(bit6) / PadCnt(bit5:4) / TVer(bit3:0)；字节 2–3 = P_Key（RoCE 通常 <code>0xFFFF</code>）。</li>
+                    <li>字节 4 = F(FECN) / B(BECN) / 保留；<strong>字节 5–7 = Dest QP（24 bit）</strong>；<strong>字节 8 = A(AckReq)</strong> + 7 bit 保留；字节 9–11 = PSN（24 bit）。</li>
+                    <li>常见错误：把 Dest QP 放在字节 4–6、AckReq 放在字节 7 —— 手工解包会整体偏移 1 字节。</li>
+                    <li>另一个高频错误：认为 OpCode「高 2 bit 为服务类型」，实际是<strong>高 3 bit</strong>（否则 <code>0x64</code> UD SEND Only 无法解释）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">BTH 结构是「服务类型收敛于首字节、目的 QP 居中、PSN 收尾」；偏移错误会同时污染 QPN 与 AckReq 判定，导致抓包分析得出完全相反的结论。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">BTH OpCode 的编码规则与 RC 段全表是什么？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：OpCode 位域构造与 RC/UC/RD/UD 段划分</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>构造规则：<code>OpCode = ServiceType(3b) &lt;&lt; 5 | Operation(5b)</code>；RC 段 <code>0x00–0x1F</code>、UC <code>0x20–0x3F</code>、RD <code>0x40–0x5F</code>、UD <code>0x60–0x7F</code>，<code>0x80+</code> 为 RoCEv2/厂商扩展（CNP = <code>0x81</code>）。</li>
+                    <li>RC 段关键值：SEND <code>0x00/0x01/0x02</code>（First/Middle/Last）、SEND Only <code>0x04</code>、WRITE First/Middle/Last <code>0x06/0x07/0x08</code>、WRITE Only <code>0x0A</code>、<strong>READ Request <code>0x0C</code></strong>、READ Response <code>0x0D–0x10</code>、<strong>ACK <code>0x11</code></strong>、AtomicAck <code>0x12</code>、Cmp&amp;Swap <code>0x13</code>、Fetch&amp;Add <code>0x14</code>、SEND Last/Only with Invalidate <code>0x16/0x17</code>。</li>
+                    <li>UC 段无 ACK、无 READ、无 ATOMIC；UD 仅 <code>0x64/0x65</code>（SEND Only ± Imm），带 DETH 8 B + GRH，≤ PMTU、需 Q_Key 校验、无重传。</li>
+                    <li>CNP 结构：BTH 后为 16 B 保留字段（通常全 0）+ ICRC + FCS，<strong>BECN=1、PSN=0、DestQP 指向应降速的源 QP</strong>。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">RC 段 <code>0x00–0x17</code> 是生产环境主用区间；<code>0x0C</code>=READ Request、<code>0x11</code>=ACK 是两个必须记住的锚点值——交换机 TCAM 计数与抓包过滤都依赖它们。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">扩展传输头（ETH）家族各有哪些成员，分别出现在什么场景？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：RETH / AETH / AtomicETH / DETH / ImmDt / IETH / XRCETH 的归属与作用</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>RETH（16 B）</strong>：VA 64b + R_Key 32b + DMA Length 32b，仅出现在 WRITE First/Only(+Imm) 与 READ Request，<strong>仅首包/Only 包携带</strong>。</li>
+                    <li><strong>AETH（4 B）</strong>：Syndrome 8b + MSN 24b，出现在 ACK(<code>0x11</code>)、READ Response First/Only、AtomicAck。</li>
+                    <li><strong>AtomicETH（28 B）</strong>：VA + R_Key + Swap/Add Data + Compare Data；<strong>AtomicAckETH（8 B）</strong> 仅返回操作前 64 bit 原值。</li>
+                    <li><strong>DETH（8 B）</strong>：Q_Key + Source QP，仅 UD SEND Only；<strong>ImmDt（4 B）</strong>：32 bit 立即数，位于 payload 之后、ICRC 之前；<strong>IETH（4 B）</strong>：待撤销的 R_Key。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">RETH 的「仅首包携带」决定了分片的单点失效特性：首包丢失后 Middle/Last 无法独立寻址，整条消息只能整体重传。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">AETH Syndrome 的精确编码是什么？如何据此做 NAK 排障定性？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：ACK/RNR NAK/NAK 的位域划分与根因分类</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>Syndrome 1 字节：bit[7] 保留为 0；<strong>bits[6:5] 是类别，bits[4:0] 是值</strong>（不是 bits[7:6]）。<code>00</code>=ACK（Credit Count）、<code>01</code>=RNR NAK（Timer Value）、<code>11</code>=不可重试 NAK（NAK Code）、<code>10</code>=保留。</li>
+                    <li>NAK Code：0（<code>0x60</code>）PSN Sequence Error（可重试，重传）；1（<code>0x61</code>）Invalid Request；2（<code>0x62</code>）Remote Access Error；3（<code>0x63</code>）Remote Operational Error；4（<code>0x64</code>）Invalid RD Request；5（<code>0x65</code>）Operation In Progress。</li>
+                    <li>排障定性三分法：<code>0x60</code> = 网络丢包/乱序（查 PFC、ECN、交换机丢包计数）；<code>0x20–0x3F</code> = 接收端 Recv WQE 不足（查 RQ 深度与消费速度）；<code>0x62</code> = rkey/权限/MR 生命周期（查应用逻辑）。</li>
+                    <li>MSN（24b）负责消息级顺序与完成去重，与 PSN（包级）处于不同层级。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">若把类别位误判为 bits[7:6]，<code>0x60</code> 会被误读成 RNR NAK，导致「查接收缓冲」而非「查网络丢包」——处置方向完全相反。这是二手资料最常见的排障误导来源。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">ICRC 覆盖哪些字段、排除哪些字段？为什么 ICRC 校验失败极难发现？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：端到端校验边界与静默丢弃机制</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>ICRC（4 B）覆盖 BTH 起至 Payload 结束，并包含 IP 头源/目的地址等不变字段；<strong>排除</strong> TTL/Hop Limit、DSCP/ECN、IP checksum 等逐跳可改字段。</li>
+                    <li>这正是交换机可改写 ECN 位、递减 TTL 而不破坏 RDMA 端到端校验的根本原因——也是「ECN 标记不影响 ICRC」的理论依据。</li>
+                    <li>VCRC（2 B）仅 IB 原生，覆盖含 LRH 整包、每跳重算；FCS（4 B）为以太网链路层校验，与 ICRC 独立并存。</li>
+                    <li><strong>排障陷阱</strong>：ICRC 失败报文被 RNIC <strong>静默丢弃</strong>——不产生 CQE、不产生 NAK，表现为 ACK 超时 → 重试 → 最终 <code>IBV_WC_RETRY_EXC_ERR</code>。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">看到「包到了但对端毫无反应」时，必须把 ICRC/链路误码纳入排查，而非只查路由。UDP checksum 在 RoCEv2/IPv4 中常置 0，完整性由 ICRC 承担；IPv6 下通常要求计算，须按厂商文档核对。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">分片、PadCnt 与 PMTU 之间是什么关系？为什么 RoCEv2 必须禁止 IP 分片？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：WR → First/Middle/Last 切分机制与 MTU 分层</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>IB PMTU 取值固定为 <strong>256 / 512 / 1024 / 2048 / 4096 B</strong>；RNIC 按 PMTU 把一条 WR 切成 First/Middle/Last（或 Only），每包分配独立 PSN。</li>
+                    <li><code>PadCnt</code> 把末包补齐到 4 B 边界以保证 ICRC 对齐，接收端按此裁剪，避免把填充字节写入远端内存。</li>
+                    <li>RoCEv2 必须置 <code>DF=1</code>：RNIC 硬件流水线从 UDP 之后按固定偏移解析 BTH，IP 分片会直接破坏 BTH 定位。</li>
+                    <li>以太网 MTU（如 9000 Jumbo）与 IB PMTU 是两个独立概念：链路 MTU 必须 ≥ <code>PMTU + 封装开销</code>，但分段粒度由 <code>path_mtu</code> 决定，不会因为开了 9000 就自动变成 9000。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">「链路 MTU ≥ PMTU + 62 B 开销」是硬约束；Jumbo Frame 只是承载条件，不是分段依据。误配会导致黑洞式丢包而非显式错误。</div>
+            </div>
+        </div>
+
+        <div class="topic-divider">三、指令语义与指令级问题 <span>（SEND / WRITE / READ / ATOMIC / ACK 族的语义边界）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">SEND 族（含 with Immediate / with Invalidate）最典型的问题有哪些？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：双边语义下 RNR、完成误读与规模扩展性</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>RNR NAK / 接收资源饥饿</strong>：接收端 RQ 无可用 WQE → 回 <code>0x20–0x3F</code>，发送端退避重试；<code>rnr_retry</code> 耗尽 → <code>IBV_WC_RNR_RETRY_EXC_ERR</code>，QP 进 ERROR。规避：预贴足量 Recv WQE、SRQ 共享、按峰值 in-flight 配置深度。</li>
+                    <li><strong>完成语义误读</strong>：发送 CQE 只表示 NIC 已取走数据并收到传输层 ACK，<strong>不表示对端应用已读/已处理</strong>（T4 ≠ T6）。需要应用层 ACK、版本号或 seqlock。</li>
+                    <li><strong>规模扩展性差</strong>：每个对端都要预留 Recv 资源，N 节点全互联下缓冲管理近似 <strong>O(N²)</strong>。</li>
+                    <li><strong>Immediate 仅 32 bit 且为网络字节序</strong>：直接当 host 整数读会错（需 <code>ntohl</code>）；只适合传 token/索引/位图。</li>
+                    <li>其他：接收缓冲过小 → <code>IBV_WC_LOC_LEN_ERR</code>；SE 位仅影响 CQ <strong>event</strong> 产生、不改变数据到达语义；<code>SEND_WITH_INV</code> 撤销的是<strong>接收端</strong> rkey 且与在途操作存在竞态。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">大规模数据面应优先用 WRITE，SEND 只保留给控制面与通知；把 RNR 计数作为一等监控指标，而非事后排障线索。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">RDMA WRITE 无远端通知怎么办？「零长度 WRITE_WITH_IMM」为什么是标准答案？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：单边写语义、通知机制与 GDR 可见性三层时点</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>普通 WRITE 不产生远端 CQE，远端无法感知完成。标准做法是<strong>两段式</strong>：N 个普通 WRITE + 一个<strong>零长度 <code>WRITE_WITH_IMM</code></strong>（或 SEND）作为 doorbell——这是 NCCL IB 传输的常用实现。</li>
+                    <li><code>WRITE_WITH_IMM</code> <strong>仍消耗接收端 Recv WQE</strong>：立即数要落到 CQE，若无预贴 WQE 同样触发 RNR NAK；零长度通知的 <code>sg_list</code> 可为空，但 Recv WQE 不可省。</li>
+                    <li><strong>「完成」≠「远端可见」</strong>：本地 CQE 只保证传输层确认；远端数据可能仍在 PCIe posted-write 缓冲中，未对 CPU/GPU 缓存层次可见。GDR 场景需显式 flush / 读回确认 + GPU 侧 acquire 语义。</li>
+                    <li>顺序语义：RC 同 QP 内 SQ WQE 按序下发，但<strong>READ/ATOMIC 之后的后续 WR 可能被提前执行</strong>；跨 QP 完全无保序——需 <code>IBV_SEND_FENCE</code> 或应用层屏障。</li>
+                    <li>WRITE 不消耗远端 RQ，<strong>无接收侧背压</strong>，发送端可全速灌入打爆接收内存带宽/PCIe/交换网 → 需应用层信用、DCQCN 限速、chunk 分级流水。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">三个时点必须分清：本地 CQE / 远端 NIC 完成 / 应用（GPU kernel）可见。禁止把 CQE 当 GPU kernel 就绪信号，否则会出现「带宽达标但结果不确定」的隐蔽故障。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">11</div>
+                <div class="faq-title">RDMA READ 为什么延迟高、还可能被配额卡住？哪些场景应改用 WRITE？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：READ 的 RTT 成本、双重 outstanding 配额与 fence 依赖</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><code>0x0C</code> 请求仅带 RETH 无 payload，响应由 <code>0x0D–0x10</code> 送回，<strong>至少一次完整 RTT</strong>，小消息延迟约为 WRITE 的 2 倍。</li>
+                    <li>受<strong>双重配额</strong>约束：发起端 <code>max_rd_atomic</code> 与响应端 <code>max_dest_rd_atomic</code> 共同限制，默认值常偏小（1/4/16），需在 QP 创建时按并发度调优并用 <code>ibv_query_qp</code> 复核。</li>
+                    <li>大 READ 被拆成多包响应，与同 QP 的 WRITE 争用 PSN 窗口与重传缓冲 → 控制单次 READ 大小或分离 QP。</li>
+                    <li>READ 之后若紧跟依赖读到数据的 WRITE/SEND，<strong>必须置 <code>IBV_SEND_FENCE</code></strong>，否则可能被越过先执行。</li>
+                    <li>抓包陷阱：READ 出错时<strong>不是</strong>普通 <code>0x11</code> NAK，而是用带 AETH 错误 syndrome 的 READ Response 包返回，过滤规则容易漏。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">KV Cache 分级访问（HBM → 同 rack DDR → 同 tray SSD → 跨 rack DDR → 共享层）中，热路径应用 WRITE 推送 + 零长度 WRITE_WITH_IMM 通知；只有冷数据/回源才用 READ，且必须核算 RTT 与 <code>max_dest_rd_atomic</code>。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">12</div>
+                <div class="faq-title">ATOMIC 操作的边界在哪里？为什么不能当作通用一致性原语？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：64 bit 原子语义、对齐/端序约束与原子性作用域</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>仅 RC（及规范中的 RD）支持；UC/UD 不支持；部分 NIC 完全不提供（如 AWS EFA SRD 无原生原子），需用零长度 <code>WRITE_WITH_IMM</code> + 接收端 CPU proxy 模拟。</li>
+                    <li>固定 <strong>8 字节且必须自然对齐</strong>：非 8 B 对齐 → <code>0x61</code> Invalid Request NAK（RC/RD），UC/UD 则静默丢弃。</li>
+                    <li>端序陷阱：操作数在网络上为<strong>大端序</strong>，responder 按本地内存端序执行；跨端序节点的 CAS 比较值会解读错，需显式 <code>htobe64</code>/<code>be64toh</code>。</li>
+                    <li>原子性作用域有限：只保证同一 CA、同一地址上无其他 QP 插入，<strong>不等于跨 CPU / 跨 PCIe 设备 / GPU 显存 / 跨节点的事务一致性</strong>。</li>
+                    <li>8 字节原子性鸿沟：多字段结构（如 304 B 哈希项）用 WRITE 更新并非原子，读者可能看到「新版本 + 旧值」→ 需 cache line 尾部版本号 + 末尾 CAS 提交 + 读侧双重校验（FaRM 式）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">ATOMIC 只适合计数器/序号/锁字这类 8 B 标量；跨字段一致性必须靠版本号 + 提交位方案在软件层构建，不可依赖硬件原子范围扩展。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">13</div>
+                <div class="faq-title">为什么抓包看不到「一问一答」的 ACK？重传为何会放大丢包影响？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：ACK 累积合并、Go-Back-N 重传与 PFC/CNP 耦合</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>ACK <strong>可累积、可合并</strong>，且只对 <code>AckReq=1</code> 的请求回；看不到 1:1 对应属正常，常被误判为丢应答。分析应以消息末包的 AckReq 与 AETH 为准。</li>
+                    <li>重传粒度粗：PSN 不连续 → <code>0x60</code> NAK，发送端从 ePSN 起重发后续已发报文（<strong>Go-Back-N 语义</strong>），丢 1 包可能回退整窗，尾延迟被放大。选择性重传属 IBTA 新版本/厂商实现扩展，<strong>不可假定</strong>。</li>
+                    <li>不可重试 NAK（<code>0x61/0x62/0x63</code>）通常直接终结 WR，重试无意义；应按 syndrome 分类处置。</li>
+                    <li>重试耗尽是硬失败：<code>IBV_WC_RETRY_EXC_ERR</code> / <code>IBV_WC_RNR_RETRY_EXC_ERR</code> → QP 进 ERROR，其余在途 WR 全部 <code>IBV_WC_WR_FLUSH_ERR</code>，<strong>必须重建 QP</strong>。</li>
+                    <li>CNP 与 ECN/PFC 耦合：交换机标 CE → 接收端发 <code>0x81</code> CNP → 发送端 DCQCN 降速；CNP 太慢则先触发 PFC 反压。PFC 自身有死锁、pause 风暴、拥塞树扩散等失效模式（SIGCOMM 2016 有生产事故记录）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">工程上应把丢包率压到接近 0（PFC + ECN/DCQCN），而不是依赖重传兜底——因为 RoCE 的重传代价是 Go-Back-N 级别的窗口回退。上层必须具备 QP 重建与状态重放能力。</div>
+            </div>
+        </div>
+
+        <div class="topic-divider">四、勘误与工程闭环 <span>（资料库既有材料的偏差，以及排障/验收方法）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">14</div>
+                <div class="faq-title">资料库既有 RDMA 材料中有哪些必须纠正的硬性错误？<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">分类：Other（方法论/勘误） · 问题描述：与 IBTA Vol.1、A17、Wireshark dissector 源码逐条核对的结果</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>E1</strong>：既有材料称「READ Request = <code>0x0A</code>，Response = <code>0x0B/0x0C/0x0D</code>」→ 规范为 Request = <strong><code>0x0C</code></strong>、Response = <strong><code>0x0D/0x0E/0x0F/0x10</code></strong>；<code>0x0A</code> 实为 WRITE Only、<code>0x0B</code> 为 WRITE Only+Imm。</li>
+                    <li><strong>E2</strong>：称「ACK = <code>0x0F</code>」→ 规范为 <strong><code>0x11</code></strong>（<code>0x0F</code> 是 READ Response Last）；按错误值配 TCAM 会漏掉全部 ACK/NAK。</li>
+                    <li><strong>E3</strong>：把 mlx5 WQE 的 <code>0x08</code>(RDMA_WRITE) 当成传输层编码 → 两者是不同编码空间的巧合，混用会使后续所有 opcode 推导偏移。</li>
+                    <li><strong>E4</strong>：BTH 字节 4–6 = Dest QP 的错误 → 正确为字节 5–7；字节 8 才是 AckReq。</li>
+                    <li><strong>E5</strong>：AETH 类别位误作 bits[7:6] → 正确为 <strong>bits[6:5]</strong>，否则 <code>0x60</code> 会被误判成 RNR。</li>
+                    <li><strong>E6</strong>：称「BTH 为 8 字节」「OpCode 高 2 bit 为服务类型」→ 正确为 <strong>12 字节</strong>、<strong>高 3 bit</strong>。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">这些偏差不影响架构性论述，但会直接导致抓包解析与排障定性出错。凡涉及线上字段，一律以 IBTA / Wireshark 常量表为准，二手材料仅作架构参考。</div>
+            </div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>技术知识点沉淀</h2>
+
+            <h3>1. 指令级问题速查矩阵（节选）</h3>
+            <table>
+                <tr><th>指令族</th><th>最高频风险</th><th>线上表征</th><th>verbs 完成状态</th><th>首选规避</th></tr>
+                <tr><td>SEND / RECV</td><td>RNR（Recv WQE 不足）</td><td>AETH <code>0x20–0x3F</code></td><td><code>RNR_RETRY_EXC_ERR</code></td><td>加深 RQ/SRQ、监控 RNR 计数</td></tr>
+                <tr><td>WRITE</td><td>远端无感知</td><td><code>0x0A/0x06–0x08</code></td><td>仅发送端 CQE</td><td>追加零长度 WRITE_WITH_IMM</td></tr>
+                <tr><td>WRITE with Imm</td><td>仍会 RNR</td><td><code>0x09/0x0B</code> + ImmDt</td><td><code>RECV_RDMA_WITH_IMM</code></td><td>预贴 Recv WQE</td></tr>
+                <tr><td>WRITE（GDR）</td><td>远端不可见</td><td>无异常</td><td>发送端 SUCCESS</td><td>flush / 读回 / acquire 屏障</td></tr>
+                <tr><td>READ</td><td>配额受限 / 多一次 RTT</td><td><code>0x0C</code> + <code>0x0D–0x10</code></td><td>—</td><td>调 <code>max_rd_atomic</code>、批量化</td></tr>
+                <tr><td>ATOMIC</td><td>对齐 / 端序 / 能力</td><td><code>0x13/0x14</code></td><td><code>REM_INV_REQ_ERR</code></td><td>8 B 对齐 + <code>htobe64</code> + 能力探测</td></tr>
+                <tr><td>ACK / NAK</td><td>丢包重传放大</td><td>AETH <code>0x60</code></td><td><code>RETRY_EXC_ERR</code></td><td>PFC + ECN/DCQCN、查交换机丢包</td></tr>
+                <tr><td>CNP</td><td>拥塞控制失效</td><td><code>0x81</code> / CE 标记 / PAUSE</td><td>无（速率下降）</td><td>ECN 门限、CNP 限速、PFC 死锁检测</td></tr>
+            </table>
+
+            <h3>2. 抓包与过滤命令</h3>
+            <ul>
+                <li><code>udp.port == 4791</code> —— 只看 RoCEv2 流量</li>
+                <li><code>udp.port == 4791 &amp;&amp; infiniband.bth.opcode == 0x11</code> —— ACK/NAK（交换机 TCAM 计数同样按此配置）</li>
+                <li><code>udp.port == 4791 &amp;&amp; infiniband.aeth.syndrome == 0x60</code> —— PSN Sequence Error</li>
+                <li><code>udp.port == 4791 &amp;&amp; infiniband.bth.opcode == 0x81</code> —— CNP</li>
+                <li>IB 原生用 <code>ibdump</code>，RoCE 用 <code>tcpdump -i &lt;dev&gt; -s 0 -w roce.pcap</code></li>
+            </ul>
+
+            <h3>3. 计数器三段定位（主机 → 接入交换机 → fabric）</h3>
+            <ul>
+                <li>主机侧：<code>perfquery</code> / <code>ibstat</code> / mlx5 ethtool 统计（<code>rx_discards</code>、<code>rx_pause</code>、<code>ecn_marked</code>、<code>cnp_sent</code>、<code>rnr_nak_retry_err</code>、<code>retry_exceeded</code>）。</li>
+                <li>交换机侧：PFC pause 帧速率、ECN 标记计数、逐优先级丢包计数。</li>
+            </ul>
+
+            <h3>4. 性能验收命令</h3>
+            <ul>
+                <li>WRITE：<code>ib_write_bw -d mlx5_0 -i 1 -F --report_gbits</code> / <code>ib_write_lat</code></li>
+                <li>READ：<code>ib_read_bw</code> / <code>ib_read_lat</code>（对比 WRITE 验证 RTT 与 <code>max_rd_atomic</code>）</li>
+                <li>SEND：<code>ib_send_bw</code> / <code>ib_send_lat</code>（验证 RQ 深度与 RNR）</li>
+                <li>ATOMIC：<code>ib_atomic_bw</code> / <code>ib_atomic_lat</code>（验证 8 B 对齐与能力）</li>
+                <li>集合通信：<code>nccl-tests</code> 的 <code>all_reduce_perf</code>（端到端验证 GDR + 多路径）</li>
+            </ul>
+
+            <h3>5. 配置核查清单</h3>
+            <ul>
+                <li>PMTU 与链路 MTU 一致、QP <code>path_mtu</code> 协商一致、<code>DF=1</code> 禁止 IP 分片。</li>
+                <li><code>max_rd_atomic</code> / <code>max_dest_rd_atomic</code>、<code>retry_cnt</code> / <code>rnr_retry</code>、P_Key、GID 类型（RoCEv2 应为 v2 GID）。</li>
+                <li>DSCP/PFC 优先级映射、ECN 门限、MR 权限位（REMOTE_WRITE / READ / ATOMIC）。</li>
+            </ul>
+
+            <h3>6. 与 SUE / AI 集群设计的三个关联结论</h3>
+            <ul>
+                <li><strong>多 plane 与报文喷洒</strong>：同一 QP 的包走不同路径时，PSN 窗口与接收端重排缓冲是第一瓶颈。要么 fabric 保证 per-flow 保序，要么把乱序容忍上移（UEC / SRD 类方案）——<strong>二者不能只做一半</strong>。</li>
+                <li><strong>KV Cache 分级访问</strong>：热路径用 WRITE 推送 + 零长度 <code>WRITE_WITH_IMM</code> 通知；跨级回源才用 READ，并与 <code>prefix_hash → worker</code> 路由配合减少跨级 READ。</li>
+                <li><strong>GDR 三层时点</strong>：本地 CQE / 远端 NIC 完成 / GPU kernel 可见是三个不同时点，必须有显式 flush 与 acquire 语义。</li>
+            </ul>
+
+            <h3>7. Memory Window 与授权生命周期</h3>
+            <ul>
+                <li>Invalidate 撤销的是 <strong>rkey</strong> 而非 MW 对象本身；MW 资源仍在，可再生成新 rkey。</li>
+                <li><code>IBV_WR_LOCAL_INV</code> 是纯本地 WR、<strong>不发任何报文</strong>；跨节点撤销必须用 <code>SEND_WITH_INV</code>（BTH <code>0x16/0x17</code> + IETH）。</li>
+                <li>撤销前需用 fence + 完成屏障收敛在途操作，否则在途请求会返回 <code>0x62</code>。</li>
+                <li><code>SEND_WITH_INV</code> 的接收 CQE 通过 <code>IBV_WC_WITH_INV</code> 标志在 <code>imm_data</code> 中带回被撤销 rkey —— 解析 CQE 必须先判 <code>wc_flags</code>。</li>
+            </ul>
+
+            <h3>8. rkey 的安全属性边界</h3>
+            <ul>
+                <li><code>rkey</code> 是<strong>授权凭证，不是加密密钥</strong>：不提供机密性、完整性或身份认证；泄露 rkey + VA 即可在权限范围内任意写。</li>
+                <li>缓解手段：最小权限/最小范围注册、Type 2 MW 轮换 rkey、PD 隔离、控制面可信通道交换。</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Technical-FAQ Knowledge Base · 2026-11-15 · 共 14 条问答 + 8 组知识点</p>
+        </div>
+    </div>
+</body>
+</html>
