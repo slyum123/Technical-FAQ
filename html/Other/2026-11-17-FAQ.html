@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日技术 FAQ · 2026-11-17</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.7;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container { max-width: 880px; margin: 0 auto; }
+        a { color: #58a6ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-bottom: 24px; font-size: 0.95em; }
+        h1 { font-size: 1.9em; color: #58a6ff; margin-bottom: 8px; }
+        .subtitle { color: #8b949e; margin-bottom: 12px; font-size: 1.05em; }
+        .date { color: #8b949e; font-size: 0.9em; margin-bottom: 20px; }
+        .scope-note {
+            background: rgba(210,168,255,0.07);
+            border: 1px solid #3d3350;
+            border-left: 3px solid #d2a8ff;
+            border-radius: 0 8px 8px 0;
+            padding: 14px 18px;
+            margin-bottom: 30px;
+            font-size: 0.92em;
+            color: #b9a7cf;
+        }
+        .scope-note strong { color: #d2a8ff; }
+        .faq-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-bottom: 18px;
+        }
+        .faq-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .faq-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(88,166,255,0.12);
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+        .faq-title {
+            font-size: 1.15em;
+            font-weight: 600;
+            color: #e6edf3;
+            line-height: 1.4;
+            margin-top: 3px;
+        }
+        .badge {
+            display: inline-block;
+            font-size: 0.72em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            font-weight: 500;
+            vertical-align: middle;
+        }
+        .badge-ai { background: rgba(240,136,62,0.15); color: #f0883e; }
+        .badge-comm { background: rgba(86,211,100,0.15); color: #56d364; }
+        .badge-comp { background: rgba(121,192,255,0.15); color: #79c0ff; }
+        .badge-other { background: rgba(210,168,255,0.15); color: #d2a8ff; }
+        .faq-meta { color: #8b949e; font-size: 0.9em; margin-bottom: 12px; }
+        .faq-section { margin-bottom: 12px; }
+        .faq-section:last-child { margin-bottom: 0; }
+        .faq-section-title {
+            color: #79c0ff;
+            font-size: 0.92em;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .faq-section ul { padding-left: 20px; color: #c9d1d9; }
+        .faq-section li { margin-bottom: 6px; }
+        .key-conclusion {
+            background: rgba(47,129,247,0.08);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            padding: 12px 16px;
+            color: #c9d1d9;
+        }
+        .topic-divider {
+            margin: 34px 0 18px;
+            padding: 10px 16px;
+            background: rgba(88,166,255,0.06);
+            border-left: 3px solid #58a6ff;
+            border-radius: 0 8px 8px 0;
+            font-weight: 600;
+            color: #79c0ff;
+        }
+        .topic-divider span { font-weight: 400; color: #8b949e; font-size: 0.9em; }
+        .knowledge-box {
+            background: #0f1419;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 22px 24px;
+            margin-top: 32px;
+        }
+        .knowledge-box h2 { font-size: 1.2em; color: #d2a8ff; margin-bottom: 16px; }
+        .knowledge-box h3 { font-size: 1.02em; color: #e6edf3; margin: 20px 0 8px; }
+        .knowledge-box ul { padding-left: 20px; color: #c9d1d9; }
+        .knowledge-box li { margin-bottom: 6px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0 6px; font-size: 0.9em; }
+        th, td { border: 1px solid #30363d; padding: 8px 10px; text-align: left; vertical-align: top; }
+        th { background: #161b22; color: #79c0ff; font-weight: 600; }
+        td { color: #c9d1d9; }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Cascadia Code", monospace;
+            background: rgba(110,118,129,0.25);
+            padding: 1px 6px;
+            border-radius: 5px;
+            font-size: 0.92em;
+        }
+        .footer {
+            text-align: center;
+            color: #6e7681;
+            font-size: 0.85em;
+            margin-top: 44px;
+            padding-top: 22px;
+            border-top: 1px solid #21262d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a class="back" href="../../index.html">← 返回技术文档索引</a>
+
+        <h1>每日技术 FAQ · 2026-11-17</h1>
+        <p class="subtitle">Grok 模型架构 · NVIDIA × Groq LPU 软硬件融合方案</p>
+        <p class="date">2026-11-17 · 14 条问答 + 8 组技术知识点沉淀 · 数值均标注口径来源（官方规格书 / 厂商宣称 / 公开报道）</p>
+
+        <div class="scope-note">
+            <strong>口径说明：</strong>当日两个技术议题分别为「Grok 架构方案材料编写」（20:52）与「NV+Groq 软硬件融合解决方案」（22:46）。
+            会话正文未在本地留存全文，故本文档按<strong>议题级沉淀</strong>整理：条目覆盖两个议题的核心技术结构与关键数字，
+            所有硬指标均回溯至可核验来源（Groq 官方 Product Spec Sheet、xAI Grok-1 开源公告、NVIDIA 产品口径），
+            厂商宣称值（performance claim）与第三方实测值分开标注，不混用。
+        </div>
+
+        <div class="topic-divider">一、Grok 模型架构 <span>（MoE 稀疏性带来的成本结构重组）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">1</div>
+                <div class="faq-title">Grok-1 的 MoE 结构是什么？为什么「8 专家取 2」这个比例决定了整个成本模型？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：MoE 拓扑与稀疏度对算力、显存、带宽三者的差异化影响</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>Grok-1：<strong>314B 参数总量</strong>，Mixture-of-Experts，<strong>8 个专家、每 token 激活 2 个</strong>，即每 token 激活约 <strong>25%</strong> 权重，折合激活参数量约 <strong>86B</strong>（xAI 开源公告口径：「314B parameter MoE model with 25% of the weights active on a given token」）。</li>
+                    <li>稀疏度 25% 意味着：<strong>计算侧</strong>按约 86B 参数计 FLOPs；<strong>容量侧</strong>必须容纳全部 314B 权重；<strong>带宽侧</strong>每 token 仍需从存储层次搬运其命中的 2 个专家，跨专家路由使访存呈现「大块、非连续、随 token 变化」的访问模式。</li>
+                    <li>工程后果：MoE 把「算力换质量」变成「容量 + 带宽换质量」。同等激活算力下，MoE 的质量优于 Dense，但显存占用与访存压力按总量而非激活量计。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">讨论 MoE 的部署成本时，必须同时报三个数：<strong>参数总量 314B / 激活量 86B / 稀疏度 25%</strong>。只报「等效 86B」会低估显存与带宽需求，只报「314B」会高估算力需求——这是方案材料里最常见的口径错误。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">2</div>
+                <div class="faq-title">Grok-1 的 Transformer 层参数细节有哪些？哪些直接决定了并行切分策略？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：层数、注意力头配置、词表、上下文、位置编码与量化对 TP/PP 切分的影响</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>核心配置：<strong>64 层</strong> Transformer、<strong>d_model = 6144</strong>、<strong>48 个 Q 注意力头 / 8 个 KV 头</strong>（GQA，分组比 6:1）、词表 <strong>131,072（2^17）</strong>、上下文 <strong>8,192 token</strong>、<strong>RoPE</strong> 旋转位置编码、<strong>bf16</strong> 训练、支持 <strong>8-bit 量化</strong>与 <strong>activation sharding</strong>、Apache 2.0 开放权重。</li>
+                    <li>切分含义：48 Q / 8 KV 的 GQA 结构使 KV Cache 体积仅为 MHA 的 <strong>1/6</strong>；TP 切分时 KV 头数 8 是硬约束，TP=8 恰好一头一片、TP&gt;8 需要复制 KV 或沿 head_dim 二次切分。</li>
+                    <li>KV Cache 量化估算（bf16，8,192 上下文，单请求）：<code>2 × 64 层 × 8 KV 头 × 128 head_dim × 8192 × 2 B ≈ 2.1 GB</code>——这个量级直接解释了为什么长上下文推理必须做分页/分级 KV 管理。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">GQA 8 KV 头是 Grok-1 并行方案的第一约束：TP 度数应与 KV 头数对齐，PP 沿 64 层切分，MoE 专家层单独做 EP。方案材料中给出 TP/PP/EP 三维切分时，必须以「48/8 头 + 64 层 + 8 专家」这三个数为边界条件。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">3</div>
+                <div class="faq-title">为什么说 MoE「省算力但不省显存」？如何做量化核算？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：用 Grok-1 数据做一次容量与带宽的显式估算</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>权重容量（bf16）：<code>314 × 10^9 × 2 B ≈ 628 GB</code>；8-bit 量化后约 <code>314 GB</code>。这决定最小部署规模——单卡 80 GB HBM 时代至少需 8 卡纯权重驻留（量化后），无余量放 KV Cache。</li>
+                    <li>单 token 权重读取量：仅需 86B 激活参数，bf16 下约 <code>172 GB</code>，8-bit 下约 <code>86 GB</code>。以 8-bit、HBM 有效带宽 3 TB/s 计，仅权重读取即 <code>86/3000 ≈ 29 ms/token</code>——这是单机 batch=1 解码的物理下限。</li>
+                    <li>结论方向：MoE 的算力红利要真正兑现，必须靠<strong>批处理摊销</strong>（batch 提升后权重读取被复用）或<strong>专家并行 + 高带宽互联</strong>；单纯降低激活参数并不自动提升 tok/s。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">MoE 解码是<strong>带宽受限</strong>而非算力受限。优化顺序应为：量化 → 增大 batch → 专家亲和调度（减少跨节点 all-to-all）→ 提高互联带宽，而不是先堆算力。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">4</div>
+                <div class="faq-title">xAI 为什么用 JAX + Rust 构建 Grok-1 训练栈，而不是 PyTorch？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">分类：Computer · 问题描述：训练框架选型的工程权衡</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>xAI 官方表述：Grok-1 由 xAI <strong>从零训练</strong>，使用 <strong>基于 JAX 与 Rust 的自定义训练栈</strong>，训练于 2023 年 10 月完成。</li>
+                    <li>JAX 侧收益：<code>jit</code> 的编译期静态 shape + <code>shard_map</code>/<code>pjit</code> 的显式分片语义，使 TP/PP/EP 切分在编译期确定，通信算子（all-reduce / all-to-all）由编译器插入而非手写；对 314B 级 MoE 的全片编译与 SPMD 表达更自然。</li>
+                    <li>Rust 侧收益：Tokenizer、数据管道、编排与检查点 IO 等偏「系统工程」环节，用 Rust 换取内存安全与确定性延迟，避免 Python GIL 与数据加载抖动成为万卡级训练的尾部毛刺源。</li>
+                    <li>代价：生态位偏移——社区算子/内核复用度低于 PyTorch；因此开源后社区主要靠 PyTorch/HF 移植版降低使用门槛。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">选型逻辑不是「JAX 更快」，而是<strong>把不确定性从运行时移到编译期</strong>：静态 shape + 显式分片 + 确定性数据管道，三者共同服务于「万卡规模下可预测的吞吐」。这与后文 LPU 的确定性设计哲学是同一类思路。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">5</div>
+                <div class="faq-title">8,192 上下文与 8-bit 量化，在今天看意味着什么？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：规格的历史定位，以及量化对精度与显存的实际影响</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>8,192 上下文在 2023 年属第一梯队（同期 Llama 2 为 4,096），但相对当前 128K～1M 级上下文已明显偏小；对 Agent / RAG 场景，上下文长度直接决定「一次装入多少检索片段」，是最先触顶的规格。</li>
+                    <li>8-bit 量化把权重从 628 GB 压到约 314 GB，是单机可部署性的分水岭；但需注意量化对象通常只含线性层权重，<strong>KV Cache 与激活仍按 bf16 计</strong>，长上下文场景下 KV 占比会反超权重。</li>
+                    <li>activation sharding：把激活按层/按 token 分片存放，使单卡激活峰值随层推进而滚动，避免激活成为与权重同量级的常驻开销。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">评估 Grok-1 类模型的部署时，权重、KV Cache、激活三者的量化策略必须分开声明；只写「已 8-bit 量化」而不说明 KV 精度，容量估算会偏差 2 倍以上。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">6</div>
+                <div class="faq-title">向非算法受众写 Grok 架构方案材料，应该固定哪几条口径？<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">分类：Other · 问题描述：技术方案材料的表达规范，避免口径漂移</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>固定三组数：<strong>总量 314B / 激活 86B / 稀疏度 25%</strong>；<strong>64 层 / 48Q-8KV / 6144</strong>；<strong>8K 上下文 / 131K 词表 / bf16 + 8-bit</strong>。任何一页 PPT 引用其一，都必须三组同时可查。</li>
+                    <li>区分「模型规格」与「部署规格」：前者是架构事实，后者依赖量化、并行度、batch、硬件代际，不可混写。</li>
+                    <li>对硬件/网络受众，把 MoE 讲成「访存模式问题」而非「参数量问题」：跨专家路由 → 非连续大块读取 → 对互联与 HBM 带宽敏感。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">材料可信度取决于口径可追溯：每个数字后面跟来源（官方公告 / 规格书 / 自测），并把厂商宣称值与实测值分栏呈现——这也是本文档的书写约定。</div>
+            </div>
+        </div>
+
+        <div class="topic-divider">二、NVIDIA × Groq：LPU 架构与软硬件融合方案 <span>（GPU 做 prefill、LPU 做 decode 的异构分工）</span></div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">7</div>
+                <div class="faq-title">Groq LPU（TSP）的四条设计原则是什么？它和 GPU 的根本分歧在哪？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：确定性数据流架构的设计哲学，与 GPU 众核模型的结构性差异</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>软件优先（Software First）</strong>：先设计编译器再流片。编译器把模型映射为包含<strong>全部数据移动信息</strong>的程序镜像，芯片行为在编译期即确定。</li>
+                    <li><strong>可编程流水线（Programmable Assembly Line）</strong>：功能单元之间用「传送带」搬运数据，每条指令显式指定取数据的流、运算、回写的流——硬件内部无需同步机制。</li>
+                    <li><strong>确定性计算与网络</strong>：无 cache（无未命中）、无仲裁（无资源竞争）、无分支预测（无投机），每个执行步可预测到单周期；片间数据流同样编译期静态调度。</li>
+                    <li><strong>片上内存（On-chip Memory）</strong>：权重常驻 SRAM，不用 DRAM/HBM，消除访存延迟的不确定性。</li>
+                    <li>根本分歧：GPU 是「众核 + 动态调度 + 多级缓存」，用运行时不确性换通用性与平均吞吐；LPU 是「单核巨流水线 + 静态调度 + 纯 SRAM」，用容量与灵活性换延迟确定性。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">LPU 不是「更快的 GPU」，而是把<strong>调度从运行时移到编译期</strong>的另一种计算范式。评价它必须用 P99 延迟与抖动，而非峰值 TFLOPS——这正是两套架构不可直接对比的原因。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">8</div>
+                <div class="faq-title">GroqChip 官方规格有哪些？为什么网上「230 MB / 750 TB/s / 80 TB/s」几个数字经常互相矛盾？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">分类：Computer · 问题描述：官方 Spec Sheet 与论文口径、十进制/二进制单位的差异</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>官方 Product Spec Sheet（groq.com）：<strong>14 nm</strong>、<strong>230 MB SRAM/芯片</strong>、<strong>up to 80 TB/s 片上访存带宽</strong>、<strong>up to 750 TOPs</strong> 与 <strong>188 TFLOPs（INT8 / FP16 @900 MHz）</strong>、<strong>16 路 RealScale 片间互连</strong>、PCIe Gen4 x16、TDP 215 W（均值 185 W）。</li>
+                    <li>口径冲突来源：① 「230 MB」是十进制，微架构论文写 <strong>220 MiB</strong> SRAM scratchpad，属同一容量的两种单位；② 「80 TB/s」为官方取整后的片上总带宽，论文口径为 <strong>55 TiB/s</strong> SRAM 带宽，另计流寄存器（SRF）网络约 <strong>20 TiB/s</strong>；③ 「750 TOPs」是 INT8 峰值，「188 TFLOPs」为 FP16 峰值——两者是不同精度，不可并列比较。</li>
+                    <li>按微架构反推：MXM 409,600 乘加器 × 900 MHz × 2 ≈ 737 TOPS（INT8），与官方 750 TOPs 一致，说明官方数字可自洽核验。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">引用 Groq 指标时必须带三要素：<strong>精度（INT8/FP16）、口径（官方/论文）、单位（十进制/二进制）</strong>。跨来源混用是这类材料最容易被质询的漏洞。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">9</div>
+                <div class="faq-title">TSP 微架构的关键结构有哪些？「无分支」是如何实现的？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">分类：Computer · 问题描述：功能切片、super lane、指令/数据流正交、分支消除</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>整体形态：把「复制 N 个小核」改为<strong>一颗单核巨流水线</strong>——功能单元按功能而非按核排布，无 MMU、无 cache、无 NoC 仲裁、无一致性协议。</li>
+                    <li>super lane：芯片由 <strong>20 条 super lane</strong>组成（实际制造 21 条，留 1 条做良率冗余），每条含 <strong>MXM×2 + MEM×2 + VXM×1 + SXM×2</strong>；每条再分 16 lane、每 lane 32 B 宽，构成 16×32 的大 SIMD。</li>
+                    <li>四类执行单元：<strong>MXM</strong>（矩阵，4 平面 × 320×320 = 409,600 MAC）、<strong>VXM</strong>（16 ALU，逐点/超越函数，ALU 可链式连接、中间结果不落内存）、<strong>SXM</strong>（distribute/mask/transpose/rotate/permute/shift 等数据重塑，兼管 C2C 与 PCIe）、<strong>MEM</strong>（88 块伪双端口 SRAM，176 路并发）。</li>
+                    <li>正交流动：<strong>指令流自南向北</strong>广播（省掉 L1I 与指令请求合并），<strong>数据流自西向东</strong>在 45 个 SRF 间穿行、64 条数据流（32 东 + 32 西）每周期各搬 320 B 向量、单周期跳变、无仲裁。第 T 周期的指令必须与第 T 周期恰好到达的数据交叉相遇——一个周期都不能错，这就是「一切延迟必须确定」的由来。</li>
+                    <li>分支消除：ISA 中<strong>没有分支/跳转</strong>，程序顺序执行；条件语句由硬件<strong>同时计算两条分支</strong>，再用一条 <code>select</code> 按 VXM 比较指令产生的掩码从两条结果流中选取——把运行时决策转成编译期编排 + 数据流选择。</li>
+                    <li>调度成本：144 个片上指令控制单元（ICU），指令解码与调度占用面积 &lt; 3%，省下的晶体管转为计算单元与 SRAM。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">LPU 的高能效来自<strong>移除动态机制后的面积再分配</strong>：无 cache、无分支预测、无仲裁，调度面积压到 3% 以下，算力密度超过 1 TOPS/mm²。代价是编译器必须承担全部时序编排责任——这是一套「编译器即调度器」的强耦合系统。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">10</div>
+                <div class="faq-title">为什么 LPU 坚持不用 DRAM？代价是什么？<span class="badge badge-comp">Computer</span></div>
+            </div>
+            <div class="faq-meta">分类：Computer · 问题描述：确定性系统与不确定存储的互斥关系，以及容量约束的连锁后果</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>DRAM 的访问延迟取决于刷新、bank 冲突、排队等内部状态机，<strong>延迟不固定</strong>；一个「所有操作延迟精确已知」的处理器无法建立在不确定的存储之上——这是架构层的互斥，不是性能取舍。</li>
+                    <li>收益：编译器成为「预言机」，可静态推算每条数据何时到达；实测 BERT-base（batch=1）尾部延迟约 130 μs，P99 仅比均值高约 0.4%，而同期 GPU + TensorRT 的 P99 普遍高出 25% 以上。</li>
+                    <li>代价一（容量）：230 MB/芯片对上百 B 参数模型远远不够，必须把权重<strong>横向分布到数十至数百颗芯片</strong>，模型规模直接换算成芯片数量与机架成本。</li>
+                    <li>代价二（形状刚性）：静态调度要求编译期已知 shape，动态 batch、变长上下文需 padding 或图重编译，对高并发、强突发的在线服务不友好。</li>
+                    <li>代价三（容错）：确定性链路上任一芯片/链路故障都会破坏静态调度假设，可靠性设计需按「整组冗余」而非「单卡重试」来做。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">LPU 的确定性是<strong>用容量与灵活性买来的</strong>：它把「延迟不确定」这个运维难题换成了「芯片数量与形状刚性」这个成本难题。评估时必须同时算两侧，只看 tok/s 会严重误判 TCO。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">11</div>
+                <div class="faq-title">NVIDIA 与 Groq 的交易结构是什么？「融合」是收购还是授权？<span class="badge badge-other">Other</span></div>
+            </div>
+            <div class="faq-meta">分类：Other · 问题描述：2025 年底交易的事实边界，及其对方案定位的影响</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>2025 年 12 月（公开报道为 12 月 24 日）：NVIDIA 与 Groq 达成<strong>非独家推理技术授权</strong>协议，交易规模约 <strong>200 亿美元</strong>；Groq 创始人 Jonathan Ross（前 Google TPU 首任架构师）、时任总裁 Sunny Madra 及部分团队成员<strong>加入 NVIDIA</strong>。</li>
+                    <li>Groq 公司<strong>继续独立运营</strong>，由时任 CFO Simon Edwards 出任 CEO；GroqCloud 推理云业务照常运行，2026 年 6 月另获 6.5 亿美元成长融资，2026 年 8 月加入 NVIDIA Cloud Partner 计划。</li>
+                    <li>性质辨析：是「技术授权 + 核心团队转入（acqui-hire）」，<strong>不是股权收购</strong>；因此 Groq 既是 NVIDIA 的技术供给方，又是云侧的独立服务商——两重身份需要在方案中分别界定。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">方案材料中「NVIDIA 收购 Groq」的表述不准确，应写「非独家技术授权 + 核心团队加入」；否则在法务/商务口径上会与公开披露冲突。技术后果是 LPU 从「GPU 竞争者」转为「GPU 平台的加速单元」。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">12</div>
+                <div class="faq-title">NVIDIA × Groq 的融合形态是什么？GPU 与 LPU 如何分工？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：GTC 2026 公布的 Groq 3 LPX 与 Vera Rubin 组合的分工逻辑</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>形态：2026 年 3 月 GTC 公布，<strong>Vera Rubin 平台</strong>与 <strong>Groq 3 LPX</strong> 机架组合——公开报道的配比为<strong>每机架 72 颗 Rubin GPU + 256 颗 Groq 3 LPU</strong>；NVIDIA 官方将该加速器定位为「强化 Vera Rubin NVL72 交互性」的组件，而非独立替代 GPU 的产品。</li>
+                    <li>分工：<strong>GPU 侧承担 prefill</strong>（大矩阵、长上下文、KV Cache 生成与驻留）+ 部分注意力计算；<strong>LPU 侧承担 decode</strong>（逐 token、低延迟、延迟敏感）。这是把 PD 分离（prefill/decode disaggregation）从「GPU 之间」推进到「异构器件之间」。</li>
+                    <li>宣称收益：NVIDIA 口径为<strong>每兆瓦推理吞吐最高提升 35 倍</strong>（对比纯 GPU 部署）——属厂商 performance claim，需在实测中按模型规模、上下文长度、SLA 目标复核。</li>
+                    <li>落地：Groq 3 LPX 已进入量产，<strong>Nebius 为首个公开采用者</strong>（导入 Token Factory 生产环境）；机架组装由 Foxconn 承担的报道流传较广，但 NVIDIA 公告未直接确认，引用时应标注为「市场/法人评估」。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">融合方案的实质是<strong>按「计算特性 × 延迟敏感度」重新划分阶段</strong>：算力密集、可并行的 prefill 留给 GPU；带宽与延迟敏感、逐 token 串行的 decode 交给静态调度的 LPU。这比单纯堆 GPU 更贴近交互式 Agent 的真实瓶颈。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">13</div>
+                <div class="faq-title">GPU + LPU 异构部署的工程关键点有哪些？KV Cache 跨器件迁移是最大风险吗？<span class="badge badge-comm">Communication</span></div>
+            </div>
+            <div class="faq-meta">分类：Communication · 问题描述：数据面、互联、容量、调度四个维度的落地约束</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li><strong>KV Cache 迁移是核心数据面</strong>：prefill 产出完整 KV 后须移交 decode 侧。以 8K 上下文、GQA（8 KV 头）量级估算，单请求 KV 约 GB 级；迁移一次即占用与 prefill 同量级的时间窗，因此要按「每 token 生成时间 &gt; KV 传输时间」的比值设阈值，并优先走 NVLink / C2C 而非跨机以太网。</li>
+                    <li><strong>容量匹配</strong>：LPU 单芯片 230 MB SRAM，KV Cache 与权重<strong>争用同一片 SRAM</strong>。这意味着 decode 侧的并发 batch 数、上下文长度与模型规模三者互相挤压，必须做显式预算，不能沿用 GPU「HBM 富余、随便缓存」的思路。</li>
+                    <li><strong>互联与拓扑</strong>：LPU 依赖 16 路 RealScale 片间互连形成「无交换机」的确定性拓扑；与 GPU 侧的 NVLink 域如何拼接、跨域是否引入以太网一跳，直接决定端到端抖动——确定性链路一旦跨入非确定性网络，抖动优势基本归零。</li>
+                    <li><strong>调度与流控</strong>：两侧吞吐模型不同（GPU 按 batch 吞吐、LPU 按静态调度步进），需要解耦队列 + 背压机制，否则一侧的排队抖动会污染另一侧的 P99。</li>
+                    <li><strong>失败域</strong>：LPU 组的确定性假设使「单芯片降级重试」不可行，健康检查与摘除策略需按整组设计。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">异构融合的成败不在单器件峰值，而在<strong>交接面</strong>：KV Cache 迁移带宽、SRAM 容量预算、跨域是否保住确定性、两侧排队是否解耦。这四项任一失守，理论加速比都会在实测中大幅折损。</div>
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-header">
+                <div class="faq-num">14</div>
+                <div class="faq-title">什么场景该上 GPU + LPU 异构，什么场景 GPU 单架构更优？<span class="badge badge-ai">AI</span></div>
+            </div>
+            <div class="faq-meta">分类：AI · 问题描述：选型判据与边界条件</div>
+            <div class="faq-section">
+                <div class="faq-section-title">回答要点</div>
+                <ul>
+                    <li>倾向异构（GPU prefill + LPU decode）：交互式 Agent、语音/实时对话、代码补全等<strong>延迟敏感 + 输出 token 为主</strong>的业务；SLA 以 TPOT / P99 为约束而非以吞吐为唯一目标。</li>
+                    <li>倾向 GPU 单架构：超长上下文（KV 容量需求大）、训练与推理混合部署、模型频繁变更（静态调度需重编译）、突发不可预测流量（动态 batch 更灵活）、以及需要大规模 scale-out 弹性伸缩的公有云多租户。</li>
+                    <li>判断阈值（建议口径）：当<strong>decode 阶段占总时延 &gt; 60%</strong>、且目标 TPOT 低于 GPU 带宽可支撑值时，异构收益最大；反之 prefill 占比高的负载，额外引入 LPU 主要增加复杂度。</li>
+                    <li>成本核算必须含：芯片数（LPU 容量小 → 单模型占用芯片多）、机架/供电、跨器件互联、以及静态调度带来的资源碎片（无法按请求弹性伸缩）。</li>
+                </ul>
+            </div>
+            <div class="faq-section">
+                <div class="faq-section-title">关键结论</div>
+                <div class="key-conclusion">选型不看「谁更快」，而看<strong>延迟结构 + 容量约束 + 流量可预测性</strong>三条：decode 主导 &amp; 延迟敏感 &amp; 流量可预测 → 异构划算；prefill 主导 &amp; 长上下文 &amp; 流量突变 → GPU 单架构更稳。</div>
+            </div>
+        </div>
+
+        <div class="knowledge-box">
+            <h2>三、技术知识点沉淀</h2>
+
+            <h3>1. 千 token/s 级推理的延迟预算分解</h3>
+            <ul>
+                <li>以 1,000 tokens/s/user 为目标 → 单 token 预算 <strong>1 ms</strong>；DeepSeek-V3 类 63 层模型 → 每层 <strong>≈15.87 μs</strong>；每层约 5 个算子 → 每算子 <strong>≈3.17 μs</strong>。</li>
+                <li>对照硬件代价：HBM 单次访问约 <strong>2 μs</strong>、GPU kernel launch <strong>5–15 μs</strong>、fence/L2 flush <strong>1–3 μs</strong>——在千 token/s 约束下首先撞的是<strong>延迟墙，不是带宽墙</strong>。这是 LPU 类静态调度架构存在的根本理由。</li>
+            </ul>
+
+            <h3>2. GPU 侧非确定性的三个来源（可直接用于需求文档）</h3>
+            <ul>
+                <li><strong>cache miss / TLB miss</strong>：命中率随 batch 与序列长度变化，P99 与均值差可达 25% 以上。</li>
+                <li><strong>kernel launch 开销</strong>：5–15 μs/次，小算子密集的 decode 阶段占比极高。</li>
+                <li><strong>动态线程调度与 warp 抢占</strong>：缺乏执行时间的静态可预测性，难以给出硬实时 SLA。</li>
+            </ul>
+
+            <h3>3. 确定性系统的三项代价（决策清单）</h3>
+            <table>
+                <tr><th>代价</th><th>表现</th><th>工程应对</th></tr>
+                <tr><td>容量</td><td>230 MB SRAM/芯片，权重与 KV 争用</td><td>模型横向分片、KV 分层/压缩、限制并发 batch</td></tr>
+                <tr><td>形状刚性</td><td>静态调度要求编译期已知 shape</td><td>按业务分档预编译多套图（batch/长度桶）</td></tr>
+                <tr><td>失败域</td><td>单点故障破坏整组静态调度</td><td>整组冗余 + 快速整体摘除，不做单卡重试</td></tr>
+            </table>
+
+            <h3>4. 异构卸载判据（prefill / decode 二分之外）</h3>
+            <ul>
+                <li>算子若<strong>并行度高、可大块矩阵化</strong> → GPU；若<strong>逐 token 串行、延迟敏感、访存模式规则</strong> → 静态调度器件。</li>
+                <li>卸载收益的硬条件：<strong>单次迁移量 / 迁移带宽 &lt; 单次计算节省时间</strong>；否则搬数据的代价会吃掉架构红利（这与 RDMA/内存语义卸载的判断式完全同构）。</li>
+            </ul>
+
+            <h3>5. MoE 容量与带宽核算公式（可直接套用）</h3>
+            <ul>
+                <li>权重容量 = <code>P_total × bytes_per_param</code>；单 token 读取 = <code>P_active × bytes_per_param</code>；解码下界 ≈ <code>P_active × bytes / BW_effective</code>。</li>
+                <li>Grok-1 代入（8-bit、3 TB/s）：628 GB → 314 GB；读取 86 GB；下界 ≈ <strong>29 ms/token</strong>（batch=1）。批处理摊销后该项按 1/batch 递减，直到算力或 KV 带宽成为新瓶颈。</li>
+            </ul>
+
+            <h3>6. GroqChip v1 关键数字速查（官方口径）</h3>
+            <ul>
+                <li>工艺 14 nm · SRAM 230 MB（≈220 MiB）· 片上带宽 up to 80 TB/s · 750 TOPs INT8 / 188 TFLOPs FP16 @900 MHz · 16 路片间互连 · PCIe Gen4 x16 · TDP 215 W。</li>
+                <li>微架构：20 super lane（制造 21）、MXM 4×320×320 = 409,600 MAC、VXM 16 ALU、SXM 数据重塑、MEM 88 块伪双端口 SRAM（176 路并发）、45 个 SRF / 64 条数据流 / 20 TiB/s 流带宽、144 个 ICU（调度面积 &lt; 3%）、ISA 无分支（select 实现条件）。</li>
+            </ul>
+
+            <h3>7. Grok-1 架构速查</h3>
+            <ul>
+                <li>314B MoE / 8 专家取 2 / 激活 25%（≈86B）· 64 层 · d_model 6144 · 48 Q 头 / 8 KV 头 · 词表 131,072 · 上下文 8,192 · RoPE · bf16 · 8-bit 量化 · activation sharding · JAX + Rust 训练栈 · Apache 2.0。</li>
+            </ul>
+
+            <h3>8. 术语消歧：Grok 与 Groq 不是同一件事</h3>
+            <ul>
+                <li><strong>Grok</strong>（xAI）：大语言模型产品线，Grok-1 为 314B MoE 开源模型。</li>
+                <li><strong>Groq</strong>（Groq, Inc.）：LPU/TSP 芯片与 GroqCloud 推理服务厂商，2025-12 起向 NVIDIA 非独家授权推理技术。</li>
+                <li>当日两个议题恰好一为模型、一为芯片，材料与索引中必须严格区分拼写，否则会出现「Grok LPU」这类错误组合。</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>Technical-FAQ Knowledge Base · 2026-11-17 · 共 14 条问答 + 8 组知识点</p>
+        </div>
+    </div>
+</body>
+</html>
